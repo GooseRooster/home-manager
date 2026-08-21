@@ -101,7 +101,7 @@ def devc-container-row [name?: string] {
 # already does that, since podman's build cache is content-addressed and
 # rebuilds any changed instruction on its own; --build-no-cache is only
 # needed when the Dockerfile text itself didn't change but you still want
-# e.g. brew/apt/cargo to fetch fresh versions).
+# e.g. apt/cargo/nix to fetch fresh versions).
 def "devc rebuild" [name?: string] {
     devc-require-cli
     let cfg = (devc-resolve-config $name)

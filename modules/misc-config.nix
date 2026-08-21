@@ -18,6 +18,18 @@ let
     supported-systems = ["base16"]
     hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\""
   '';
+
+  # Ghostty config: `theme` only when tinty theming is enabled (else ghostty tries
+  # to load a tinty theme that was never written), and the shell is the Nix nu.
+  ghosttyConfig = lib.concatStringsSep "\n" (
+    (lib.optional cfg.theming.enable "theme = \"tinted-theming\"")
+    ++ [
+      "command = ${pkgs.nushell}/bin/nu"
+      "confirm-close-surface = false"
+      "adjust-cell-height = 15%"
+      "font-size = 14"
+    ]
+  ) + "\n";
 in
 {
   # Platform-agnostic configs — binaries come from nix-cli / nixos-config, these
@@ -50,8 +62,8 @@ in
     # GUI/desktop-only (skipped in containers/WSL).
     (lib.mkIf desktopOnly {
       ".config/ghostty/config" = {
-        source = ../files/ghostty/config;
         force = true;
+        text = ghosttyConfig;
       };
       ".config/mpv/mpv.conf" = {
         source = ../files/mpv/mpv.conf;

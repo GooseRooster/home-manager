@@ -70,8 +70,8 @@ def distro-glyph [] {
 def fastfetch [...args: string] {
   # Only want the greeting to fire if we are not within a container
   # (distrobox sets CONTAINER_ID; dev containers set DEVCONTAINER via
-  # containerEnv in devcontainer.json), and not cd'ing into dotfiles via chezmoi.
-  if not ("CONTAINER_ID" in $env) and not ("DEVCONTAINER" in $env) and not ("CHEZMOI" in $env) {
+  # containerEnv in devcontainer.json).
+  if not ("CONTAINER_ID" in $env) and not ("DEVCONTAINER" in $env) {
     let ff_dir    = ($nu.home-dir | path join ".config" "fastfetch")
     let config    = ($ff_dir | path join "config.jsonc")
     let logo_file = ($ff_dir | path join "logo.txt")   # per-machine, never committed to dotfiles
@@ -167,13 +167,7 @@ def copy [...args: string] {
 
 
 # ── Functions: Containers and VMs ───────────────────────────────────────────────────────
-# Distrobox: enter container, bootstrap nu
-# `distrobox enter -- <cmd>` execs the command directly with no profile/shellenv
-# sourced first, so a bare `nu` isn't found even when linuxbrew is mounted.
-# The linuxbrew volume is always mounted at /home/linuxbrew/.linuxbrew inside
-# the container (see README's Distrobox section), regardless of where the host
-# resolves its own brew prefix (e.g. /var/home on ostree hosts) — so this must
-# stay a literal container-side path, not $env.HOMEBREW_PREFIX.
+# Distrobox: enter container, drop into nu (nu is on PATH via Nix).
 def dbx [name: string] {
   ^distrobox enter $name -- nu
 }
