@@ -7,6 +7,7 @@
 
   home.modules.gaming.enable = true;
   home.modules.theming.enable = true;
-  # podmanAlias stays off: the desktop gets its SSH agent from gnome-keyring and
-  # uses podman natively (docker-compat socket handled by nixos-config's podman module).
+  # Rootless podman socket + docker->podman alias (lazydocker/lazypodman). SSH
+  # agent still comes from gnome-keyring; podman socket is user-scoped.
+  home.modules.podmanAlias.enable = true;
 }

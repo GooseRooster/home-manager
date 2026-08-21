@@ -15,6 +15,7 @@
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
     ./modules/caches.nix
+    ./modules/podman.nix
   ];
 
   programs.home-manager.enable = true;
