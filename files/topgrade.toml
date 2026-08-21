@@ -9,6 +9,7 @@
 only = [
     "system",       # distro package manager (topgrade auto-detects NixOS)
     "tldr",         # tldr pages cache
+    "yazi",         # yazi plugins (ya pkg upgrade)
 ]
 
 assume_yes = true  # non-interactive

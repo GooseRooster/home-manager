@@ -12,9 +12,11 @@
 # from inside a container.
 #
 # Templates are looked up in $DEVCONTAINER_TEMPLATES_DIR (default:
-# ~/.local/share/devcontainer-templates). The templates themselves have not
-# been migrated out of the old dotfiles repo yet — clone/checkout a copy there,
-# or export the variable to point at wherever they live.
+# ~/.local/share/devcontainer-templates). They live in the nix-cli repo — fetch
+# them without cloning via:
+#   nix build --no-link --print-out-paths github:GooseRooster/nix-cli#devcontainer-templates
+# then symlink the result to ~/.local/share/devcontainer-templates, or point the
+# variable at a checkout of the repo's devcontainer-templates/ directory.
 
 set -euo pipefail
 

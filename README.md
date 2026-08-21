@@ -38,8 +38,12 @@ Standalone (any distro with Nix):
 ```sh
 home-manager switch --flake github:GooseRooster/home-manager#desktop
 home-manager switch --flake github:GooseRooster/home-manager#wsl
-home-manager switch --flake github:GooseRooster/home-manager#devcontainer
+home-manager switch --flake github:GooseRooster/home-manager#devcontainer --impure
 ```
+
+The `devcontainer` target uses `--impure` because `hosts/devcontainer.nix` reads
+`$USER`/`$HOME` at eval time — the container's uid-1000 user varies by base image
+(`vscode`, `ubuntu`, …), so it can't be hardcoded.
 
 From a local checkout:
 
@@ -49,6 +53,20 @@ home-manager switch --flake .#desktop
 
 On NixOS, prefer wiring it through `nixos-config` (see below) so `nixos-rebuild
 switch` applies it with rollback.
+
+## Adding a host
+
+Like `nixos-config`'s `hosts/` + `nixosConfigurations`, add a host here in two spots:
+
+1. `hosts/<name>.nix` — set `home.username`/`home.homeDirectory` and the
+   `home.modules.*` flags (copy `hosts/wsl.nix` as a template).
+2. `flake.nix` — add `<name>` to both `homeConfigurations.<name> = mkHome "<name>"`
+   and `hmModules.<name> = mkHostModule "<name>"`.
+
+`homeConfigurations` is the standalone target (`home-manager switch --flake .#<name>`);
+`hmModules` is the reusable module for NixOS integration below. For a host that
+needs a non-`gooze` user, set `home.username`/`home.homeDirectory` in its
+`hosts/<name>.nix` (see `hosts/devcontainer.nix` for the env-driven variant).
 
 ### NixOS integration (recommended)
 
@@ -71,23 +89,34 @@ Then per host (e.g. in `hosts/home/default.nix`):
 ```nix
 { inputs, ... }: {
   imports = [ inputs.home-manager.nixosModules.home-manager ];
-  home-manager.users.gooze.imports = [ inputs.dotfiles.hmModules.desktop ];
+  home-manager.users.gooze = {
+    imports = [ inputs.dotfiles.hmModules.default ];
+    # Set the flags to mirror the system-side toggles:
+    home.modules.gaming.enable = true;
+    home.modules.theming.enable = true;
+  };
 }
 ```
 
-## First build (fill in yazi plugin hashes)
+`hmModules.default` is the shared base (no username/homeDirectory, no flags) —
+NixOS's HM integration infers the user from `home-manager.users.<name>`, so each
+host sets only the flags it needs. (The `hmModules.desktop`/`wsl`/`devcontainer`
+bundles are for standalone `homeConfigurations`, where username/flags must be set.)
 
-The yazi plugins in `modules/yazi.nix` use `lib.fakeHash` (pinned to the same
-git revs the old `yazi/package.toml` used). On the first `home-manager switch`
-Nix will error with the real hash for each fetch — copy each into `modules/yazi.nix`.
-Standard Nix workflow; after that, builds are locked.
+## Yazi plugin updates
+
+The plugin *list* is declared in `files/yazi/package.toml`; the plugins are
+fetched by yazi's own `ya pkg install` (run on activation), like the LazyVim
+starter. No rev/hash pins by default — `ya pkg upgrade` (run via topgrade's
+`yazi` step) tracks the latest of each plugin. To pin one after it breaks, add
+`rev = "<commit>"` to its entry in `package.toml`.
 
 ## Mutable state, declaratively
 
 | Tool | Old (chezmoi bootstrap) | Now |
 |------|------------------------|-----|
 | LazyVim starter | `git clone` + `rm .git` | `home.activation.cloneLazyVim` (idempotent, self-updating) |
-| yazi plugins | `ya pkg install` | `programs.yazi.plugins` / `flavors` |
+| yazi plugins | `ya pkg install` | `package.toml` + `home.activation.installYaziPlugins` (self-updating via `ya pkg upgrade`) |
 | tldr cache | `tldr --update` | `tealdeer/config.toml` with `auto_update = true` |
 | television channels | `tv update-channels` | `home.activation.updateTvChannels` |
 
@@ -96,13 +125,7 @@ Standard Nix workflow; after that, builds are locked.
 Still living in the old dotfiles repo, pending a new home (likely `nix-cli`,
 which already has a `quadlets/` dir):
 
-- `devcontainer-templates/` — the `.devcontainer` scaffolding copied by
-  `devcontainer-init`. The script now looks in
-  `$DEVCONTAINER_TEMPLATES_DIR` (default `~/.local/share/devcontainer-templates`).
 - `container_templates/` — the podman quadlets (Windows VM, omnitools, searxng).
-- The dev container `local/setup.sh` hooks still assume brew + `bootstrap-cli.sh`;
-  they should be rewritten to `nix profile install github:GooseRooster/nix-cli#base`
-  + `home-manager switch --flake github:GooseRooster/home-manager#devcontainer`.
 
 ## Local overrides
 

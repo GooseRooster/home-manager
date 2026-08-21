@@ -10,37 +10,6 @@ let
 		{ key = "e", path = "~/Emulation", desc = "Emulation" },
 		{ key = "s", path = "~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common", desc = "Steam Library" },
 '';
-
-  # yazi plugin sources — pinned to the same revs chezmoi's package.toml used.
-  # NOTE: `lib.fakeHash` stands in until the first build; run once and paste the
-  # reported hashes (standard Nix workflow). See README "First build".
-  fetchPlugin = { owner, repo, rev }: pkgs.fetchFromGitHub {
-    inherit owner repo rev;
-    hash = lib.fakeHash;
-  };
-
-  yaziPluginsRepo = fetchPlugin { owner = "yazi-rs"; repo = "plugins"; rev = "4c63ed3"; };
-
-  plugins = {
-    full-border = "${yaziPluginsRepo}/full-border.yazi";
-    recycle-bin = fetchPlugin { owner = "uhs-robert"; repo = "recycle-bin"; rev = "82da16a"; };
-    bunny = fetchPlugin { owner = "stelcodes"; repo = "bunny"; rev = "71b14a3"; };
-    compress = fetchPlugin { owner = "KKV9"; repo = "compress"; rev = "e60e122"; };
-    starship = fetchPlugin { owner = "Rolv-Apneseth"; repo = "starship"; rev = "159eaba"; };
-    mount = "${yaziPluginsRepo}/mount.yazi";
-    what-size = fetchPlugin { owner = "pirafrank"; repo = "what-size"; rev = "179ebf6"; };
-    yatline = fetchPlugin { owner = "imsi32"; repo = "yatline"; rev = "c5d4b48"; };
-    yatline-modified-time = fetchPlugin { owner = "wekauwau"; repo = "yatline-modified-time"; rev = "2d33471"; };
-    yatline-selected-size = fetchPlugin { owner = "pakhromov"; repo = "yatline-selected-size"; rev = "7d9402a"; };
-    yatline-disk-usage = fetchPlugin { owner = "pakhromov"; repo = "yatline-disk-usage"; rev = "77bdde7"; };
-    yatline-created-time = fetchPlugin { owner = "wekauwau"; repo = "yatline-created-time"; rev = "7cd5e21"; };
-    simple-status = fetchPlugin { owner = "Ape"; repo = "simple-status"; rev = "d0da104"; };
-    ouch = fetchPlugin { owner = "ndtoan96"; repo = "ouch"; rev = "406ce6c"; };
-    yatline-githead = fetchPlugin { owner = "imsi32"; repo = "yatline-githead"; rev = "929e52c"; };
-    linemode-plus = fetchPlugin { owner = "barbanevosa"; repo = "linemode-plus"; rev = "4d0d034"; };
-    mediainfo = fetchPlugin { owner = "boydaihungst"; repo = "mediainfo"; rev = "e079a00"; };
-  };
-
 in
 {
   programs.yazi = {
@@ -55,7 +24,23 @@ in
       [ (lib.optionalString cfg.gaming.enable gamingHops) ]
       (builtins.readFile ../files/yazi/init.lua);
 
-    inherit plugins;
-
+    # Local "inherit" flavor — pulls every color from the terminal palette so
+    # tinty scheme swaps retint yazi live. Declared declaratively; not fetched.
+    flavors = {
+      "inherit" = ../files/yazi/flavors/inherit.yazi;
+    };
   };
+
+  # Plugin *list* is declared here; the plugins themselves are fetched by yazi's
+  # own `ya pkg install` (latest, self-updating) — see files/yazi/package.toml.
+  xdg.configFile."yazi/package.toml".source = ../files/yazi/package.toml;
+
+  # Fetch/refresh the plugins declared in package.toml (git on PATH for `ya`).
+  home.activation.installYaziPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run() {
+      export PATH="${pkgs.git}/bin:${pkgs.yazi}/bin:$PATH"
+      ${pkgs.yazi}/bin/ya pkg install
+    }
+    run
+  '';
 }
