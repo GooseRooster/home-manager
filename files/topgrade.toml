@@ -1,0 +1,16 @@
+# Topgrade — Nix-first config (was container/WSL-focused with brew steps).
+#
+# Restricts updates to a small, headless-friendly set. Steps whose tool isn't
+# installed are skipped automatically. Step names are topgrade's snake_case
+# identifiers; run `topgrade --dry-run` to preview.
+
+[misc]
+# Run only these steps; everything else is skipped.
+only = [
+    "system",       # distro package manager (topgrade auto-detects NixOS)
+    "tldr",         # tldr pages cache
+]
+
+assume_yes = true  # non-interactive
+skip_notify = true # no desktop notification daemon in containers/WSL
+cleanup = true     # clean up caches after updating

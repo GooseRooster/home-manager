@@ -1,0 +1,46 @@
+[opener]
+edit = [
+	{ run = "nvim %s", block = true, for = "unix" },
+	{ run = "%EDITOR% %s", block = true, for = "windows" },
+]
+
+[mgr]
+show_hidden = true
+linemode = "size_mtime"
+
+
+
+[plugin]
+  prepend_preloaders = [
+    # Audio, video, image — main catch-all
+    { mime = "{audio,video,image}/*", run = "mediainfo" },
+
+    # application/* types mediainfo handles — merged into one rule
+    # (subrip=subtitles, postscript/illustrator/eps=vector, dvb.ait=broadcast)
+    { mime = "application/{subrip,postscript,illustrator,dvb.ait,eps}", run = "mediainfo" },
+
+    # vnd.adobe.illustrator has a deeper path, can't merge with the above
+    { mime = "application/vnd.adobe.illustrator", run = "mediainfo" },
+
+    # Extension fallback for AI files misidentified as application/pdf
+    { url = "*.{ai,eps,ait}", run = "mediainfo" },
+  ]
+
+prepend_previewers = [
+    # Audio, video, image — main catch-all
+    { mime = "{audio,video,image}/*", run = "mediainfo" },
+
+    # application/* types mediainfo handles — merged into one rule
+    { mime = "application/{subrip,postscript,illustrator,dvb.ait,eps}", run = "mediainfo" },
+
+    # vnd.adobe.illustrator has a deeper path, can't merge with the above
+    { mime = "application/vnd.adobe.illustrator", run = "mediainfo" },
+
+    # Extension fallback for AI files misidentified as application/pdf
+    { url = "*.{ai,eps,ait}", run = "mediainfo" },
+  ]
+# For a large file like Adobe Illustrator, Adobe Photoshop, etc
+# you may need to increase the memory limit if no image is rendered.
+# https://yazi-rs.github.io/docs/configuration/yazi#tasks
+[tasks]
+  image_alloc      = 1073741824        # = 1024*1024*1024 = 1024MB

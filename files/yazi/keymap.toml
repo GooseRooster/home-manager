@@ -1,0 +1,29 @@
+
+[[mgr.prepend_keymap]]
+on = ["R", "b"]
+run = "plugin recycle-bin"
+desc = "Open Recycle Bin menu"
+
+
+[[mgr.prepend_keymap]]
+desc = "Start bunny.yazi"
+on = ";"
+run = "plugin bunny"
+
+[[mgr.prepend_keymap]]
+on = ["C"]
+run = "plugin ouch"
+desc = "Compress with ouch"
+
+[[mgr.prepend_keymap]]
+on = [ ".", "s" ]
+run  = "plugin what-size"
+desc = "Calc size of selection or cwd" 
+
+[[mgr.prepend_keymap]]
+on  = "M"
+run = "plugin mount"
+[[mgr.prepend_keymap]]
+on  = ["m", "c"]
+run = "linemode size_mtime"
+

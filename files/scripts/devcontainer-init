@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#
+# devcontainer-init — copy one of the dev container templates (see
+# devcontainer-templates/) into another repo you're working on.
+#
+# Usage:
+#   devcontainer-init <template-name> [target-dir]   # target-dir defaults to .
+#   devcontainer-init                                 # list available templates
+#
+# Host-only: this script isn't installed inside dev containers themselves
+# (gated on devcontainer_enabled) — there's nothing to deploy templates *to*
+# from inside a container.
+#
+# Templates are looked up in $DEVCONTAINER_TEMPLATES_DIR (default:
+# ~/.local/share/devcontainer-templates). The templates themselves have not
+# been migrated out of the old dotfiles repo yet — clone/checkout a copy there,
+# or export the variable to point at wherever they live.
+
+set -euo pipefail
+
+TEMPLATES_DIR="${DEVCONTAINER_TEMPLATES_DIR:-$HOME/.local/share/devcontainer-templates}"
+
+_list_templates() {
+  echo "Available templates:"
+  for dir in "$TEMPLATES_DIR"/*/; do
+    [[ -d "$dir" ]] || continue
+    echo "  - $(basename "$dir")"
+  done
+}
+
+FORCE=false
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+  --force) FORCE=true ;;
+  *) ARGS+=("$arg") ;;
+  esac
+done
+
+if [[ "${#ARGS[@]}" -lt 1 ]]; then
+  _list_templates
+  exit 0
+fi
+
+TEMPLATE_NAME="${ARGS[0]}"
+TARGET_DIR="${ARGS[1]:-.}"
+TEMPLATE_SRC="$TEMPLATES_DIR/$TEMPLATE_NAME"
+
+if [[ ! -d "$TEMPLATE_SRC" ]]; then
+  echo "ERROR: Unknown template '$TEMPLATE_NAME'." >&2
+  _list_templates >&2
+  exit 1
+fi
+
+if [[ -e "$TARGET_DIR/.devcontainer" && "$FORCE" != true ]]; then
+  echo "ERROR: $TARGET_DIR/.devcontainer already exists. Pass --force to overwrite." >&2
+  exit 1
+fi
+
+mkdir -p "$TARGET_DIR"
+cp -r "$TEMPLATE_SRC/." "$TARGET_DIR/"
+
+echo "Copied '$TEMPLATE_NAME' into $TARGET_DIR/.devcontainer"
+echo ""
+echo "Next steps:"
+echo "  - Fill in the // TODO / ⟨…⟩ markers (toolchain, mounts, ports) in the copied files"
+echo "  - Host prereqs: SSH agent loaded ('ssh-add -l'); for the dotnet template also"
+echo "    create ~/.nuget/NuGet/NuGet.Config with your feed + PAT"
+echo "  - Personalize (optional): cp -r $TARGET_DIR/.devcontainer/local.example \\"
+echo "                                    $TARGET_DIR/.devcontainer/local  (gitignored)"
+echo "  - Open in VS Code / run 'devcontainer up --workspace-folder $TARGET_DIR'"
+echo "  - dotnet template: trust the exported dev cert per .devcontainer/README.md"

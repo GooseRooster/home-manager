@@ -1,0 +1,5 @@
+theme = "tinted-theming"
+command = /var/home/linuxbrew/.linuxbrew/bin/nu
+confirm-close-surface = false
+adjust-cell-height = 15%
+font-size = 14

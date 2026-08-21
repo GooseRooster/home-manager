@@ -1,0 +1,10 @@
+# Normalize line endings for the shell/lua/toml configs.
+* text=auto
+*.sh text eol=lf
+*.nu text eol=lf
+*.lua text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.jsonc text eol=lf
+*.jpg binary
