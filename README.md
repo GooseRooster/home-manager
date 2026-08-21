@@ -105,18 +105,17 @@ bundles are for standalone `homeConfigurations`, where username/flags must be se
 
 ## Yazi plugin updates
 
-The plugin *list* is declared in `files/yazi/package.toml`; the plugins are
-fetched by yazi's own `ya pkg install` (run on activation), like the LazyVim
-starter. No rev/hash pins by default — `ya pkg upgrade` (run via topgrade's
-`yazi` step) tracks the latest of each plugin. To pin one after it breaks, add
-`rev = "<commit>"` to its entry in `package.toml`.
+Plugins are fully declarative: pinned to a `rev` + `hash` in
+`modules/yazi.nix` via `programs.yazi.plugins` (fetched from the Nix store,
+no runtime network or git). To update one, bump its `rev`/`hash` — the CI
+`yazi-plugins` job (see Roadmap) can do this via PR.
 
 ## Mutable state, declaratively
 
 | Tool | Old (chezmoi bootstrap) | Now |
 |------|------------------------|-----|
 | LazyVim starter | `git clone` + `rm .git` | `home.activation.cloneLazyVim` (idempotent, self-updating) |
-| yazi plugins | `ya pkg install` | `package.toml` + `home.activation.installYaziPlugins` (self-updating via `ya pkg upgrade`) |
+| yazi plugins | `ya pkg install` | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tldr --update` | `tealdeer/config.toml` with `auto_update = true` |
 | television channels | `tv update-channels` | `home.activation.updateTvChannels` |
 
@@ -140,11 +139,10 @@ pattern). Put per-host secrets/API keys there.
   - `lazyvim` — scheduled job that watches `LazyVim/starter` for a new default
     commit and opens a PR pinning it, so the `cloneLazyVim` activation stays
     reproducible and reviewed instead of silently tracking `HEAD`.
-  - `yazi-plugins` — scheduled job that refreshes the plugin `rev`s in
-    `files/yazi/package.toml` (today left unpinned = latest) and opens a PR,
-    optionally gated on a build.
+  - `yazi-plugins` — scheduled job that bumps the pinned `rev`/`hash` in
+    `modules/yazi.nix` and opens a PR, gated on a build.
 
-- **Make the two non-declarative pieces declarative via CI PRs** — `cloneLazyVim`
-  and `ya pkg install` currently track "latest" by design. With the `lazyvim` and
-  `yazi-plugins` jobs above, pin them to revs that CI bumps and a `check` build
-  verifies, giving self-updating behavior *plus* rollback/pin-at-will.
+- **Make LazyVim's non-declarative clone declarative via CI PRs** — yazi plugins
+  are already declarative (pinned rev/hash); `cloneLazyVim` still tracks `HEAD`.
+  The `lazyvim` job pins the starter to a rev CI bumps, giving self-updating
+  behavior *plus* rollback/pin-at-will.
