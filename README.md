@@ -120,15 +120,31 @@ starter. No rev/hash pins by default — `ya pkg upgrade` (run via topgrade's
 | tldr cache | `tldr --update` | `tealdeer/config.toml` with `auto_update = true` |
 | television channels | `tv update-channels` | `home.activation.updateTvChannels` |
 
-## Not yet migrated
-
-Still living in the old dotfiles repo, pending a new home (likely `nix-cli`,
-which already has a `quadlets/` dir):
-
-- `container_templates/` — the podman quadlets (Windows VM, omnitools, searxng).
-
 ## Local overrides
 
 `~/.config/nushell/env.local.nu` is materialized once by
 `home.activation.materializeEnvLocal` and never overwritten (chezmoi's `create_`
 pattern). Put per-host secrets/API keys there.
+
+## Roadmap
+
+### Planned
+
+- **CI** (`.github/workflows/`), to close the loop on the two non-declarative
+  pieces below. Using Determinate Systems actions (`determinate-nix-action`,
+  `magic-nix-cache-action`, `update-flake-lock`):
+  - `check` — run `nix flake check` (builds every `homeConfigurations`) on push
+    & PR to gate broken configs.
+  - `update-flake-lock` — scheduled `nix flake update` that opens a PR with a
+    fresh lock file (`nixpkgs` / `home-manager` / `nix-cli`).
+  - `lazyvim` — scheduled job that watches `LazyVim/starter` for a new default
+    commit and opens a PR pinning it, so the `cloneLazyVim` activation stays
+    reproducible and reviewed instead of silently tracking `HEAD`.
+  - `yazi-plugins` — scheduled job that refreshes the plugin `rev`s in
+    `files/yazi/package.toml` (today left unpinned = latest) and opens a PR,
+    optionally gated on a build.
+
+- **Make the two non-declarative pieces declarative via CI PRs** — `cloneLazyVim`
+  and `ya pkg install` currently track "latest" by design. With the `lazyvim` and
+  `yazi-plugins` jobs above, pin them to revs that CI bumps and a `check` build
+  verifies, giving self-updating behavior *plus* rollback/pin-at-will.
