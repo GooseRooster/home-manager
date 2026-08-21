@@ -9,12 +9,14 @@ in
     ".local/bin/game-performance.sh" = lib.mkIf cfg.gaming.enable {
       source = ../files/scripts/game-performance.sh;
       executable = true;
+      force = true;
     };
 
     # Devcontainer template scaffolder — host/WSL only, not inside containers.
     ".local/bin/devcontainer-init" = lib.mkIf (!cfg.devcontainer.enable) {
       source = ../files/scripts/devcontainer-init;
       executable = true;
+      force = true;
     };
   };
 }

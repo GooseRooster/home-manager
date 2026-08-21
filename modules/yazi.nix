@@ -33,7 +33,19 @@ in
 
   # Plugin *list* is declared here; the plugins themselves are fetched by yazi's
   # own `ya pkg install` (latest, self-updating) — see files/yazi/package.toml.
-  xdg.configFile."yazi/package.toml".source = ../files/yazi/package.toml;
+  # force: HM owns these even if a pre-existing (e.g. old chezmoi) file is present.
+  xdg.configFile = {
+    "yazi/package.toml" = {
+      source = ../files/yazi/package.toml;
+      force = true;
+    };
+    # programs.yazi writes these; force them so HM can replace a stale copy.
+    "yazi/yazi.toml".force = true;
+    "yazi/keymap.toml".force = true;
+    "yazi/theme.toml".force = true;
+    "yazi/init.lua".force = true;
+    "yazi/flavors/inherit.yazi".force = true;
+  };
 
   # Fetch/refresh the plugins declared in package.toml (git on PATH for `ya`).
   home.activation.installYaziPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

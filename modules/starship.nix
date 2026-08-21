@@ -1,5 +1,8 @@
 { lib, ... }:
 
 {
-  xdg.configFile."starship.toml".source = ../files/starship.toml;
+  xdg.configFile."starship.toml" = {
+    source = ../files/starship.toml;
+    force = true;
+  };
 }

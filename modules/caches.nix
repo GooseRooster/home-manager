@@ -4,10 +4,13 @@
 # (tealdeer, television) come from nix-cli; here we only manage their state.
 {
   # tealdeer: auto-refresh the tldr page cache on use (replaces `tldr --update`).
-  xdg.configFile."tealdeer/config.toml".text = ''
-    [updates]
-    auto_update = true
-  '';
+  xdg.configFile."tealdeer/config.toml" = {
+    force = true;
+    text = ''
+      [updates]
+      auto_update = true
+    '';
+  };
 
   # television: fetch the community channel prototypes on first activation.
   # Network-dependent and failure-tolerant (like the old bootstrap step).

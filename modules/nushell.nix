@@ -59,18 +59,31 @@ in
     VISUAL = "${pkgs.neovim}/bin/nvim";
   };
 
+  # programs.nushell writes config.nu/env.nu; force them so HM replaces the
+  # default files nu generates on first run.
+  home.file = {
+    "${config.xdg.configHome}/nushell/config.nu".force = true;
+    "${config.xdg.configHome}/nushell/env.nu".force = true;
+  };
+
   xdg.configFile = {
-    "nushell/devcontainer.nu".source = ../files/nushell/devcontainer.nu;
+    "nushell/devcontainer.nu" = {
+      source = ../files/nushell/devcontainer.nu;
+      force = true;
+    };
 
     # Sourced unconditionally from config.nu; a no-op comment when the flag is off.
-    "nushell/podman-alias.nu".text = lib.optionalString cfg.podmanAlias.enable ''
-      # Point Docker CLI/API clients (lazydocker, the devcontainer CLI, etc.) at
-      # podman's rootless user socket, and make `docker` invoke podman. Both engines
-      # can stay installed — use `command docker` or the full path for the real docker.
-      $env.DOCKER_HOST = $"unix:///run/user/(^id -u | str trim)/podman/podman.sock"
-      alias docker = podman
-      alias lazypodman = lazydocker
-    '';
+    "nushell/podman-alias.nu" = {
+      force = true;
+      text = lib.optionalString cfg.podmanAlias.enable ''
+        # Point Docker CLI/API clients (lazydocker, the devcontainer CLI, etc.) at
+        # podman's rootless user socket, and make `docker` invoke podman. Both engines
+        # can stay installed — use `command docker` or the full path for the real docker.
+        $env.DOCKER_HOST = $"unix:///run/user/(^id -u | str trim)/podman/podman.sock"
+        alias docker = podman
+        alias lazypodman = lazydocker
+      '';
+    };
   };
 
   # env.local.nu: materialize once, never overwrite (chezmoi's `create_` pattern).
