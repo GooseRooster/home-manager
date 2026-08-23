@@ -106,4 +106,22 @@ in
       };
     })
   ];
+
+  # Theming: pre-create the directories tinty's hooks write into, then run the
+  # initial `tinty sync` so `gnomad`/`tinty apply` work immediately. Gated on
+  # the theming flag and idempotent (sync only runs when the data dir is
+  # absent). Runs after `writeBoundary` so the tinty config above already exists.
+  home.activation.tintySetup = lib.mkIf cfg.theming.enable (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run() {
+      local dirs="$HOME/.config/ghostty/themes $HOME/.claude/themes"
+      ${lib.optionalString cfg.gaming.enable ''dirs="$dirs $HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings"''}
+      mkdir -p $dirs
+
+      if [ ! -d "$HOME/.local/share/tinted-theming/tinty" ]; then
+        PATH="${pkgs.git}/bin:$PATH" ${pkgs.tinty}/bin/tinty sync \
+          || echo "WARN: 'tinty sync' failed (offline?), skipping." >&2
+      fi
+    }
+    run
+  '');
 }
