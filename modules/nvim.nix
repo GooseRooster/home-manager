@@ -6,13 +6,19 @@
 # self-updating directory, so we clone it once and copy our files over it.
 {
   # Clone LazyVim/starter into ~/.config/nvim if absent (idempotent).
+  # Network-dependent and failure-tolerant: an offline first boot must not
+  # abort the whole Home Manager activation (exit 128 from `git clone`).
   home.activation.cloneLazyVim = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     run() {
       local dir="$HOME/.config/nvim"
       if [ ! -e "$dir" ]; then
         mkdir -p "$HOME/.config"
-        ${pkgs.git}/bin/git clone https://github.com/LazyVim/starter "$dir"
-        rm -rf "$dir/.git"
+        if ${pkgs.git}/bin/git clone https://github.com/LazyVim/starter "$dir"; then
+          rm -rf "$dir/.git"
+        else
+          echo "WARN: 'git clone LazyVim/starter' failed (offline?), skipping." >&2
+          rm -rf "$dir"
+        fi
       fi
     }
     run

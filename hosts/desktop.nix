@@ -2,8 +2,8 @@
 
 # NixOS desktop (nixos-config host "home"): full shell + editor + theming + gaming.
 {
-  home.username = "gooze";
-  home.homeDirectory = "/home/gooze";
+  home.username = "goose";
+  home.homeDirectory = "/home/goose";
 
   home.modules.gaming.enable = true;
   home.modules.theming.enable = true;
