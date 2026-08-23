@@ -65,7 +65,7 @@ Like `nixos-config`'s `hosts/` + `nixosConfigurations`, add a host here in two s
 
 `homeConfigurations` is the standalone target (`home-manager switch --flake .#<name>`);
 `hmModules` is the reusable module for NixOS integration below. For a host that
-needs a non-`goose` user, set `home.username`/`home.homeDirectory` in its
+needs a non-`gooze` user, set `home.username`/`home.homeDirectory` in its
 `hosts/<name>.nix` (see `hosts/devcontainer.nix` for the env-driven variant).
 
 ### NixOS integration (recommended)
@@ -89,7 +89,7 @@ Then per host (e.g. in `hosts/home/default.nix`):
 ```nix
 { inputs, ... }: {
   imports = [ inputs.home-manager.nixosModules.home-manager ];
-  home-manager.users.goose = {
+  home-manager.users.gooze = {
     imports = [ inputs.dotfiles.hmModules.default ];
     # Set the flags to mirror the system-side toggles:
     home.modules.gaming.enable = true;
