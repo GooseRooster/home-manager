@@ -27,10 +27,4 @@ killall -SIGUSR2 ghostty 2>/dev/null || true
 """
 supported-systems = ["base16", "base24"]
 
-{{ VESKTOP }}#Zen
-[[items]]
-path = "https://github.com/GooseRooster/base16-tinted-zen"
-name = "base16-tinted-zen"
-themes-dir = "output"
-hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/app.zen_browser.zen/.zen/$(ls ~/.var/app/app.zen_browser.zen/.zen | grep -i 'release' | head -1)/chrome/userChrome.css\""
-supported-systems = ["base16"]
+
