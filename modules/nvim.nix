@@ -28,6 +28,10 @@
   home.activation.overlayNvimLua = lib.hm.dag.entryAfter [ "cloneLazyVim" ] ''
     run() {
       mkdir -p "$HOME/.config/nvim/lua"
+      # cp preserves the read-only mode of store paths (444/555), which would
+      # make the *next* activation fail with "Permission denied" when it tries
+      # to overwrite them. Make the tree owner-writable before copying.
+      chmod -R u+w "$HOME/.config/nvim/lua"
       cp -rf ${../files/nvim/lua}/. "$HOME/.config/nvim/lua/"
     }
     run
