@@ -7,7 +7,7 @@
   imports = [
     ./modules/flavors.nix
     ./modules/nushell.nix
-    ./modules/nvim.nix
+    ./modules/bootstrap.nix
     ./modules/yazi.nix
     ./modules/starship.nix
     ./modules/topgrade.nix

@@ -110,14 +110,29 @@ Plugins are fully declarative: pinned to a `rev` + `hash` in
 no runtime network or git). To update one, bump its `rev`/`hash` — the CI
 `yazi-plugins` job (see Roadmap) can do this via PR.
 
+## Bootstrap
+
+Mutable, network-dependent state (the LazyVim starter, `tinty` theme repos,
+television channels) is initialised by a single idempotent `bootstrap` command —
+run it **once per machine**, after the first switch and once you're online:
+
+```sh
+bootstrap
+```
+
+It's safe to re-run (each step skips itself once done, and the LazyVim clone is
+keyed on `~/.config/nvim/init.lua`, so a failed offline run retries cleanly next
+time). Re-run it any time a step reports a network failure.
+
 ## Mutable state, declaratively
 
 | Tool | Old (chezmoi bootstrap) | Now |
 |------|------------------------|-----|
-| LazyVim starter | `git clone` + `rm .git` | `home.activation.cloneLazyVim` (idempotent, self-updating) |
+| LazyVim starter | `git clone` + `rm .git` | `bootstrap` (idempotent, self-updating) |
 | yazi plugins | `ya pkg install` | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tldr --update` | `tealdeer/config.toml` with `auto_update = true` |
-| television channels | `tv update-channels` | `home.activation.updateTvChannels` |
+| television channels | `tv update-channels` | `bootstrap` |
+| tinty theme repos | `tinty sync` | `bootstrap` |
 
 ## Local overrides
 
@@ -137,12 +152,13 @@ pattern). Put per-host secrets/API keys there.
   - `update-flake-lock` — scheduled `nix flake update` that opens a PR with a
     fresh lock file (`nixpkgs` / `home-manager` / `nix-cli`).
   - `lazyvim` — scheduled job that watches `LazyVim/starter` for a new default
-    commit and opens a PR pinning it, so the `cloneLazyVim` activation stays
+    commit and opens a PR pinning it, so the `bootstrap` clone stays
     reproducible and reviewed instead of silently tracking `HEAD`.
   - `yazi-plugins` — scheduled job that bumps the pinned `rev`/`hash` in
     `modules/yazi.nix` and opens a PR, gated on a build.
 
 - **Make LazyVim's non-declarative clone declarative via CI PRs** — yazi plugins
-  are already declarative (pinned rev/hash); `cloneLazyVim` still tracks `HEAD`.
+  are already declarative (pinned rev/hash); the `bootstrap` clone still tracks
+  `HEAD`.
   The `lazyvim` job pins the starter to a rev CI bumps, giving self-updating
   behavior *plus* rollback/pin-at-will.
