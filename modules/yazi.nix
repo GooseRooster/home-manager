@@ -49,6 +49,12 @@ in
   programs.yazi = {
     enable = true;
 
+    # The yazi *binary* comes from nix-cli's #base bundle (installed via
+    # `nix profile add`), not HM — this repo owns config, nix-cli owns binaries.
+    # Setting package to emptyDirectory keeps HM's plugin/settings/keymap/theme
+    # machinery active but avoids the file collision on ~/.nix-profile/bin/yazi.
+    package = pkgs.emptyDirectory;
+
     # We define our own `y` (cd-on-exit) wrapper in config.nu — don't add
     # yazi's, or nushell sees `y` twice.
     enableNushellIntegration = false;

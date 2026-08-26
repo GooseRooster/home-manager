@@ -15,6 +15,9 @@ in
 {
   programs.nushell = {
     enable = true;
+    # Binary comes from nix-cli's #base bundle; HM only writes config. See the
+    # matching note in modules/yazi.nix for the split-repo rationale.
+    package = pkgs.emptyDirectory;
     configFile.source = ../files/nushell/config.nu;
     envFile.text = ''
       # ── SSH agent ─────────────────────────────────────────────────────────────

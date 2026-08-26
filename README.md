@@ -16,6 +16,13 @@ home-manager    ← this repo: home dotfiles
 - **Dev toolchains** (dotnet, java, rust, node, …) belong in dev containers or
   `nix develop` environments — never here.
 
+To enforce the split, HM modules that use the `programs.<tool>` machinery
+(currently `programs.yazi`, `programs.nushell`) set `package = pkgs.emptyDirectory`
+so HM writes config + wires plugins/integrations without also dropping the
+binary into `~/.nix-profile/bin` — which would collide with the same binary
+provided by `#base`. Add the same one-liner to any new `programs.*` module you
+enable here.
+
 ## Targets / flavors
 
 Each target enables a set of feature flags (`home.modules.*`), the HM equivalent
