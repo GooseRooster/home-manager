@@ -21,5 +21,11 @@
   programs.home-manager.enable = true;
   xdg.enable = true;
 
+  # Some HM-referenced packages (or #base-extra bundles) are unfree (e.g. vscode).
+  # This scopes allowUnfree to the HM-built nixpkgs instance only; system-wide
+  # nix commands still need `NIXPKGS_ALLOW_UNFREE=1 --impure` (or a user
+  # ~/.config/nix/nix.conf entry).
+  nixpkgs.config.allowUnfree = true;
+
   home.stateVersion = "26.05";
 }

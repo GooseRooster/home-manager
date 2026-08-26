@@ -33,33 +33,74 @@ mpv, tinty, owl.jpg) the same way the old `.chezmoiignore.tmpl` did.
 
 ## Applying
 
-Standalone (any distro with Nix):
+Standalone (any distro with Nix — foreign systems included):
 
 ```sh
 home-manager switch --flake github:GooseRooster/home-manager#desktop
-home-manager switch --flake github:GooseRooster/home-manager#wsl
+home-manager switch --flake github:GooseRooster/home-manager#wsl --impure
 home-manager switch --flake github:GooseRooster/home-manager#devcontainer --impure
 ```
 
-The `devcontainer` target uses `--impure` because `hosts/devcontainer.nix` reads
-`$USER`/`$HOME` at eval time — the container's uid-1000 user varies by base image
-(`vscode`, `ubuntu`, …), so it can't be hardcoded.
+Both `wsl` and `devcontainer` targets use `--impure` because their `hosts/*.nix`
+read `$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro
+(NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, container `vscode`/`ubuntu`, …), so it
+can't be hardcoded. The desktop target has a fixed user and doesn't need it.
 
 From a local checkout:
 
 ```sh
 home-manager switch --flake .#desktop
+home-manager switch --flake .#wsl --impure
+```
+
+First-time bootstrap on a foreign system without `home-manager` on PATH yet
+(fetches HM itself via `nix run`, then subsequent switches use the HM binary
+installed into the user profile):
+
+```sh
+nix run github:nix-community/home-manager/master -- \
+  switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
 
 On NixOS, prefer wiring it through `nixos-config` (see below) so `nixos-rebuild
 switch` applies it with rollback.
+
+### Full foreign-WSL / devcontainer flow
+
+The two-repo split (`nix-cli` for binaries, this repo for config) is designed so
+a fresh WSL distro or devcontainer bootstraps in three commands after Nix is
+installed:
+
+```sh
+# 1) Enable flakes system-wide (once per distro).
+sudo tee -a /etc/nix/nix.conf >/dev/null <<'EOF'
+experimental-features = nix-command flakes
+trusted-users = root <your-user>
+EOF
+sudo systemctl restart nix-daemon.service   # skip on distros without systemd
+
+# 2) CLI batteries (nushell, neovim, yazi, lazygit, …).
+nix profile install \
+  github:GooseRooster/nix-cli#base \
+  github:GooseRooster/nix-cli#wsl     # omit the second URL for devcontainers
+
+# 3) Home Manager dotfiles.
+nix run github:nix-community/home-manager/master -- \
+  switch --flake github:GooseRooster/home-manager#wsl --impure
+#                                                #devcontainer for containers
+```
+
+Then run `bootstrap` once (see below) to prime the LazyVim starter and
+television channels.
 
 ## Adding a host
 
 Like `nixos-config`'s `hosts/` + `nixosConfigurations`, add a host here in two spots:
 
 1. `hosts/<name>.nix` — set `home.username`/`home.homeDirectory` and the
-   `home.modules.*` flags (copy `hosts/wsl.nix` as a template).
+   `home.modules.*` flags. Copy `hosts/desktop.nix` for a fixed-user host, or
+   `hosts/wsl.nix` / `hosts/devcontainer.nix` for one whose user varies by
+   distro/base-image (reads `$USER`/`$HOME` via `--impure`).
 2. `flake.nix` — add `<name>` to both `homeConfigurations.<name> = mkHome "<name>"`
    and `hmModules.<name> = mkHostModule "<name>"`.
 
