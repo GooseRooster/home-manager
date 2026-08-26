@@ -22,32 +22,50 @@ return {
 						hide_panel = { lhs = "q", desc = "Hide terminal panel" },
 					},
 				},
-				-- Only used when debugger.console = "externalTerminal".
-				-- wezterm is Windows-only here (/mnt/c); alacritty is the Linux binary on PATH.
-				external_terminal = {
-					command = "alacritty",
-					args = { "-e" },
-				},
 				projx_lsp = {
 					enabled = true,
 				},
 				lsp = {
 					enabled = true, -- Enable builtin roslyn lsp
 					set_fold_expr = false,
+					preload_roslyn = true, -- Start loading roslyn before any buffer is opened
 					roslynator_enabled = true, -- Automatically enable roslynator analyzer
 					easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
+					easy_dotnet_extension_enabled = true, -- Needs true for enhanced_rename / create_type_from_usage
+					enhanced_rename = true, -- Auto-rename file when renaming primary class
+					create_type_from_usage = true, -- Code action: create class from unresolved symbol
+					restart_roslyn_on_branch_change = true, -- Helps on Linux with stale diagnostics after big git swaps
 					auto_refresh_codelens = true,
 					suggest_updates = true, -- Periodically suggest roslyn-language-server updates
 					analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+					-- Razor cohosting: markup goes through vscode-html-language-server. Not bundled —
+					-- install with `npm i -g vscode-langservers-extracted` (or per project).
+					razor = {
+						enabled = true,
+						html = {
+							enabled = true,
+							cmd = nil, -- Auto-detect project node_modules/.bin, then PATH
+							request_timeout = 5000,
+						},
+					},
 					config = {},
 				},
 				debugger = {
 					-- Path to custom coreclr DAP adapter
-					-- easy-dotnet-server falls back to its own netcoredbg binary if bin_path is nil
+					-- When set, this fully overrides `engine`; easy-dotnet-server uses this binary as-is.
+					-- When nil, easy-dotnet-server falls back to its bundled debugger selected by `engine`.
 					bin_path = nil,
+					-- Bundled debugger used when bin_path is nil:
+					--   "netcoredbg" (default) — Samsung netcoredbg
+					--   "dncdbg"               — viewizard/dncdbg (richer fork of netcoredbg)
+					--   "sharpdbg"             — MattParkerDev/sharpdbg (C# rewrite)
+					engine = "netcoredbg",
 					console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
 					apply_value_converters = true,
 					auto_register_dap = true,
+					-- Sample the debugged process' CPU/mem so the `easy-dotnet_cpu` and
+					-- `easy-dotnet_mem` dapui widgets have data. Off = widgets unregistered.
+					mem_cpu_usage = true,
 					mappings = {
 						open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
 					},
@@ -95,6 +113,8 @@ return {
 						close = { lhs = "q", desc = "close testrunner" },
 						refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
 						cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+						next_failure = { lhs = "]f", desc = "jump to next failing test" },
+						prev_failure = { lhs = "[f", desc = "jump to previous failing test" },
 					},
 				},
 				new = {
@@ -114,6 +134,8 @@ return {
 					},
 				},
 				server = {
+					-- Windows .NET Framework support via MSBuild in a Visual Studio install.
+					use_visual_studio = false,
 					---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
 					log_level = nil,
 				},
@@ -127,7 +149,13 @@ return {
 					--Set this to false if you have configured lualine to avoid double logging
 					handler = function(start_event)
 						local spinner = require("easy-dotnet.ui-modules.spinner").new()
-						spinner:start_spinner(start_event.job.name)
+						-- Upstream switched start_spinner to a callable text provider so the
+						-- job name updates live; the spinner still accepts a plain string
+						-- for backwards compat, but the callable form is what current
+						-- easy-dotnet ships as the default handler.
+						spinner:start_spinner(function()
+							return start_event.job.name
+						end)
 						---@param finished_event JobEvent
 						return function(finished_event)
 							spinner:stop_spinner(finished_event.result.msg, finished_event.result.level)
