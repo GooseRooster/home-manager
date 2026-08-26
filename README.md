@@ -80,7 +80,7 @@ EOF
 sudo systemctl restart nix-daemon.service   # skip on distros without systemd
 
 # 2) CLI batteries (nushell, neovim, yazi, lazygit, …).
-nix profile install \
+nix profile add --refresh \
   github:GooseRooster/nix-cli#base \
   github:GooseRooster/nix-cli#wsl     # omit the second URL for devcontainers
 
