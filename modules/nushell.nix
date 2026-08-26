@@ -100,4 +100,48 @@ in
     }
     run
   '';
+
+  # WSL only: the distro (Ubuntu/Debian/…) owns ~/.bashrc, so we can't use
+  # programs.bash.initExtra without HM taking over the whole file. Append an
+  # idempotent block that hands off from bash to nu — but via PROMPT_COMMAND,
+  # not a top-level `nu` call.
+  #
+  # Why the deferral matters: `nix develop` sources ~/.bashrc BEFORE it
+  # activates the derivation env (PATH, IN_NIX_SHELL, shellHook). A naive
+  # `nu` at the top of bashrc therefore spawns nu with a pre-nix PATH — none
+  # of the devShell tools resolve, and `$env.IN_NIX_SHELL?` is missing. The
+  # same bug bites direnv, ssh-agent handoff, and anything else that mutates
+  # the env after ~/.bashrc but before the first prompt.
+  #
+  # PROMPT_COMMAND fires just before bash draws its first prompt, by which
+  # point the full nix env + shellHook are applied, so `exec nu` inherits
+  # everything. `exec` (not plain `nu`) means exiting nu returns to whatever
+  # spawned bash — no orphan bash prompt between nu and the parent.
+  home.activation.wslNuLauncher = lib.mkIf cfg.wsl.enable (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      run() {
+        local bashrc="$HOME/.bashrc"
+        local marker="# >>> home-manager: nu launcher >>>"
+        [ -e "$bashrc" ] || return 0
+        grep -qF "$marker" "$bashrc" && return 0
+        cat >>"$bashrc" <<'EOF'
+
+# >>> home-manager: nu launcher >>>
+# Managed by modules/nushell.nix (wslNuLauncher). Do not edit inline —
+# change the source and re-run `home-manager switch`. Delete the whole
+# block (markers and all) to force a re-materialization.
+#
+# Defer `exec nu` to PROMPT_COMMAND so that `nix develop`, direnv, and any
+# other rc-time env setup — which runs AFTER ~/.bashrc but BEFORE the
+# first prompt — is fully applied when nu spawns. A plain `nu` at the top
+# of bashrc snapshots a stale PATH and can't see devShell tools.
+if [[ $- == *i* ]]; then
+  PROMPT_COMMAND='exec nu'
+fi
+# <<< home-manager: nu launcher <<<
+EOF
+      }
+      run
+    ''
+  );
 }
