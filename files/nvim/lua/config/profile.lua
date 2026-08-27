@@ -186,7 +186,7 @@ M.baseline_treesitter = {}
 M.minimal_langs = { "git", "json", "yaml", "docker", "nushell" }
 
 function M.is_container()
-	return env("DEVCONTAINER") ~= nil or env("CONTAINER_ID") ~= nil
+	return env("CONTAINER_ID") ~= nil
 end
 
 function M.is_host()

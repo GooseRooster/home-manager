@@ -1,7 +1,7 @@
 gui:
   # TTY-friendly theme. All values are SGR names; the host terminal's
   # palette drives the actual color, so this works across containers,
-  # SSH, devcontainers, tmux, any $TERM.
+  # SSH, tmux, any $TERM.
   # Only one key differs from lazygit's upstream default: selectedLineBgColor
   # is [default] instead of [blue]. gocui's setCharacter force-boldens and
   # bumps the cell color to the bright variant on selection regardless of

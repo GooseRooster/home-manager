@@ -69,9 +69,8 @@ def distro-glyph [] {
 
 def fastfetch [...args: string] {
   # Only want the greeting to fire if we are not within a container
-  # (distrobox sets CONTAINER_ID; dev containers set DEVCONTAINER via
-  # containerEnv in devcontainer.json).
-  if not ("CONTAINER_ID" in $env) and not ("DEVCONTAINER" in $env) {
+  # (distrobox sets CONTAINER_ID).
+  if not ("CONTAINER_ID" in $env) {
     let ff_dir    = ($nu.home-dir | path join ".config" "fastfetch")
     let config    = ($ff_dir | path join "config.jsonc")
     let logo_file = ($ff_dir | path join "logo.txt")   # per-machine, never committed to dotfiles
@@ -171,11 +170,6 @@ def copy [...args: string] {
 def dbx [name: string] {
   ^distrobox enter $name -- nu
 }
-
-# Devcontainer CLI wrappers (devc up/enter/nvim/stop/rm/ps) — see devcontainer.nu.
-# Safe to source unconditionally; each function checks for the devcontainer
-# CLI/podman itself and errors clearly if either is missing.
-source ~/.config/nushell/devcontainer.nu
 
 
 # ── Custom completions ────────────────────────────────────────────────────────

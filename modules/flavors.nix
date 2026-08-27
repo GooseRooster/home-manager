@@ -22,11 +22,8 @@ in
     podmanAlias = {
       enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in nushell.";
     };
-    devcontainer = {
-      enable = mkFlag "Lean dev-container profile: skip GUI/desktop-only dotfiles.";
-    };
     wsl = {
-      enable = mkFlag "NixOS-WSL profile: skip GUI dotfiles but keep devcontainer-init.";
+      enable = mkFlag "NixOS-WSL profile: skip GUI dotfiles.";
     };
   };
 }

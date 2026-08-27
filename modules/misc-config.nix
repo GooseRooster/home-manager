@@ -3,9 +3,9 @@
 let
   cfg = config.home.modules;
 
-  # GUI/desktop-only configs are skipped in dev containers and WSL, mirroring
-  # chezmoi's .chezmoiignore.tmpl devcontainer/wsl blocks.
-  desktopOnly = !cfg.devcontainer.enable && !cfg.wsl.enable;
+  # GUI/desktop-only configs are skipped on WSL, mirroring chezmoi's old
+  # .chezmoiignore.tmpl wsl block.
+  desktopOnly = !cfg.wsl.enable;
 
   # tinty Vesktop hook — only when gaming is enabled (see files/tinty/config.toml).
   vesktopBlock = ''

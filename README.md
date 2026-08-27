@@ -12,9 +12,12 @@ home-manager    ← this repo: home dotfiles
 
 - **nix-cli** owns *binaries* (nushell, neovim, yazi, tealdeer, television, …).
 - **home-manager** owns *config* and the mutable state those tools need (yazi
-  plugins, tldr/television caches, the LazyVim starter).
-- **Dev toolchains** (dotnet, java, rust, node, …) belong in dev containers or
-  `nix develop` environments — never here.
+  plugins, tldr/television caches, the LazyVim starter). Also owns
+  reusable **Nix devShell templates** (see [Devshell templates](#devshell-templates))
+  for scaffolding project-local dev environments.
+- **Dev toolchains** (dotnet, java, rust, node, …) belong in project-local
+  `nix develop` environments — never installed here directly. The devshell
+  templates provide the seed configs for those.
 
 To enforce the split, HM modules that use the `programs.<tool>` machinery
 (currently `programs.yazi`, `programs.nushell`) set `package = pkgs.emptyDirectory`
@@ -32,11 +35,10 @@ of chezmoi's `chezmoi.toml` `[data]` flags and `.chezmoiignore.tmpl`.
 |--------|-----|----------|
 | `desktop` | NixOS desktop | `gaming`, `theming` |
 | `wsl` | NixOS-WSL dev host | `wsl`, `podmanAlias` |
-| `devcontainer` | lean container | `devcontainer`, `podmanAlias` |
 
-Flags: `gaming`, `theming`, `podmanAlias`, `devcontainer`, `wsl` (see
-`modules/flavors.nix`). `devcontainer`/`wsl` skip GUI-only dotfiles (ghostty,
-mpv, tinty, owl.jpg) the same way the old `.chezmoiignore.tmpl` did.
+Flags: `gaming`, `theming`, `podmanAlias`, `wsl` (see `modules/flavors.nix`).
+`wsl` skips GUI-only dotfiles (ghostty, mpv, tinty, owl.jpg) the same way the
+old `.chezmoiignore.tmpl` did.
 
 ## Applying
 
@@ -45,13 +47,12 @@ Standalone (any distro with Nix — foreign systems included):
 ```sh
 home-manager switch --flake github:GooseRooster/home-manager#desktop
 home-manager switch --flake github:GooseRooster/home-manager#wsl --impure
-home-manager switch --flake github:GooseRooster/home-manager#devcontainer --impure
 ```
 
-Both `wsl` and `devcontainer` targets use `--impure` because their `hosts/*.nix`
-read `$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro
-(NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, container `vscode`/`ubuntu`, …), so it
-can't be hardcoded. The desktop target has a fixed user and doesn't need it.
+The `wsl` target uses `--impure` because its `hosts/wsl.nix` reads
+`$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro
+(NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, …), so it can't be hardcoded. The
+desktop target has a fixed user and doesn't need it.
 
 From a local checkout:
 
@@ -72,11 +73,10 @@ nix run github:nix-community/home-manager/master -- \
 On NixOS, prefer wiring it through `nixos-config` (see below) so `nixos-rebuild
 switch` applies it with rollback.
 
-### Full foreign-WSL / devcontainer flow
+### Full foreign-WSL flow
 
 The two-repo split (`nix-cli` for binaries, this repo for config) is designed so
-a fresh WSL distro or devcontainer bootstraps in three commands after Nix is
-installed:
+a fresh WSL distro bootstraps in three commands after Nix is installed:
 
 ```sh
 # 1) Enable flakes system-wide (once per distro).
@@ -89,12 +89,11 @@ sudo systemctl restart nix-daemon.service   # skip on distros without systemd
 # 2) CLI batteries (nushell, neovim, yazi, lazygit, …).
 nix profile add --refresh \
   github:GooseRooster/nix-cli#base \
-  github:GooseRooster/nix-cli#wsl     # omit the second URL for devcontainers
+  github:GooseRooster/nix-cli#wsl
 
 # 3) Home Manager dotfiles.
 nix run github:nix-community/home-manager/master -- \
   switch --flake github:GooseRooster/home-manager#wsl --impure
-#                                                #devcontainer for containers
 ```
 
 Then run `bootstrap` once (see below) to prime the LazyVim starter and
@@ -106,15 +105,15 @@ Like `nixos-config`'s `hosts/` + `nixosConfigurations`, add a host here in two s
 
 1. `hosts/<name>.nix` — set `home.username`/`home.homeDirectory` and the
    `home.modules.*` flags. Copy `hosts/desktop.nix` for a fixed-user host, or
-   `hosts/wsl.nix` / `hosts/devcontainer.nix` for one whose user varies by
-   distro/base-image (reads `$USER`/`$HOME` via `--impure`).
+   `hosts/wsl.nix` for one whose user varies by distro (reads `$USER`/`$HOME`
+   via `--impure`).
 2. `flake.nix` — add `<name>` to both `homeConfigurations.<name> = mkHome "<name>"`
    and `hmModules.<name> = mkHostModule "<name>"`.
 
 `homeConfigurations` is the standalone target (`home-manager switch --flake .#<name>`);
 `hmModules` is the reusable module for NixOS integration below. For a host that
 needs a non-`gooze` user, set `home.username`/`home.homeDirectory` in its
-`hosts/<name>.nix` (see `hosts/devcontainer.nix` for the env-driven variant).
+`hosts/<name>.nix` (see `hosts/wsl.nix` for the env-driven variant).
 
 ### NixOS integration (recommended)
 
@@ -148,8 +147,8 @@ Then per host (e.g. in `hosts/home/default.nix`):
 
 `hmModules.default` is the shared base (no username/homeDirectory, no flags) —
 NixOS's HM integration infers the user from `home-manager.users.<name>`, so each
-host sets only the flags it needs. (The `hmModules.desktop`/`wsl`/`devcontainer`
-bundles are for standalone `homeConfigurations`, where username/flags must be set.)
+host sets only the flags it needs. (The `hmModules.desktop`/`wsl` bundles are for
+standalone `homeConfigurations`, where username/flags must be set.)
 
 ## Yazi plugin updates
 
@@ -157,6 +156,34 @@ Plugins are fully declarative: pinned to a `rev` + `hash` in
 `modules/yazi.nix` via `programs.yazi.plugins` (fetched from the Nix store,
 no runtime network or git). To update one, bump its `rev`/`hash` — the CI
 `yazi-plugins` job (see Roadmap) can do this via PR.
+
+## Devshell templates
+
+Reusable Nix devShell scaffolds for project-local dev environments, shipped in
+`files/devshell-templates/` and materialized on switch into
+`~/.local/share/devshell-templates/`. The `devshell-init` helper drops a
+template into a target repo. Deployed by `modules/scripts.nix` on both remaining
+hosts (desktop, wsl).
+
+Currently available:
+
+- **`dotnet`** — .NET SDK 10 + `dart-sass` + local-tool-manifest restore + dev
+  cert export to `./.certs/` + optional `./.dev.local.sh` personal hook. See
+  `files/devshell-templates/dotnet/README.md` for adoption details and a
+  couple of NLog gotchas worth remembering.
+
+Usage from any repo:
+
+```sh
+devshell-init                     # list available templates
+devshell-init dotnet              # scaffold into CWD
+devshell-init dotnet path/to/repo # scaffold into a target dir
+devshell-init dotnet --force      # allow overwrite of existing flake.nix / .envrc
+```
+
+Templates are personal reference material — each is a snapshot you copy and
+then diverge from per-project. Refresh a template in-place when you learn
+something worth propagating back to future scaffolds.
 
 ## Bootstrap
 

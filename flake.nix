@@ -34,14 +34,12 @@
       homeConfigurations = {
         desktop = mkHome "desktop";
         wsl = mkHome "wsl";
-        devcontainer = mkHome "devcontainer";
       };
 
       hmModules = {
         default = ./home.nix;
         desktop = mkHostModule "desktop";
         wsl = mkHostModule "wsl";
-        devcontainer = mkHostModule "devcontainer";
       };
     };
 }

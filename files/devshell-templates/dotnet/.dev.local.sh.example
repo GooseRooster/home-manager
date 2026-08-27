@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Personal dev hook — copy to ./.dev.local.sh (gitignored) to opt in.
+#
+# The flake's shellHook sources ./.dev.local.sh at the end of shell setup, so
+# anything you export or run here happens after the SDK, sass, dotnet local
+# tools, and dev cert are already in place.
+#
+# This file is only a template — the real ./.dev.local.sh is entirely yours.
+# Teammates without one see nothing (the source is guarded).
+
+# ─── Personal dotnet global tools ──────────────────────────────────────────
+#
+# List package IDs here; the loop below install-or-upgrades each one on shell
+# entry, throttled to once per day so you're not hitting NuGet on every
+# direnv reload. Tools installed by `dotnet tool install --global` live at
+# ~/.dotnet/tools/ — that's your $HOME, not the Nix store, so they persist
+# across shell exits, `nix develop` rebuilds, and `nix flake update` bumps.
+#
+# `dotnet tool update` is used deliberately (not `install`):
+#   * If the tool is NOT installed, `update` installs it.
+#   * If it IS installed, `update` checks NuGet and upgrades to latest if a
+#     newer version exists (whereas `install` just exits 0 without checking).
+# So `update` is the always-do-the-right-thing verb.
+personal_tools=(
+    # Roslyn language server for neovim / editor use:
+    # csharp-ls
+    # easy-dotnet.nvim's companion binary:
+    # EasyDotnet
+    # EF Core CLI:
+    # dotnet-ef
+    # Interactive .NET REPL:
+    # dotnet-script
+)
+
+if [ "${#personal_tools[@]}" -gt 0 ]; then
+    marker="$HOME/.cache/devshell-dotnet/personal-tools-checked"
+    # Refresh once every 24 hours. Tweak the threshold, or delete the marker
+    # to force an immediate check.
+    refresh_after_hours=24
+    now=$(date +%s)
+    last=0
+    [ -f "$marker" ] && last=$(stat -c %Y "$marker" 2>/dev/null || echo 0)
+    if [ $(( now - last )) -gt $(( refresh_after_hours * 3600 )) ]; then
+        echo "==> Personal: checking dotnet global tool updates"
+        mkdir -p "$(dirname "$marker")"
+        for tool in "${personal_tools[@]}"; do
+            # `|| true` keeps a single failed update (e.g. transient NuGet
+            # outage, or a tool pulled from the feed) from aborting the hook.
+            dotnet tool update --global "$tool" >/dev/null 2>&1 || \
+                echo "    - failed to update $tool (skipping)"
+        done
+        touch "$marker"
+    fi
+fi
+
+# ─── Personal env vars ─────────────────────────────────────────────────────
+#
+# Handy for pointing local runs at non-default environments without touching
+# committed appsettings files.
+#
+# export ASPNETCORE_ENVIRONMENT=QA
+# export SOME_LOCAL_SECRET=...
+
+# ─── Personal aliases / functions ──────────────────────────────────────────
+#
+# alias run='dotnet run --project src/YourApp/YourApp.csproj'
+# alias watch='dotnet watch --project src/YourApp/YourApp.csproj'

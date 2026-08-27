@@ -44,7 +44,7 @@ in
         # easy-dotnet.nvim shells out to the `dotnet-easydotnet` binary (the
         # EasyDotnet global .NET tool) on startup. Without it the plugin fails
         # with "Failed to start dotnet server". Gated on `dotnet` being on PATH
-        # so hosts/devcontainers without the SDK are a silent no-op.
+        # so hosts without the SDK are a silent no-op.
         echo "==> easy-dotnet: EasyDotnet global tool"
         if command -v dotnet >/dev/null 2>&1; then
           if dotnet tool list -g 2>/dev/null | grep -qi '^easydotnet '; then

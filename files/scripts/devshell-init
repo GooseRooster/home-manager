@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# devshell-init — copy one of the Nix devShell templates (see
+# devshell-templates/) into another repo you're working on.
+#
+# Usage:
+#   devshell-init <template-name> [target-dir]   # target-dir defaults to .
+#   devshell-init                                # list available templates
+#   devshell-init <template-name> --force        # allow overwriting existing files
+#
+# Files are dropped at the target's ROOT (flake.nix, .envrc,
+# .config/dotnet-tools.json, .dev.local.sh.example, README of the
+# template) — that's how Nix devShells are meant to sit.
+#
+# Templates are looked up in $DEVSHELL_TEMPLATES_DIR (default:
+# ~/.local/share/devshell-templates), which is materialized by
+# ~/repos/home-manager (modules/scripts.nix).
+
+set -euo pipefail
+
+TEMPLATES_DIR="${DEVSHELL_TEMPLATES_DIR:-$HOME/.local/share/devshell-templates}"
+
+_list_templates() {
+  echo "Available templates (from $TEMPLATES_DIR):"
+  if [[ ! -d "$TEMPLATES_DIR" ]]; then
+    echo "  (templates dir missing — run 'home-manager switch' to materialize)"
+    return
+  fi
+  for dir in "$TEMPLATES_DIR"/*/; do
+    [[ -d "$dir" ]] || continue
+    echo "  - $(basename "$dir")"
+  done
+}
+
+FORCE=false
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+  --force) FORCE=true ;;
+  *) ARGS+=("$arg") ;;
+  esac
+done
+
+if [[ "${#ARGS[@]}" -lt 1 ]]; then
+  _list_templates
+  exit 0
+fi
+
+TEMPLATE_NAME="${ARGS[0]}"
+TARGET_DIR="${ARGS[1]:-.}"
+TEMPLATE_SRC="$TEMPLATES_DIR/$TEMPLATE_NAME"
+
+if [[ ! -d "$TEMPLATE_SRC" ]]; then
+  echo "ERROR: Unknown template '$TEMPLATE_NAME'." >&2
+  _list_templates >&2
+  exit 1
+fi
+
+mkdir -p "$TARGET_DIR"
+
+# Refuse to clobber a repo that already has a flake.nix / .envrc / dotnet
+# manifest unless explicitly forced. These are the sentinels most likely to
+# indicate the repo already has a devShell of its own.
+if [[ "$FORCE" != true ]]; then
+  for sentinel in flake.nix .envrc .config/dotnet-tools.json; do
+    if [[ -e "$TARGET_DIR/$sentinel" ]]; then
+      echo "ERROR: $TARGET_DIR/$sentinel already exists. Pass --force to overwrite." >&2
+      exit 1
+    fi
+  done
+fi
+
+# Copy template contents (dotfiles included) into the target root.
+cp -rT "$TEMPLATE_SRC" "$TARGET_DIR"
+
+echo "Copied '$TEMPLATE_NAME' template into $TARGET_DIR"
+echo ""
+echo "Next steps:"
+echo "  - Append to $TARGET_DIR/.gitignore:"
+echo "      /.certs/"
+echo "      /.dev.local.sh"
+echo "      /.direnv/"
+echo "      /.envrc.local"
+echo "      /.config/.tools-restored"
+echo "  - Trust the dev cert on this host (one-off):"
+echo "      dotnet dev-certs https --trust"
+echo "  - Enter the shell:  direnv allow   (or: nix develop)"
+echo "  - Personalize (optional): cp $TARGET_DIR/.dev.local.sh.example \\"
+echo "                              $TARGET_DIR/.dev.local.sh  (gitignored)"
+echo "  - Read $TARGET_DIR/README.md for template-specific gotchas."
