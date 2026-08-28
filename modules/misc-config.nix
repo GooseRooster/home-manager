@@ -7,7 +7,6 @@ let
   # .chezmoiignore.tmpl wsl block.
   desktopOnly = !cfg.wsl.enable;
 
-  # tinty Vesktop hook — only when gaming is enabled (see files/tinty/config.toml).
   vesktopBlock = ''
     #Vesktop (Discord)
     [[items]]
@@ -19,21 +18,16 @@ let
     hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\""
   '';
 
-  # tinty -> Noctalia palette hook — only when the noctalia session is active.
-  # Copies the generated base16 palette into Noctalia's user-writable palettes
-  # dir (~/.config/noctalia/palettes/) and applies it as a custom scheme.
-  noctaliaBlock = ''
-    [[items]]
-    path = "https://github.com/LePetitPrince-4/base16-noctalia"
-    name = "noctalia"
-    themes-dir = "palettes"
-    hook = "cp -f $TINTY_THEME_FILE_PATH ~/.config/noctalia/palettes/tinty.json && noctalia msg color-scheme-set custom tinty"
-  '';
-
-  # Ghostty config: `theme` only when tinty theming is enabled (else ghostty tries
-  # to load a tinty theme that was never written), and the shell is the Nix nu.
+  # Ghostty config. The `theme` line points at whichever retint mechanism the
+  # session uses: tinty writes ~/.config/ghostty/themes/tinted-theming, while
+  # Noctalia's builtin ghostty template writes ~/.config/ghostty/themes/noctalia
+  # (and its apply.sh no-ops on configs already set to `theme = noctalia`,
+  # which matters because HM's config is a read-only symlink).
+  # The shell is the Nix nu.
   ghosttyConfig = lib.concatStringsSep "\n" (
-    (lib.optional cfg.theming.enable "theme = \"tinted-theming\"")
+    (lib.optional cfg.theming.enable (
+      if cfg.session == "noctalia" then "theme = noctalia" else "theme = \"tinted-theming\""
+    ))
     ++ [
       "command = ${pkgs.nushell}/bin/nu"
       "confirm-close-surface = false"
@@ -43,9 +37,6 @@ let
   ) + "\n";
 in
 {
-  # Platform-agnostic configs — binaries come from nix-cli / nixos-config, these
-  # only place the config files. force = true: HM owns them (lazygit/lazydocker/
-  # btop generate a default on first run; old chezmoi copies may also exist).
   xdg.configFile = {
     "btop/btop.conf" = {
       source = ../files/btop/btop.conf;
@@ -86,8 +77,9 @@ in
       };
     })
 
-    # Theming (tinty scheme sync + gnomad schemes) — desktop only.
-    (lib.mkIf cfg.theming.enable {
+    # Theming (tinty scheme sync + gnomad schemes) — desktop only. tinty is
+    # dropped in the noctalia session: Noctalia templates own app theming there.
+    (lib.mkIf (cfg.theming.enable && cfg.session != "noctalia") {
       ".config/gnomad/schemes/dragon-ember.yaml" = {
         source = ../files/gnomad/schemes/dragon-ember.yaml;
         force = true;
@@ -111,11 +103,8 @@ in
       ".config/tinted-theming/tinty/config.toml" = {
         force = true;
         text = builtins.replaceStrings
-          [ "{{ VESKTOP }}" "{{ NOCTALIA }}" ]
-          [
-            (lib.optionalString cfg.gaming.enable vesktopBlock)
-            (lib.optionalString (cfg.session == "noctalia") noctaliaBlock)
-          ]
+          [ "{{ VESKTOP }}" ]
+          [ (lib.optionalString cfg.gaming.enable vesktopBlock) ]
           (builtins.readFile ../files/tinty/config.toml);
       };
     })

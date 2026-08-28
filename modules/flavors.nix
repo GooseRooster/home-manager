@@ -21,8 +21,9 @@ in
       default = "gnome";
       description = ''
         Desktop session stack: "gnome" (GDM + GNOME Shell) or "noctalia"
-        (ly + Umbriel + Noctalia v5). Gates session-specific integrations,
-        e.g. the tinty -> Noctalia palette hook.
+        (ly + Umbriel + Noctalia v5). In the noctalia session Noctalia's
+        builtin templates own app theming, so tinty config/tooling is dropped
+        and ghostty points at Noctalia's rendered theme.
       '';
     };
     gaming = {

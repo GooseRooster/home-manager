@@ -15,8 +15,10 @@ in
   home.packages = [
     (pkgs.writeShellApplication {
       name = "bootstrap";
+      # tinty is only used outside the noctalia session (Noctalia templates own
+      # app theming there) — see modules/misc-config.nix.
       runtimeInputs = [ pkgs.git pkgs.television ]
-        ++ lib.optionals cfg.theming.enable [ pkgs.tinty ];
+        ++ lib.optionals (cfg.theming.enable && cfg.session != "noctalia") [ pkgs.tinty ];
       text = ''
         # Neovim: clone LazyVim starter (keyed on init.lua, not the directory, so
         # a partial/offline failure is retried on the next run), then overlay our
@@ -58,7 +60,7 @@ in
         else
           echo "    dotnet SDK not on PATH, skipping (nothing to do)."
         fi
-      '' + lib.optionalString cfg.theming.enable ''
+      '' + lib.optionalString (cfg.theming.enable && cfg.session != "noctalia") ''
         # tinty: pre-create hook output dirs, then fetch theme repos once.
         echo "==> tinty: theme repos + hook dirs"
         mkdir -p "$HOME/.config/ghostty/themes" "$HOME/.claude/themes"
