@@ -1,0 +1,39 @@
+name: update-flake-lock
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Sundays 03:17 UTC — after nix-cli's Saturday PR (approved & merged),
+    # so the nix-cli input bump picks up the new main.
+    - cron: "17 3 * * 0"
+
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/determinate-nix-action@v3
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # Gate before the PR: build the desktop home config (the wsl target
+      # needs --impure env vars to activate, but builds fine).
+      - name: Update inputs and build desktop home config
+        run: |
+          nix flake update
+          nix build .#homeConfigurations.desktop.activationPackage
+
+      - name: Open/update PR
+        uses: DeterminateSystems/update-flake-lock@main
+        with:
+          pr-title: "flake.lock: update nixpkgs / home-manager / nix-cli"
+          pr-labels: |
+            dependencies
+            automated

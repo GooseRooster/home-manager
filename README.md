@@ -154,8 +154,9 @@ standalone `homeConfigurations`, where username/flags must be set.)
 
 Plugins are fully declarative: pinned to a `rev` + `hash` in
 `modules/yazi.nix` via `programs.yazi.plugins` (fetched from the Nix store,
-no runtime network or git). To update one, bump its `rev`/`hash` — the CI
-`yazi-plugins` job (see Roadmap) can do this via PR.
+no runtime network or git). To update one, bump its `rev`/`hash` — or let the
+weekly CI `yazi-plugins` job open a PR doing exactly that
+(`bash scripts/update-yazi-plugins.sh` works locally too).
 
 ## Devshell templates
 
@@ -219,21 +220,18 @@ pattern). Put per-host secrets/API keys there.
 
 ### Planned
 
-- **CI** (`.github/workflows/`), to close the loop on the two non-declarative
-  pieces below. Using Determinate Systems actions (`determinate-nix-action`,
-  `magic-nix-cache-action`, `update-flake-lock`):
-  - `check` — run `nix flake check` (builds every `homeConfigurations`) on push
-    & PR to gate broken configs.
-  - `update-flake-lock` — scheduled `nix flake update` that opens a PR with a
-    fresh lock file (`nixpkgs` / `home-manager` / `nix-cli`).
-  - `lazyvim` — scheduled job that watches `LazyVim/starter` for a new default
-    commit and opens a PR pinning it, so the `bootstrap` clone stays
-    reproducible and reviewed instead of silently tracking `HEAD`.
-  - `yazi-plugins` — scheduled job that bumps the pinned `rev`/`hash` in
-    `modules/yazi.nix` and opens a PR, gated on a build.
+- **`lazyvim`** — pin the LazyVim starter to a rev CI bumps (skipped for now:
+  the starter clones once at bootstrap and LazyVim self-updates).
 
-- **Make LazyVim's non-declarative clone declarative via CI PRs** — yazi plugins
-  are already declarative (pinned rev/hash); the `bootstrap` clone still tracks
-  `HEAD`.
-  The `lazyvim` job pins the starter to a rev CI bumps, giving self-updating
-  behavior *plus* rollback/pin-at-will.
+### Done
+
+- **CI** (`.github/workflows/`), using Determinate Systems actions:
+  - `check` — builds both `homeConfigurations` on push & PR (the `wsl` target
+    builds `--impure` with dummy env, since it reads `$USER`/`$HOME` at eval
+    time).
+  - `update-flake-lock` — Sundays 03:17 UTC: updates nixpkgs / home-manager /
+    nix-cli and opens a PR gated on a build. Runs after `nix-cli`'s Saturday
+    update so the merged `nix-cli` main is what gets pinned.
+  - `yazi-plugins` — Sundays 03:17 UTC: bumps the pinned `rev`/`hash` in
+    `modules/yazi.nix` (`scripts/update-yazi-plugins.sh`, also runnable
+    locally) and opens a separate PR gated on a build.

@@ -1,0 +1,50 @@
+name: update-yazi-plugins
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Sundays 03:17 UTC — alongside the flake-lock update (separate PR so a
+    # broken plugin bump doesn't block the nixpkgs/home-manager update).
+    - cron: "17 3 * * 0"
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  yazi-plugins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/determinate-nix-action@v3
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Bump pinned yazi plugins
+        id: bump
+        run: |
+          bash scripts/update-yazi-plugins.sh | tee /tmp/changelog.md
+          if git diff --quiet modules/yazi.nix; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Gate: builds the desktop home config, which fetches every plugin at
+      # its new pin — catches moved/renamed/deleted repos and broken hashes.
+      - name: Build desktop home config with new pins
+        if: steps.bump.outputs.changed == 'true'
+        run: nix build .#homeConfigurations.desktop.activationPackage
+
+      - name: Open/update PR
+        if: steps.bump.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: update-yazi-plugins
+          title: "yazi: bump pinned plugins"
+          body-path: /tmp/changelog.md
+          labels: |
+            dependencies
+            automated
