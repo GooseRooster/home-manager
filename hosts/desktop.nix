@@ -10,4 +10,8 @@
   # Rootless podman socket + docker->podman alias (lazydocker/lazypodman). SSH
   # agent still comes from gnome-keyring; podman socket is user-scoped.
   home.modules.podmanAlias.enable = true;
+
+  # ly + Umbriel + Noctalia v5 session (mirrors modules.desktop.session in the
+  # nixos-config host; both must agree).
+  home.modules.session = "noctalia";
 }

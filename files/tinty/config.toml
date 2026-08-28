@@ -28,3 +28,6 @@ killall -SIGUSR2 ghostty 2>/dev/null || true
 supported-systems = ["base16", "base24"]
 
 
+{{ VESKTOP }}
+
+{{ NOCTALIA }}

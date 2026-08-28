@@ -13,6 +13,18 @@ let
 in
 {
   options.home.modules = {
+    # Which desktop session stack this dotfiles config targets. Set directly
+    # in hosts/*.nix (standalone) or mirrored from the NixOS
+    # modules.desktop.session option by the host config (integrated).
+    session = lib.mkOption {
+      type = lib.types.enum [ "gnome" "noctalia" ];
+      default = "gnome";
+      description = ''
+        Desktop session stack: "gnome" (GDM + GNOME Shell) or "noctalia"
+        (ly + Umbriel + Noctalia v5). Gates session-specific integrations,
+        e.g. the tinty -> Noctalia palette hook.
+      '';
+    };
     gaming = {
       enable = mkFlag "Gaming-specific dotfile content (yazi Steam/Emulation hops, tinty Vesktop theme hook).";
     };

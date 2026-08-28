@@ -19,6 +19,17 @@ let
     hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\""
   '';
 
+  # tinty -> Noctalia palette hook — only when the noctalia session is active.
+  # Copies the generated base16 palette into Noctalia's user-writable palettes
+  # dir (~/.config/noctalia/palettes/) and applies it as a custom scheme.
+  noctaliaBlock = ''
+    [[items]]
+    path = "https://github.com/LePetitPrince-4/base16-noctalia"
+    name = "noctalia"
+    themes-dir = "palettes"
+    hook = "cp -f $TINTY_THEME_FILE_PATH ~/.config/noctalia/palettes/tinty.json && noctalia msg color-scheme-set custom tinty"
+  '';
+
   # Ghostty config: `theme` only when tinty theming is enabled (else ghostty tries
   # to load a tinty theme that was never written), and the shell is the Nix nu.
   ghosttyConfig = lib.concatStringsSep "\n" (
@@ -100,8 +111,11 @@ in
       ".config/tinted-theming/tinty/config.toml" = {
         force = true;
         text = builtins.replaceStrings
-          [ "{{ VESKTOP }}" ]
-          [ (lib.optionalString cfg.gaming.enable vesktopBlock) ]
+          [ "{{ VESKTOP }}" "{{ NOCTALIA }}" ]
+          [
+            (lib.optionalString cfg.gaming.enable vesktopBlock)
+            (lib.optionalString (cfg.session == "noctalia") noctaliaBlock)
+          ]
           (builtins.readFile ../files/tinty/config.toml);
       };
     })

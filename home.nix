@@ -21,6 +21,12 @@
   programs.home-manager.enable = true;
   xdg.enable = true;
 
+  # When switching between the two HM tracks (standalone `home-manager switch`
+  # vs the NixOS-integrated generation), pass `-b hm-backup` to standalone
+  # switches so pre-existing files from the other track are backed up instead
+  # of erroring. The integrated side sets home-manager.backupFileExtension in
+  # the nixos-config host, which does the same for system rebuilds.
+
   # Some HM-referenced packages (or #base-extra bundles) are unfree (e.g. vscode).
   # This scopes allowUnfree to the HM-built nixpkgs instance only; system-wide
   # nix commands still need `NIXPKGS_ALLOW_UNFREE=1 --impure` (or a user
