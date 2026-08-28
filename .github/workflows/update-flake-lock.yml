@@ -30,7 +30,7 @@ jobs:
       - name: Update inputs and build desktop home config
         run: |
           nix flake update
-          nix build .#homeConfigurations.desktop.activationPackage
+          nix build --no-link .#homeConfigurations.desktop.activationPackage
 
       - name: Open/update PR
         uses: DeterminateSystems/update-flake-lock@main

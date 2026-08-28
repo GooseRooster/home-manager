@@ -38,7 +38,7 @@ jobs:
       # its new pin — catches moved/renamed/deleted repos and broken hashes.
       - name: Build desktop home config with new pins
         if: steps.bump.outputs.changed == 'true'
-        run: nix build .#homeConfigurations.desktop.activationPackage
+        run: nix build --no-link .#homeConfigurations.desktop.activationPackage
 
       - name: Open/update PR
         if: steps.bump.outputs.changed == 'true'

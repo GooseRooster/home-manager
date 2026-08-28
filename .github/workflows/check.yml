@@ -27,5 +27,5 @@ jobs:
       # values; that's eval-time only, nothing activates.
       - name: Build home configurations
         run: |
-          nix build .#homeConfigurations.desktop.activationPackage
-          HOME=/home/runner USER=runner nix build --impure .#homeConfigurations.wsl.activationPackage
+          nix build --no-link .#homeConfigurations.desktop.activationPackage
+          HOME=/home/runner USER=runner nix build --no-link --impure .#homeConfigurations.wsl.activationPackage
