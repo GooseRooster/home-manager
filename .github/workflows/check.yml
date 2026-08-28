@@ -18,6 +18,8 @@ jobs:
       - uses: DeterminateSystems/determinate-nix-action@v3
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-flakehub: false # GitHub-native cache only; no FlakeHub account
 
       # `nix flake check` alone is eval-only for homeConfigurations, so
       # build the activation packages. The wsl target reads $USER/$HOME at
