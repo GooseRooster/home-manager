@@ -8,7 +8,7 @@ let
   gamingHops = ''
 		{ key = "m", path = "~/Modding/", desc = "Modding" },
 		{ key = "e", path = "~/Emulation", desc = "Emulation" },
-		{ key = "s", path = "~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common", desc = "Steam Library" },
+		{ key = "s", path = "~/.local/share/Steam/steamapps/common", desc = "Steam Library" },
 '';
 
   # yazi plugins, declaratively pinned to a rev + hash (from the old
