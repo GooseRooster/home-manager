@@ -25,12 +25,13 @@ jobs:
         with:
           use-flakehub: false # GitHub-native cache only; no FlakeHub account
 
-      # Gate before the PR: build the desktop home config (the wsl target
-      # needs --impure env vars to activate, but builds fine).
-      - name: Update inputs and build desktop home config
+      # Gate before the PR: build the wsl home config (needs --impure env
+      # vars for the $USER/$HOME eval; nothing activates). The NixOS desktop
+      # home is gated by nixos-config's CI via the flake input chain.
+      - name: Update inputs and build wsl home config
         run: |
           nix flake update
-          nix build --no-link .#homeConfigurations.desktop.activationPackage
+          HOME=/home/runner USER=runner nix build --no-link --impure .#homeConfigurations.wsl.activationPackage
 
       - name: Open/update PR
         uses: DeterminateSystems/update-flake-lock@main

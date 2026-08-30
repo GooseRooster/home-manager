@@ -7,69 +7,73 @@ let
   # .chezmoiignore.tmpl wsl block.
   desktopOnly = !cfg.wsl.enable;
 
-  vesktopBlock = ''
-    #Vesktop (Discord)
-    [[items]]
-    path = "https://github.com/deathbeam/base16-discord.git"
-    name = "base16-discord"
-    themes-dir = "themes"
-    theme-file-extension = ".theme.css"
-    supported-systems = ["base16"]
-    hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\""
-  '';
-
-  # Ghostty config. The `theme` line points at whichever retint mechanism the
-  # session uses: tinty writes ~/.config/ghostty/themes/tinted-theming, while
-  # Noctalia's builtin ghostty template writes ~/.config/ghostty/themes/noctalia
-  # (and its apply.sh no-ops on configs already set to `theme = noctalia`,
-  # which matters because HM's config is a read-only symlink).
-  # The shell is the Nix nu.
-  ghosttyConfig = lib.concatStringsSep "\n" (
-    (lib.optional cfg.theming.enable (
-      if cfg.session == "noctalia" then "theme = noctalia" else "theme = \"tinted-theming\""
-    ))
-    ++ [
-      "command = ${pkgs.nushell}/bin/nu"
-      "confirm-close-surface = false"
-      "adjust-cell-height = 15%"
-      "font-size = 14"
-    ]
-  ) + "\n";
+  # Tinty scheme-sync items (formerly files/tinty/config.toml). The Vesktop
+  # entry is appended only with the gaming flag (formerly a {{ VESKTOP }}
+  # replaceStrings template).
+  tintyItems = [
+    {
+      path = "https://github.com/tinted-theming/tinted-shell";
+      name = "tinted-shell";
+      themes-dir = "scripts";
+      hook = ". %f";
+    }
+    {
+      # Claude Code
+      name = "tinted-claude-code";
+      path = "https://github.com/tinted-theming/tinted-claude-code";
+      themes-dir = "scripts";
+      theme-file-extension = ".js";
+      supported-systems = [ "base16" "base24" "tinted8" ];
+      hook = "mkdir -p \"$HOME/.claude/themes\" && node \"$TINTY_THEME_FILE_PATH\" > \"$HOME/.claude/themes/tinty.json\"";
+    }
+    {
+      # Ghostty — with `theme` set to "tinted-theming" (see modules/ghostty.nix),
+      # this is where Ghostty looks for the theme file.
+      path = "https://github.com/tinted-theming/tinted-terminal";
+      name = "tinted-terminal";
+      themes-dir = "themes/ghostty";
+      hook = ''
+        mkdir -p ~/.config/ghostty/themes
+        command cp -f "$TINTY_THEME_FILE_PATH" ~/.config/ghostty/themes/tinted-theming
+        killall -SIGUSR2 ghostty 2>/dev/null || true
+      '';
+      supported-systems = [ "base16" "base24" ];
+    }
+  ] ++ lib.optional cfg.gaming.enable {
+    # Vesktop (Discord)
+    path = "https://github.com/deathbeam/base16-discord.git";
+    name = "base16-discord";
+    themes-dir = "themes";
+    theme-file-extension = ".theme.css";
+    supported-systems = [ "base16" ];
+    hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
+  };
 in
 {
   xdg.configFile = {
-    "btop/btop.conf" = {
-      source = ../files/btop/btop.conf;
-      force = true;
-    };
-    "lazygit/config.yml" = {
-      source = ../files/lazygit/config.yml;
-      force = true;
-    };
-    "lazydocker/config.yml" = {
-      source = ../files/lazydocker/config.yml;
-      force = true;
-    };
     "herdr/config.toml" = {
       source = ../files/herdr/config.toml;
-      force = true;
-    };
-    "fastfetch/config.jsonc" = {
-      source = ../files/fastfetch/config.jsonc;
       force = true;
     };
   };
 
   home.file = lib.mkMerge [
-    # GUI/desktop-only (skipped in containers/WSL).
+    # GUI/desktop-only (skipped in containers/WSL). mpv.conf is declarative
+    # here, the file is picked up by external/flatpak mpv runs).
     (lib.mkIf desktopOnly {
-      ".config/ghostty/config" = {
-        force = true;
-        text = ghosttyConfig;
-      };
       ".config/mpv/mpv.conf" = {
-        source = ../files/mpv/mpv.conf;
         force = true;
+        text = lib.generators.toKeyValue { } {
+          vo = "gpu-next";
+          gpu-api = "vulkan";
+          hwdec = "vaapi";
+          hwdec-codecs = "all";
+          deband = "yes";
+          dither-depth = "auto";
+          panscan = "0.8";
+          pipewire-buffer = "50";
+          target-peak = "1000";
+        };
       };
       ".config/owl.jpg" = {
         source = ../files/owl.jpg;
@@ -102,10 +106,7 @@ in
       };
       ".config/tinted-theming/tinty/config.toml" = {
         force = true;
-        text = builtins.replaceStrings
-          [ "{{ VESKTOP }}" ]
-          [ (lib.optionalString cfg.gaming.enable vesktopBlock) ]
-          (builtins.readFile ../files/tinty/config.toml);
+        source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
       };
     })
   ];

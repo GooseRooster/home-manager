@@ -12,34 +12,30 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
+  # The only standalone target is the foreign-WSL one (Ubuntu, Debian,
+  # ... non-NixOS distros), applied with:
+  #   home-manager switch --flake .#wsl --impure
   outputs = { self, nixpkgs, home-manager, nix-cli, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
-
-      mkHome = host: home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        extraSpecialArgs = { inherit nix-cli; };
-        modules = [
-          ./home.nix
-          ./hosts/${host}.nix
-        ];
-      };
-
-      # Reusable module bundles for NixOS integration
-      # (home-manager.users.<name>.imports = [ dotfiles.hmModules.desktop ];).
-      mkHostModule = host: { imports = [ ./home.nix ./hosts/${host}.nix ]; };
     in
     {
-      homeConfigurations = {
-        desktop = mkHome "desktop";
-        wsl = mkHome "wsl";
-      };
+      homeConfigurations.wsl =
+        home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          extraSpecialArgs = { inherit nix-cli; };
+          modules = [
+            ./home.nix
+            ./hosts/wsl.nix
+          ];
+        };
 
+      # Reusable module bundles for NixOS integration
+      # (home-manager.users.<name>.imports = [ dotfiles.hmModules.default ];).
       hmModules = {
         default = ./home.nix;
-        desktop = mkHostModule "desktop";
-        wsl = mkHostModule "wsl";
+        wsl.imports = [ ./home.nix ./hosts/wsl.nix ];
       };
     };
 }

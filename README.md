@@ -19,12 +19,15 @@ home-manager    ← this repo: home dotfiles
   `nix develop` environments — never installed here directly. The devshell
   templates provide the seed configs for those.
 
-To enforce the split, HM modules that use the `programs.<tool>` machinery
-(currently `programs.yazi`, `programs.nushell`) set `package = pkgs.emptyDirectory`
-so HM writes config + wires plugins/integrations without also dropping the
-binary into `~/.nix-profile/bin` — which would collide with the same binary
-provided by `#base`. Add the same one-liner to any new `programs.*` module you
-enable here.
+To enforce the split, HM modules that use the `programs.<tool>` machinery set
+`package = pkgs.emptyDirectory` (`programs.yazi`, `programs.nushell`,
+`programs.starship`, `programs.tealdeer`, `programs.ghostty` — for ghostty this
+also avoids HM's user service/dbus wiring, which the system package owns) or
+`package = null` where the module is nullable (`programs.btop`,
+`programs.lazygit`, `programs.lazydocker`, `programs.fastfetch`), so HM writes
+config + wires plugins/integrations without also dropping the binary into
+`~/.nix-profile/bin` — which would collide with the same binary provided by
+`#base`. Add the same one-liner to any new `programs.*` module you enable here.
 
 ## Targets / flavors
 
@@ -33,31 +36,33 @@ of chezmoi's `chezmoi.toml` `[data]` flags and `.chezmoiignore.tmpl`.
 
 | Target | Use | Flags on |
 |--------|-----|----------|
-| `desktop` | NixOS desktop | `gaming`, `theming` |
-| `wsl` | NixOS-WSL dev host | `wsl`, `podmanAlias` |
+| `wsl` | foreign-WSL dev host (standalone) | `wsl`, `podmanAlias` |
 
-Flags: `gaming`, `theming`, `podmanAlias`, `wsl` (see `modules/flavors.nix`).
-`wsl` skips GUI-only dotfiles (ghostty, mpv, tinty, owl.jpg) the same way the
-old `.chezmoiignore.tmpl` did.
+The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
+`hmModules.default` through `nixos-config`'s
+`home-manager.users.<name>.imports` and set the `home.modules.*` flags
+themselves — one source of truth per host, nothing mirrored between repos
+(see [NixOS integration](#nixos-integration-recommended)).
+
+Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl` (see
+`modules/flavors.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
+owl.jpg) the same way the old `.chezmoiignore.tmpl` did.
 
 ## Applying
 
 Standalone (any distro with Nix — foreign systems included):
 
 ```sh
-home-manager switch --flake github:GooseRooster/home-manager#desktop
 home-manager switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
 
 The `wsl` target uses `--impure` because its `hosts/wsl.nix` reads
 `$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro
-(NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, …), so it can't be hardcoded. The
-desktop target has a fixed user and doesn't need it.
+(NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, …), so it can't be hardcoded.
 
 From a local checkout:
 
 ```sh
-home-manager switch --flake .#desktop
 home-manager switch --flake .#wsl --impure
 ```
 
@@ -101,14 +106,16 @@ television channels.
 
 ## Adding a host
 
-Like `nixos-config`'s `hosts/` + `nixosConfigurations`, add a host here in two spots:
+For a **foreign** (non-NixOS) host, add it here in two spots:
 
 1. `hosts/<name>.nix` — set `home.username`/`home.homeDirectory` and the
-   `home.modules.*` flags. Copy `hosts/desktop.nix` for a fixed-user host, or
-   `hosts/wsl.nix` for one whose user varies by distro (reads `$USER`/`$HOME`
-   via `--impure`).
-2. `flake.nix` — add `<name>` to both `homeConfigurations.<name> = mkHome "<name>"`
-   and `hmModules.<name> = mkHostModule "<name>"`.
+   `home.modules.*` flags. Copy `hosts/wsl.nix` for one whose user varies by
+   distro (reads `$USER`/`$HOME` via `--impure`).
+2. `flake.nix` — add a `homeConfigurations.<name>` and, if it should also be
+   reusable for NixOS integration, an `hmModules.<name>` bundle.
+
+For a **NixOS** host, don't add anything here — wire it through `nixos-config`
+(see below), which sets the flags per host.
 
 `homeConfigurations` is the standalone target (`home-manager switch --flake .#<name>`);
 `hmModules` is the reusable module for NixOS integration below. For a host that
@@ -147,8 +154,9 @@ Then per host (e.g. in `hosts/home/default.nix`):
 
 `hmModules.default` is the shared base (no username/homeDirectory, no flags) —
 NixOS's HM integration infers the user from `home-manager.users.<name>`, so each
-host sets only the flags it needs. (The `hmModules.desktop`/`wsl` bundles are for
-standalone `homeConfigurations`, where username/flags must be set.)
+host sets only the flags it needs. Per-host flags live in the **nixos-config**
+host file, next to the system-side toggles they mirror (e.g. `home.modules.session`
+mirrors `modules.desktop.session`).
 
 ## Yazi plugin updates
 
@@ -163,8 +171,7 @@ weekly CI `yazi-plugins` job open a PR doing exactly that
 Reusable Nix devShell scaffolds for project-local dev environments, shipped in
 `files/devshell-templates/` and materialized on switch into
 `~/.local/share/devshell-templates/`. The `devshell-init` helper drops a
-template into a target repo. Deployed by `modules/scripts.nix` on both remaining
-hosts (desktop, wsl).
+template into a target repo. Deployed by `modules/scripts.nix` (every host).
 
 Currently available:
 
@@ -226,9 +233,10 @@ pattern). Put per-host secrets/API keys there.
 ### Done
 
 - **CI** (`.github/workflows/`), using Determinate Systems actions:
-  - `check` — builds both `homeConfigurations` on push & PR (the `wsl` target
+  - `check` — builds the `homeConfigurations` on push & PR (the `wsl` target
     builds `--impure` with dummy env, since it reads `$USER`/`$HOME` at eval
-    time).
+    time). The NixOS desktop home is gated by nixos-config's CI, which
+    consumes this repo as a flake input.
   - `update-flake-lock` — Sundays 03:17 UTC: updates nixpkgs / home-manager /
     nix-cli and opens a PR gated on a build. Runs after `nix-cli`'s Saturday
     update so the merged `nix-cli` main is what gets pinned.

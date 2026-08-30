@@ -1,14 +1,14 @@
-{ ... }:
+{ lib, pkgs, ... }:
 
-# Mutable tool caches that used to be bootstrapped imperatively (tealdeer). The
-# binaries themselves come from nix-cli; here we only manage their state.
+# tealdeer: auto-refresh the tldr page cache on use (replaces `tldr --update`).
+# The binary comes from nix-cli's #base bundle
 {
-  # tealdeer: auto-refresh the tldr page cache on use (replaces `tldr --update`).
-  xdg.configFile."tealdeer/config.toml" = {
-    force = true;
-    text = ''
-      [updates]
-      auto_update = true
-    '';
+  programs.tealdeer = {
+    enable = true;
+    package = pkgs.emptyDirectory;
+    # The weekly tldr-update timer would exec the empty package above. The
+    # on-use auto_update below (the pre-native behavior) refreshes the cache.
+    enableAutoUpdates = false;
+    settings.updates.auto_update = true;
   };
 }

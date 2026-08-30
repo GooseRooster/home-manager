@@ -34,11 +34,11 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Gate: builds the desktop home config, which fetches every plugin at
+      # Gate: builds the wsl home config, which fetches every plugin at
       # its new pin — catches moved/renamed/deleted repos and broken hashes.
-      - name: Build desktop home config with new pins
+      - name: Build home config with new pins
         if: steps.bump.outputs.changed == 'true'
-        run: nix build --no-link .#homeConfigurations.desktop.activationPackage
+        run: HOME=/home/runner USER=runner nix build --no-link --impure .#homeConfigurations.wsl.activationPackage
 
       - name: Open/update PR
         if: steps.bump.outputs.changed == 'true'
