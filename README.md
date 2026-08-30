@@ -6,28 +6,33 @@ Home dotfiles, declaratively managed with [Home Manager](https://github.com/nix-
 
 ```
 nixos-config    NixOS system declarations (desktop + NixOS-in-WSL)
-nix-cli         CLI "batteries" via plain Nix (buildEnv + NixOS modules)
-home-manager    ← this repo: home dotfiles
+home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
 ```
 
-- **nix-cli** owns *binaries* (nushell, neovim, yazi, tealdeer, television, …).
-- **home-manager** owns *config* and the mutable state those tools need (yazi
-  plugins, tldr/television caches, the LazyVim starter). Also owns
-  reusable **Nix devShell templates** (see [Devshell templates](#devshell-templates))
-  for scaffolding project-local dev environments.
+- This repo owns both *config* and the *binaries* (nushell, neovim, yazi,
+  tealdeer, television, …). Packages are selected per host via
+  `home.bundles.*` (see `modules/bundles.nix`):
+
+  | Bundle | Contents | Default |
+  |--------|----------|---------|
+  | `base` | devcontainer-safe CLI tooling (`pkgs/base.nix`) | on for every target |
+  | `baseExtra` | visual/GUI extras — fonts, VS Code (`pkgs/base-extra.nix`) | off |
+  | `wsl` | WSL dev-host extras (`pkgs/wsl.nix`) | off |
+
+  The `programs.<tool>` HM modules and the bundle lists share one nixpkgs
+  instance, so overlapping entries (e.g. yazi) dedupe to identical store paths.
+  Also owns reusable **Nix devShell templates** (see
+  [Devshell templates](#devshell-templates)) for scaffolding project-local dev
+  environments.
 - **Dev toolchains** (dotnet, java, rust, node, …) belong in project-local
   `nix develop` environments — never installed here directly. The devshell
   templates provide the seed configs for those.
 
-To enforce the split, HM modules that use the `programs.<tool>` machinery set
-`package = pkgs.emptyDirectory` (`programs.yazi`, `programs.nushell`,
-`programs.starship`, `programs.tealdeer`, `programs.ghostty` — for ghostty this
-also avoids HM's user service/dbus wiring, which the system package owns) or
-`package = null` where the module is nullable (`programs.btop`,
-`programs.lazygit`, `programs.lazydocker`, `programs.fastfetch`), so HM writes
-config + wires plugins/integrations without also dropping the binary into
-`~/.nix-profile/bin` — which would collide with the same binary provided by
-`#base`. Add the same one-liner to any new `programs.*` module you enable here.
+One exception to "HM owns the binary": `programs.ghostty` keeps
+`package = null` — not for a collision reason, but because the system-wide
+ghostty package (nixos-config's `modules/desktop/terminal.nix`) owns the
+user units, and `null` also disables HM's onChange `+validate-config` hook
+(which would need a real binary to exec at activation).
 
 ## Targets / flavors
 
@@ -36,7 +41,8 @@ of chezmoi's `chezmoi.toml` `[data]` flags and `.chezmoiignore.tmpl`.
 
 | Target | Use | Flags on |
 |--------|-----|----------|
-| `wsl` | foreign-WSL dev host (standalone) | `wsl`, `podmanAlias` |
+| `container` | lean dev container (standalone) | `bundles.base` (default) |
+| `wsl` | foreign-WSL dev host (standalone) | `bundles.wsl`, `wsl`, `podmanAlias` |
 
 The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 `hmModules.default` through `nixos-config`'s
@@ -45,19 +51,24 @@ themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
 Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl` (see
-`modules/flavors.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
-owl.jpg) the same way the old `.chezmoiignore.tmpl` did.
+`modules/flavors.nix`) plus the `bundles` switches (see
+`modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
+owl.jpg) 
 
 ## Applying
 
 Standalone (any distro with Nix — foreign systems included):
 
 ```sh
+# Lean dev container: base batteries + dotfiles.
+home-manager switch --flake github:GooseRooster/home-manager#container --impure
+
+# Foreign-WSL dev host: base + wsl extras + dotfiles.
 home-manager switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
 
-The `wsl` target uses `--impure` because its `hosts/wsl.nix` reads
-`$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro
+Both standalone targets use `--impure` because their `hosts/*.nix` read
+`$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro/image
 (NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, …), so it can't be hardcoded.
 
 From a local checkout:
@@ -72,7 +83,7 @@ installed into the user profile):
 
 ```sh
 nix run github:nix-community/home-manager/master -- \
-  switch --flake github:GooseRooster/home-manager#wsl --impure
+  switch --flake github:GooseRooster/home-manager#container --impure
 ```
 
 On NixOS, prefer wiring it through `nixos-config` (see below) so `nixos-rebuild
@@ -80,8 +91,7 @@ switch` applies it with rollback.
 
 ### Full foreign-WSL flow
 
-The two-repo split (`nix-cli` for binaries, this repo for config) is designed so
-a fresh WSL distro bootstraps in three commands after Nix is installed:
+A fresh WSL distro bootstraps in two commands after Nix is installed:
 
 ```sh
 # 1) Enable flakes system-wide (once per distro).
@@ -91,12 +101,7 @@ trusted-users = root <your-user>
 EOF
 sudo systemctl restart nix-daemon.service   # skip on distros without systemd
 
-# 2) CLI batteries (nushell, neovim, yazi, lazygit, …).
-nix profile add --refresh \
-  github:GooseRooster/nix-cli#base \
-  github:GooseRooster/nix-cli#wsl
-
-# 3) Home Manager dotfiles.
+# 2) CLI batteries (nushell, neovim, yazi, lazygit, …) + dotfiles in one go.
 nix run github:nix-community/home-manager/master -- \
   switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
@@ -133,7 +138,6 @@ inputs = {
 
   dotfiles.url = "github:GooseRooster/home-manager";
   dotfiles.inputs.home-manager.follows = "home-manager";
-  dotfiles.inputs.nix-cli.follows = "cli";
   dotfiles.inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
@@ -145,7 +149,9 @@ Then per host (e.g. in `hosts/home/default.nix`):
   imports = [ inputs.home-manager.nixosModules.home-manager ];
   home-manager.users.gooze = {
     imports = [ inputs.dotfiles.hmModules.default ];
-    # Set the flags to mirror the system-side toggles:
+    # Set the flags to mirror the system-side toggles (bundles.base is
+    # default-on; enable baseExtra for desktop hosts):
+    home.bundles.baseExtra.enable = true;
     home.modules.gaming.enable = true;
     home.modules.theming.enable = true;
   };
@@ -230,16 +236,4 @@ pattern). Put per-host secrets/API keys there.
 - **`lazyvim`** — pin the LazyVim starter to a rev CI bumps (skipped for now:
   the starter clones once at bootstrap and LazyVim self-updates).
 
-### Done
 
-- **CI** (`.github/workflows/`), using Determinate Systems actions:
-  - `check` — builds the `homeConfigurations` on push & PR (the `wsl` target
-    builds `--impure` with dummy env, since it reads `$USER`/`$HOME` at eval
-    time). The NixOS desktop home is gated by nixos-config's CI, which
-    consumes this repo as a flake input.
-  - `update-flake-lock` — Sundays 03:17 UTC: updates nixpkgs / home-manager /
-    nix-cli and opens a PR gated on a build. Runs after `nix-cli`'s Saturday
-    update so the merged `nix-cli` main is what gets pinned.
-  - `yazi-plugins` — Sundays 03:17 UTC: bumps the pinned `rev`/`hash` in
-    `modules/yazi.nix` (`scripts/update-yazi-plugins.sh`, also runnable
-    locally) and opens a separate PR gated on a build.

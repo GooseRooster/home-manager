@@ -1,14 +1,11 @@
 { lib, pkgs, ... }:
 
 # Starship prompt config 
-# The binary comes from nix-cli's #base bundle; HM only writes config, hence
-# package = pkgs.emptyDirectory (see the README's split-repo note).
 # Prompt init stays in nushell's config.nu (try-cmd-init "starship"), so HM's
 # nushell integration stays off to avoid double-init.
 {
   programs.starship = {
     enable = true;
-    package = pkgs.emptyDirectory;
     enableNushellIntegration = false;
     settings = {
   aws =

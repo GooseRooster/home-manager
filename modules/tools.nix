@@ -1,13 +1,11 @@
 { lib, ... }:
 
-# Tool configs via native HM modules. Binaries stay owned by nix-cli's
-# #base / #base-extra bundles, so every nullable `package` is set to null
-# (HM then only writes config). Same split as the emptyDirectory pattern in
-# programs.yazi/nushell/starship/tealdeer — see the README's split-repo note.
+# Tool configs via native HM modules. HM installs the binaries too (same
+# nixpkgs instance as the home.bundles lists, so overlapping entries dedupe
+# to identical store paths).
 {
   programs.btop = {
     enable = true;
-    package = null;
     settings = {
       color_theme = "TTY";
       theme_background = true;
@@ -102,7 +100,6 @@
 
   programs.lazygit = {
     enable = true;
-    package = null;
     # TTY-friendly theme. All values are SGR names; the host terminal's
     # palette drives the actual color, so this works across containers,
     # SSH, tmux, any $TERM.
@@ -147,7 +144,6 @@
 
   programs.lazydocker = {
     enable = true;
-    package = null;
     # TTY-friendly theme: colors are SGR names (see the lazygit note above).
     # selectedLineBgColor [default] — no background band; the cell's own color
     # (force-bold+bright by gocui) sits on the terminal's natural bg. The
@@ -166,7 +162,6 @@
 
   programs.fastfetch = {
     enable = true;
-    package = null;
     settings = {
       "$schema" = "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json";
       display.separator = "  ";

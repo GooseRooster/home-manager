@@ -3,8 +3,7 @@ name: update-flake-lock
 on:
   workflow_dispatch:
   schedule:
-    # Sundays 03:17 UTC — after nix-cli's Saturday PR (approved & merged),
-    # so the nix-cli input bump picks up the new main.
+    # Sundays 03:17 UTC.
     - cron: "17 3 * * 0"
 
 permissions:
@@ -25,18 +24,20 @@ jobs:
         with:
           use-flakehub: false # GitHub-native cache only; no FlakeHub account
 
-      # Gate before the PR: build the wsl home config (needs --impure env
-      # vars for the $USER/$HOME eval; nothing activates). The NixOS desktop
-      # home is gated by nixos-config's CI via the flake input chain.
-      - name: Update inputs and build wsl home config
+      # Gate before the PR: build both standalone home configs (need --impure
+      # env vars for the $USER/$HOME eval; nothing activates). The NixOS
+      # desktop home is gated by nixos-config's CI via the flake input chain.
+      - name: Update inputs and build home configurations
         run: |
           nix flake update
-          HOME=/home/runner USER=runner nix build --no-link --impure .#homeConfigurations.wsl.activationPackage
+          HOME=/home/runner USER=runner nix build --no-link --impure \
+            .#homeConfigurations.container.activationPackage \
+            .#homeConfigurations.wsl.activationPackage
 
       - name: Open/update PR
         uses: DeterminateSystems/update-flake-lock@main
         with:
-          pr-title: "flake.lock: update nixpkgs / home-manager / nix-cli"
+          pr-title: "flake.lock: update nixpkgs / home-manager"
           pr-labels: |
             dependencies
             automated

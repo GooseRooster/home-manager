@@ -1,35 +1,44 @@
 {
-  description = "Home Manager dotfiles — declarative home, brew & bootstrap-free";
+  description = "Home Manager dotfiles — declarative home + CLI batteries";
 
   inputs = {
-    # CLI "batteries" (packages) live in nix-cli; follow its nixpkgs so HM
-    # packages and the CLI bundles are built from the identical revision.
-    nix-cli.url = "github:GooseRooster/nix-cli";
-
-    nixpkgs.follows = "nix-cli/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  # The only standalone target is the foreign-WSL one (Ubuntu, Debian,
-  # ... non-NixOS distros), applied with:
+  # Standalone targets: foreign systems (WSL distros, dev containers) with a
+  # standalone Nix install, applied with (--impure reads $USER/$HOME at eval
+  # time — the user name varies by image/distro):
+  #   home-manager switch --flake .#container --impure
   #   home-manager switch --flake .#wsl --impure
-  outputs = { self, nixpkgs, home-manager, nix-cli, ... }:
+  outputs = { self, nixpkgs, home-manager, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
     in
     {
-      homeConfigurations.wsl =
-        home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          extraSpecialArgs = { inherit nix-cli; };
-          modules = [
-            ./home.nix
-            ./hosts/wsl.nix
-          ];
-        };
+      homeConfigurations = {
+        # Lean dev-container target: base batteries + dotfiles, nothing else.
+        container =
+          home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            modules = [
+              ./home.nix
+              ./hosts/container.nix
+            ];
+          };
+
+        wsl =
+          home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            modules = [
+              ./home.nix
+              ./hosts/wsl.nix
+            ];
+          };
+      };
 
       # Reusable module bundles for NixOS integration
       # (home-manager.users.<name>.imports = [ dotfiles.hmModules.default ];).

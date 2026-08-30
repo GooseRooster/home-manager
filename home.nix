@@ -6,6 +6,7 @@
 {
   imports = [
     ./modules/flavors.nix
+    ./modules/bundles.nix
     ./modules/nushell.nix
     ./modules/bootstrap.nix
     ./modules/yazi.nix
@@ -28,10 +29,10 @@
   # `home-manager.users.<name>.imports = [ dotfiles.hmModules.default ]`, which
   # sets home-manager.backupFileExtension (hm-backup) on its side.
 
-  # Some HM-referenced packages (or #base-extra bundles) are unfree (e.g. vscode).
-  # This scopes allowUnfree to the HM-built nixpkgs instance only; system-wide
-  # nix commands still need `NIXPKGS_ALLOW_UNFREE=1 --impure` (or a user
-  # ~/.config/nix/nix.conf entry).
+  # Some bundle packages are unfree (vscode in base-extra, claude-code in
+  # base-extra/wsl). This scopes allowUnfree to the HM-built nixpkgs instance
+  # only; system-wide nix commands still need `NIXPKGS_ALLOW_UNFREE=1 --impure`
+  # (or a user ~/.config/nix/nix.conf entry).
   nixpkgs.config.allowUnfree = true;
 
   home.stateVersion = "26.05";

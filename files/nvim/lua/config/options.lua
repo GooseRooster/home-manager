@@ -3,7 +3,7 @@
 -- Add any additional options here
 
 vim.o.exrc = true
--- `nu` is resolved on PATH (provided by the nix-cli base bundle).
+-- `nu` is resolved on PATH (provided by the base bundle).
 vim.opt.shell = "nu"
 
 -- Give every floating window (LSP hover/signature help, blink.cmp's

@@ -22,12 +22,14 @@ jobs:
           use-flakehub: false # GitHub-native cache only; no FlakeHub account
 
       # `nix flake check` alone is eval-only for homeConfigurations, so
-      # build the activation package. The wsl target reads $USER/$HOME at
-      # eval time (user varies by distro) — build it --impure with dummy
-      # values; that's eval-time only, nothing activates.
+      # build the activation packages. Both targets read $USER/$HOME at
+      # eval time (user varies by distro/image) — build them --impure with
+      # dummy values; that's eval-time only, nothing activates.
       # The NixOS desktop home is built by nixos-config's CI, which consumes
       # this repo as a flake input (hmModules.default) — all shared modules
-      # (and the plugin fetches) are exercised by the wsl build here.
-      - name: Build home configuration
+      # (and the plugin fetches) are exercised by these builds here.
+      - name: Build home configurations
         run: |
-          HOME=/home/runner USER=runner nix build --no-link --impure .#homeConfigurations.wsl.activationPackage
+          HOME=/home/runner USER=runner nix build --no-link --impure \
+            .#homeConfigurations.container.activationPackage \
+            .#homeConfigurations.wsl.activationPackage

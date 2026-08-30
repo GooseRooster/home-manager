@@ -17,6 +17,10 @@
   home.username = builtins.getEnv "USER";
   home.homeDirectory = builtins.getEnv "HOME";
 
+  # Base bundle is default-on; add the WSL extras (devcontainer, claude-code,
+  # opencode, openfortivpn, ...).
+  home.bundles.wsl.enable = true;
+
   home.modules.wsl.enable = true;
   home.modules.podmanAlias.enable = true;
 }
