@@ -10,13 +10,15 @@ in
   programs.ghostty = lib.mkIf desktopOnly {
     enable = true;
     # The binary is installed system-wide by nixos-config
-    # (modules/desktop/terminal.nix); HM only writes the config file, so
-    # emptyDirectory keeps a second copy out of the user profile. 
-    package = pkgs.emptyDirectory;
-    # HM's ghostty user service would be sourced from the empty package
-    # above (empty unit file + dbus dir junk). The system-wide ghostty
-    # package ships its own user units; the pre-native setup had no
+    # (modules/desktop/terminal.nix); HM only writes the config file.
+    # package = null also disables the module's onChange +validate-config
+    # hook, which needs a real ghostty binary to exec — with a stub package
+    # it fails activation (getExe on empty-directory).
+    # dbus.packages, the other null blocker, is only set under
+    # systemd.enable, which stays off: the system-wide ghostty package
+    # ships its own user units, and the pre-native setup had no
     # HM-provided unit either.
+    package = null;
     systemd.enable = false;
 
     # The shell is the Nix nu.
