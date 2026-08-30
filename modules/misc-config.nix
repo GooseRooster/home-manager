@@ -109,5 +109,21 @@ in
         source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
       };
     })
+
+    # Theming - desktop only. Noctalia custom schemes.
+    (lib.mkIf (cfg.theming.enable && cfg.session == "noctalia") {
+      ".config/noctalia/palettes/peat.json" = {
+          force = true;
+          source = ../files/noctalia/palettes/peat.json;
+      };
+      ".config/noctalia/palettes/peat_bog.json" = {
+          force = true;
+          source = ../files/noctalia/palettes/peat_bog.json;
+      };
+      ".config/noctalia/palettes/peat_mist.json" = {
+          force = true;
+          source = ../files/noctalia/palettes/peat_mist.json;
+      };
+    })
   ];
 }
