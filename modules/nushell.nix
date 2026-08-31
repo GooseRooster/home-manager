@@ -52,8 +52,8 @@ in
     '';
   };
 
-  # systemd-user session env (replaces chezmoi's environment.d/10-editor.conf):
-  # GUI apps launched outside nushell still get a sane $EDITOR.
+  # systemd-user session env: GUI apps launched outside nushell still get a
+  # sane $EDITOR.
   home.sessionVariables = {
     EDITOR = "${pkgs.neovim}/bin/nvim";
     VISUAL = "${pkgs.neovim}/bin/nvim";
@@ -81,7 +81,7 @@ in
     };
   };
 
-  # env.local.nu: materialize once, never overwrite (chezmoi's `create_` pattern).
+  # env.local.nu: materialize once, never overwrite.
   home.activation.materializeEnvLocal = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     run() {
       local target="$HOME/.config/nushell/env.local.nu"

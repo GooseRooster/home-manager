@@ -36,8 +36,8 @@ user units, and `null` also disables HM's onChange `+validate-config` hook
 
 ## Targets / flavors
 
-Each target enables a set of feature flags (`home.modules.*`), the HM equivalent
-of chezmoi's `chezmoi.toml` `[data]` flags and `.chezmoiignore.tmpl`.
+Each target enables a set of feature flags (`home.modules.*`), which modules
+use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 
 | Target | Use | Flags on |
 |--------|-----|----------|
@@ -105,8 +105,6 @@ sudo systemctl restart nix-daemon.service   # skip on distros without systemd
 nix run github:nix-community/home-manager/master -- \
   switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
-
-Then run `bootstrap-tinty` once if the host uses tinty theming (see below).
 
 ## Adding a host
 
@@ -218,38 +216,21 @@ Templates are personal reference material — each is a snapshot you copy and
 then diverge from per-project. Refresh a template in-place when you learn
 something worth propagating back to future scaffolds.
 
-## Bootstrap
+## Mutable state
 
-The one piece of mutable, network-dependent state left is `tinty`'s theme
-repos (`tinty sync` fetches them into `~/.local/share/tinted-theming`). The
-LazyVim starter and television channels are declarative now (see above), so
-the old multi-step `bootstrap` is down to a single idempotent
-`bootstrap-tinty` command — run it **once per machine**, after the first
-switch and once you're online:
-
-```sh
-bootstrap-tinty
-```
-
-Only relevant when tinty theming is enabled (`home.modules.theming` and a
-non-noctalia session); otherwise it's a no-op. Safe to re-run any time a step
-reports a network failure.
-
-## Mutable state, declaratively
-
-| Tool | Old (chezmoi bootstrap) | Now |
-|------|------------------------|-----|
-| LazyVim starter | `git clone` + `rm .git` | `vendor/lazyvim-starter/` + eval-time merge (CI-synced) |
-| yazi plugins | `ya pkg install` | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
-| tldr cache | `tldr --update` | `tealdeer/config.toml` with `auto_update = true` |
-| television channels | `tv update-channels` | `television` flake input → store symlink |
-| tinty theme repos | `tinty sync` | `bootstrap-tinty` |
+| Tool | Mechanism |
+|------|-----------|
+| LazyVim starter | `vendor/lazyvim-starter/` + eval-time merge (CI-synced) |
+| yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
+| tldr cache | `tealdeer/config.toml` with `auto_update = true` |
+| television channels | `television` flake input → store symlink |
+| tinty theme repos | tinty-managed; run `tinty sync` once per machine |
 
 ## Local overrides
 
 `~/.config/nushell/env.local.nu` is materialized once by
-`home.activation.materializeEnvLocal` and never overwritten (chezmoi's `create_`
-pattern). Put per-host secrets/API keys there.
+`home.activation.materializeEnvLocal` and never overwritten. Put per-host
+secrets/API keys there.
 
 ## Roadmap
 

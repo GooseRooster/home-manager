@@ -8,7 +8,6 @@
     ./modules/flavors.nix
     ./modules/bundles.nix
     ./modules/nushell.nix
-    ./modules/bootstrap.nix
     ./modules/yazi.nix
     ./modules/nvim.nix
     ./modules/television.nix
@@ -30,11 +29,6 @@
   # The NixOS hosts consume this repo through nixos-config's
   # `home-manager.users.<name>.imports = [ dotfiles.hmModules.default ]`, which
   # sets home-manager.backupFileExtension (hm-backup) on its side.
-  #
-  # Standalone targets have no declarative equivalent — if a previously-mutable
-  # config dir collides with an HM-managed store symlink on the first switch
-  # (~/.config/nvim, ~/.config/television/cable), pass `-b hm-backup` once:
-  #   home-manager switch -b hm-backup --flake .#<target> --impure
 
   # Some bundle packages are unfree (vscode in base-extra, claude-code in
   # base-extra/wsl). This scopes allowUnfree to the HM-built nixpkgs instance

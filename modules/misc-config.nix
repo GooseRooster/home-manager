@@ -3,13 +3,11 @@
 let
   cfg = config.home.modules;
 
-  # GUI/desktop-only configs are skipped on WSL, mirroring chezmoi's old
-  # .chezmoiignore.tmpl wsl block.
+  # GUI/desktop-only configs are skipped on WSL.
   desktopOnly = !cfg.wsl.enable;
 
-  # Tinty scheme-sync items (formerly files/tinty/config.toml). The Vesktop
-  # entry is appended only with the gaming flag (formerly a {{ VESKTOP }}
-  # replaceStrings template).
+  # Tinty scheme-sync items. The Vesktop entry is appended only with the
+  # gaming flag.
   tintyItems = [
     {
       path = "https://github.com/tinted-theming/tinted-shell";
@@ -82,9 +80,8 @@ in
     })
 
     # Theming (tinty scheme sync + gnomad schemes) — desktop only. tinty is a
-    # gnome-session-only tool: dropped in the noctalia session (Noctalia
-    # templates own app theming there) and any future session; positive gnome
-    # gate to match modules/bootstrap.nix.
+    # gnome-session-only tool: Noctalia's builtin templates own app theming in
+    # the noctalia session, so the tinty/gnomad files are dropped there.
     (lib.mkIf (cfg.theming.enable && cfg.session == "gnome") {
       ".config/gnomad/schemes/dragon-ember.yaml" = {
         source = ../files/gnomad/schemes/dragon-ember.yaml;

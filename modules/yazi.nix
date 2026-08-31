@@ -71,7 +71,7 @@ in
     };
   };
 
-  # force: HM owns these even if a pre-existing (e.g. old chezmoi) file is present.
+  # force: HM owns these even if a pre-existing file is present.
   xdg.configFile = {
     "yazi/yazi.toml".force = true;
     "yazi/keymap.toml".force = true;

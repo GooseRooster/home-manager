@@ -1,9 +1,7 @@
 { lib, ... }:
 
-# Feature flags — the Home Manager equivalent of chezmoi's `chezmoi.toml`
-# `[data]` flags and the `.chezmoiignore.tmpl` / `*.tmpl` conditionals they
-# drove. Hosts (hosts/*.nix) set these; modules use `lib.mkIf`/`lib.optionalString`
-# to include or omit files. The inverse of chezmoi's *ignore* list.
+# Feature flags. Hosts (hosts/*.nix) set these; modules use
+# `lib.mkIf`/`lib.optionalString` to include or omit files.
 let
   mkFlag = desc: lib.mkOption {
     type = lib.types.bool;
