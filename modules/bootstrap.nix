@@ -43,23 +43,6 @@ in
         chmod -R u+w "$HOME/.config/nvim/lua"
         cp -rf ${../files/nvim/lua}/. "$HOME/.config/nvim/lua/"
 
-        # easy-dotnet.nvim shells out to the `dotnet-easydotnet` binary (the
-        # EasyDotnet global .NET tool) on startup. Without it the plugin fails
-        # with "Failed to start dotnet server". Gated on `dotnet` being on PATH
-        # so hosts without the SDK are a silent no-op.
-        echo "==> easy-dotnet: EasyDotnet global tool"
-        if command -v dotnet >/dev/null 2>&1; then
-          if dotnet tool list -g 2>/dev/null | grep -qi '^easydotnet '; then
-            echo "    EasyDotnet already installed, skipping."
-          elif dotnet tool install -g EasyDotnet; then
-            echo "    EasyDotnet installed."
-          else
-            echo "ERROR: 'dotnet tool install -g EasyDotnet' failed (offline?)." >&2
-            exit 1
-          fi
-        else
-          echo "    dotnet SDK not on PATH, skipping (nothing to do)."
-        fi
       '' + lib.optionalString (cfg.theming.enable && cfg.session != "noctalia") ''
         # tinty: pre-create hook output dirs, then fetch theme repos once.
         echo "==> tinty: theme repos + hook dirs"
