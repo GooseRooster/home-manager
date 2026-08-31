@@ -232,11 +232,4 @@ something worth propagating back to future scaffolds.
 `home.activation.materializeEnvLocal` and never overwritten. Put per-host
 secrets/API keys there.
 
-## Roadmap
-
-### Planned
-
-- **`lazyvim`** — done: the starter is vendored (`vendor/lazyvim-starter/`)
-  and CI-synced; see [LazyVim starter updates](#lazyvim-starter-updates).
-
 
