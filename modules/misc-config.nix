@@ -81,9 +81,11 @@ in
       };
     })
 
-    # Theming (tinty scheme sync + gnomad schemes) — desktop only. tinty is
-    # dropped in the noctalia session: Noctalia templates own app theming there.
-    (lib.mkIf (cfg.theming.enable && cfg.session != "noctalia") {
+    # Theming (tinty scheme sync + gnomad schemes) — desktop only. tinty is a
+    # gnome-session-only tool: dropped in the noctalia session (Noctalia
+    # templates own app theming there) and any future session; positive gnome
+    # gate to match modules/bootstrap.nix.
+    (lib.mkIf (cfg.theming.enable && cfg.session == "gnome") {
       ".config/gnomad/schemes/dragon-ember.yaml" = {
         source = ../files/gnomad/schemes/dragon-ember.yaml;
         force = true;

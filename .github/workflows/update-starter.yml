@@ -1,0 +1,52 @@
+name: update-starter
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 03:37 UTC — separate from the yazi-plugins PR so a broken
+    # starter sync doesn't block plugin bumps.
+    - cron: "37 3 * * 1"
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  starter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/determinate-nix-action@v3
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-flakehub: false # GitHub-native cache only; no FlakeHub account
+
+      - name: Sync vendored LazyVim starter
+        id: sync
+        run: |
+          bash scripts/update-starter.sh | tee /tmp/changelog.md
+          if git diff --quiet vendor/lazyvim-starter; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Gate: builds the wsl home config with the new starter — catches
+      # upstream changes that break the merge or eval.
+      - name: Build home config with new starter
+        if: steps.sync.outputs.changed == 'true'
+        run: HOME=/home/runner USER=runner nix build --no-link --impure .#homeConfigurations.wsl.activationPackage
+
+      - name: Open/update PR
+        if: steps.sync.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: update-lazyvim-starter
+          title: "nvim: sync vendored LazyVim starter"
+          body-path: /tmp/changelog.md
+          labels: |
+            dependencies
+            automated

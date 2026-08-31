@@ -52,6 +52,9 @@ spec[#spec + 1] = { import = "plugins" }
 
 require("lazy").setup({
 	spec = spec,
+	-- ~/.config/nvim is a read-only Nix store path, so lazy-lock.json is
+	-- redirected to the (writable) data dir.
+	lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
 	defaults = {
 		-- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
 		-- If you know what you're doing, you can set this to `true` to have all your custom plugins lazy-loaded by default.

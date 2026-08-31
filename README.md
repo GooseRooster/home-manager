@@ -106,8 +106,7 @@ nix run github:nix-community/home-manager/master -- \
   switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
 
-Then run `bootstrap` once (see below) to prime the LazyVim starter and
-television channels.
+Then run `bootstrap-tinty` once if the host uses tinty theming (see below).
 
 ## Adding a host
 
@@ -172,6 +171,26 @@ no runtime network or git). To update one, bump its `rev`/`hash` — or let the
 weekly CI `yazi-plugins` job open a PR doing exactly that
 (`bash scripts/update-yazi-plugins.sh` works locally too).
 
+## LazyVim starter updates
+
+~/.config/nvim is fully declarative: the [LazyVim
+starter](https://github.com/LazyVim/starter) is vendored in
+`vendor/lazyvim-starter/` (a pure upstream mirror) and merged at eval time
+with the repo's lua overlay (`files/nvim/lua`) by `modules/nvim.nix` — the
+overlay wins on conflict, and the starter's inert example plugin is dropped.
+The vendored copy is a read-only store symlink, so `lazy-lock.json` lives in
+the data dir instead (see `files/nvim/lua/config/lazy.lua`).
+
+A weekly CI `update-starter` job mirrors upstream into `vendor/` and opens a
+PR (`bash scripts/update-starter.sh` works locally too).
+
+## Television channel updates
+
+The community cable channels are linked from the `television` flake input by
+`modules/television.nix` — updates ride along with `nix flake update`, no CI
+needed. Repo-local channels can be layered on top via
+`files/television/cable/`.
+
 ## Devshell templates
 
 Reusable Nix devShell scaffolds for project-local dev environments, shipped in
@@ -201,27 +220,30 @@ something worth propagating back to future scaffolds.
 
 ## Bootstrap
 
-Mutable, network-dependent state (the LazyVim starter, `tinty` theme repos,
-television channels) is initialised by a single idempotent `bootstrap` command —
-run it **once per machine**, after the first switch and once you're online:
+The one piece of mutable, network-dependent state left is `tinty`'s theme
+repos (`tinty sync` fetches them into `~/.local/share/tinted-theming`). The
+LazyVim starter and television channels are declarative now (see above), so
+the old multi-step `bootstrap` is down to a single idempotent
+`bootstrap-tinty` command — run it **once per machine**, after the first
+switch and once you're online:
 
 ```sh
-bootstrap
+bootstrap-tinty
 ```
 
-It's safe to re-run (each step skips itself once done, and the LazyVim clone is
-keyed on `~/.config/nvim/init.lua`, so a failed offline run retries cleanly next
-time). Re-run it any time a step reports a network failure.
+Only relevant when tinty theming is enabled (`home.modules.theming` and a
+non-noctalia session); otherwise it's a no-op. Safe to re-run any time a step
+reports a network failure.
 
 ## Mutable state, declaratively
 
 | Tool | Old (chezmoi bootstrap) | Now |
 |------|------------------------|-----|
-| LazyVim starter | `git clone` + `rm .git` | `bootstrap` (idempotent, self-updating) |
+| LazyVim starter | `git clone` + `rm .git` | `vendor/lazyvim-starter/` + eval-time merge (CI-synced) |
 | yazi plugins | `ya pkg install` | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tldr --update` | `tealdeer/config.toml` with `auto_update = true` |
-| television channels | `tv update-channels` | `bootstrap` |
-| tinty theme repos | `tinty sync` | `bootstrap` |
+| television channels | `tv update-channels` | `television` flake input → store symlink |
+| tinty theme repos | `tinty sync` | `bootstrap-tinty` |
 
 ## Local overrides
 
@@ -233,7 +255,7 @@ pattern). Put per-host secrets/API keys there.
 
 ### Planned
 
-- **`lazyvim`** — pin the LazyVim starter to a rev CI bumps (skipped for now:
-  the starter clones once at bootstrap and LazyVim self-updates).
+- **`lazyvim`** — done: the starter is vendored (`vendor/lazyvim-starter/`)
+  and CI-synced; see [LazyVim starter updates](#lazyvim-starter-updates).
 
 
