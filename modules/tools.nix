@@ -134,11 +134,6 @@
         }
       ];
 
-      os = {
-        editPreset = "nvim-remote";
-        edit = "[ -z \"\$NVIM\" ] && (nvim -- {{filename}}) || (nvim --server \"\$NVIM\" --remote-send \"q\" && nvim --server \"\$NVIM\" --remote-tab {{filename}})";
-        editAtLine = "[ -z \"\$NVIM\" ] && (nvim +{{line}} -- {{filename}}) || (nvim --server \"\$NVIM\" --remote-send \"q\" && nvim --server \"\$NVIM\" --remote-tab {{filename}} && nvim --server \"\$NVIM\" --remote-send \":{{line}}<CR>\")";
-      };
     };
   };
 
