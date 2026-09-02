@@ -38,8 +38,14 @@ in
       # zoxide — smarter cd
       try-cmd-init "zoxide" { zoxide init nushell | save -f ~/.zoxide.nu }
 
-      # carapace completions
-      $env.CARAPACE_BRIDGES = 'cobra,argcomplete,clap'
+      # carapace completions. Order defines precedence (carapace's own specs
+      # always win): framework bridges first — they drive the target binary
+      # itself (cobra's `__complete`, argcomplete/clap env protocols), so
+      # they need no extra installs and beat shell-script completions — then
+      # shells by completion quality (zsh > fish > bash). Re-add
+      # "inshellisense" at the end if the npm binary is ever installed.
+      # Same value as modules/zsh.nix's sessionVariables.
+      $env.CARAPACE_BRIDGES = 'cobra,argcomplete,clap,zsh,fish,bash'
       mkdir $"($nu.cache-dir)"
       try-cmd-init "carapace" { carapace _carapace nushell | save --force $"($nu.cache-dir)/carapace.nu" }
 

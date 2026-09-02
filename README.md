@@ -10,7 +10,7 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
 ```
 
 - This repo owns both *config* and the *binaries* (nushell, neovim, yazi,
-  tealdeer, television, …). Packages are selected per host via
+  tealdeer, fzf, …). Packages are selected per host via
   `home.bundles.*` (see `modules/bundles.nix`):
 
   | Bundle | Contents | Default |
@@ -184,13 +184,6 @@ the data dir instead (see `files/nvim/lua/config/lazy.lua`).
 A weekly CI `update-starter` job mirrors upstream into `vendor/` and opens a
 PR (`bash scripts/update-starter.sh` works locally too).
 
-## Television channel updates
-
-The community cable channels are linked from the `television` flake input by
-`modules/television.nix` — updates ride along with `nix flake update`, no CI
-needed. Repo-local channels can be layered on top via
-`files/television/cable/`.
-
 ## Devshell templates
 
 Reusable Nix devShell scaffolds for project-local dev environments, shipped in
@@ -225,7 +218,6 @@ something worth propagating back to future scaffolds.
 | LazyVim starter | `vendor/lazyvim-starter/` + eval-time merge (CI-synced) |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
-| television channels | `television` flake input → store symlink |
 | tinty theme repos | tinty-managed; run `tinty sync` once per machine |
 
 ## Local overrides

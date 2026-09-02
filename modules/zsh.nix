@@ -40,11 +40,17 @@ in
       lazypodman = "lazydocker";
     };
 
-    # CARAPACE_BRIDGES mirrors the value nushell sets in its own env.nu.
+    # CARAPACE_BRIDGES mirrors the value nushell sets in its own env.nu
+    # (modules/nushell.nix). Order defines precedence (carapace's own specs
+    # always win): framework bridges first — they drive the target binary
+    # itself (cobra's `__complete`, argcomplete/clap env protocols), so they
+    # need no extra installs and beat shell-script completions — then shells
+    # by completion quality (zsh > fish > bash). Re-add "inshellisense" at
+    # the end if the npm binary is ever installed.
     # DOCKER_HOST mirrors modules/nushell.nix's podman-alias.nu — same
     # runtime `$(id -u)` lookup, evaluated at shell-init time.
     sessionVariables = {
-      CARAPACE_BRIDGES = "cobra,argcomplete,clap";
+      CARAPACE_BRIDGES = "cobra,argcomplete,clap,zsh,fish,bash";
     } // lib.optionalAttrs cfg.podmanAlias.enable {
       DOCKER_HOST = "unix:///run/user/$(id -u)/podman/podman.sock";
     };
@@ -96,22 +102,6 @@ in
       # compinit (needed by the dotnet compdef), before the plugins below.
       (lib.mkOrder 600 (builtins.readFile ../files/zsh/functions.zsh))
 
-      # tv — fuzzy finder shell integration (see modules/television.nix for
-      # the cable-channel config). Guarded the zsh-native way, mirroring
-      # nushell's try-cmd-init: skip gracefully if the binary isn't on PATH.
-      #
-      # The sed patch: upstream's _tv_shell_history pipes `history -n -1 0`
-      # into the picker (television #379). On zsh 5.9.2 (NixOS 26.11) that
-      # event range resolves to nothing, so Ctrl+R opens an EMPTY picker.
-      # `fc -ln 1` lists the full in-memory history (no event numbers),
-      # including entries not yet flushed to $HISTFILE — the exact intent of
-      # the upstream change. Drop the patch if a future tv fixes its init.
-      (lib.mkOrder 900 ''
-        if (( $+commands[tv] )); then
-          source <(tv init zsh | sed 's/history -n -1 0/fc -ln 1/')
-        fi
-      '')
-
       # fast-syntax-highlighting's "base16" theme uses only ANSI slots 0-15
       # (see its themes/base16.ini), so highlighting follows whatever base16
       # scheme the terminal currently has loaded (ghostty + tinty), the same
@@ -128,10 +118,25 @@ in
       # per upstream's documented compatibility guidance for plugins that
       # register their own widgets/keybindings:
       # https://github.com/jeffreytse/zsh-vi-mode#execute-extra-commands
-      # (zvm 0.12.0 binds nothing on ^R/^T, so tv's own ^R/^T bindings from
-      # the order-900 block above survive — no rebind needed.)
       (lib.mkOrder 1300 ''
         source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
+      '')
+
+      # fzf — rebind. zvm_init (zsh-vi-mode.zsh — a data file that plain grep
+      # flags as binary, so it hides from key searches) runs `bindkey -v` and
+      # `zvm_bindkey viins '^R' history-incremental-search-backward` at source
+      # time, which clobbers fzf's ^R/^T bindings installed by HM's fzf
+      # integration (those bound the emacs main keymap, before zvm's
+      # bindkey -v switched main to viins). Rebind both in the keymaps that
+      # matter after zvm has had its say. Guarded on the widget, so this is a
+      # no-op wherever the fzf integration didn't run.
+      (lib.mkOrder 1310 ''
+        if (( $+widgets[fzf-history-widget] )); then
+          bindkey -M emacs '^R' fzf-history-widget
+          bindkey -M viins '^R' fzf-history-widget
+          bindkey -M emacs '^T' fzf-file-widget
+          bindkey -M viins '^T' fzf-file-widget
+        fi
       '')
 
       # Greeting: same fastfetch banner nushell shows on every interactive
@@ -157,6 +162,16 @@ in
     enable = true;
     enableZshIntegration = true;
     enableNushellIntegration = false;
+  };
+
+  # fzf — ^R history / ^T file widgets. HM sources key-bindings.zsh, whose
+  # history widget lists the full in-memory history (`fc -lin 1`), including
+  # entries not yet flushed to $HISTFILE. The order-1310 rebind above restores
+  # the ^R/^T bindings zvm clobbers. Nushell gets no fzf integration (fzf has
+  # no nu support); nu's ^R falls back to its built-in history menu.
+  programs.fzf = {
+    enable = true;
+    enableZshIntegration = true;
   };
 
   # extra.zsh: materialize once, never overwrite (mirrors nu's

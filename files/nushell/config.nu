@@ -197,8 +197,6 @@ try-cmd-init "starship" { starship init nu | save -f ($autoload_dir | path join 
 # See env.nu for script bootstrap - zoxide makes folder nav way easier.
 source ~/.zoxide.nu
 
-# Shell integration for tv - fuzzy finder for lots of cool things.
-try-cmd-init "tv" { tv init nu | save -f ($autoload_dir | path join "tv.nu") }
 
 # Podman/docker integration (DOCKER_HOST + `docker`→podman alias).
 # Templated by chezmoi on podman_alias_enabled; a no-op comment file when off.

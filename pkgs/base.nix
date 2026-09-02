@@ -32,7 +32,6 @@ with pkgs; [
   ripgrep
   starship
   tealdeer
-  television
   topgrade
   trash-cli
   tree-sitter
