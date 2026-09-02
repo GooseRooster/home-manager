@@ -8,6 +8,8 @@
     ./modules/flavors.nix
     ./modules/bundles.nix
     ./modules/nushell.nix
+    ./modules/zsh.nix
+    ./modules/eza.nix
     ./modules/yazi.nix
     ./modules/nvim.nix
     ./modules/television.nix
