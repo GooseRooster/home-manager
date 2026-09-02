@@ -13,6 +13,7 @@
     ./modules/eza.nix
     ./modules/yazi.nix
     ./modules/nvim.nix
+    ./modules/herdr.nix
     ./modules/starship.nix
     ./modules/topgrade.nix
     ./modules/misc-config.nix

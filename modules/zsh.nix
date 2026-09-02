@@ -102,6 +102,18 @@ in
       # compinit (needed by the dotnet compdef), before the plugins below.
       (lib.mkOrder 600 (builtins.readFile ../files/zsh/functions.zsh))
 
+      # fzf-tab — fzf-powered Tab menu (Aloxaf/fzf-tab, packaged in nixpkgs as
+      # zsh-fzf-tab). Upstream requires loading AFTER compinit but BEFORE
+      # plugins that wrap widgets (autosuggestions at 700,
+      # fast-syntax-highlighting at 1210, zsh-vi-mode at 1300) — this slot
+      # satisfies both. It wraps `expand-or-complete`, so Tab runs it from
+      # every keymap, zvm included. Tune with zstyles here, e.g.
+      #   zstyle ':fzf-tab:*' show-group full
+      #   zstyle ':completion:*:descriptions' format '[%d]'
+      (lib.mkOrder 610 ''
+        source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
+      '')
+
       # fast-syntax-highlighting's "base16" theme uses only ANSI slots 0-15
       # (see its themes/base16.ini), so highlighting follows whatever base16
       # scheme the terminal currently has loaded (ghostty + tinty), the same
@@ -125,11 +137,21 @@ in
       # integration. https://github.com/jeffreytse/zsh-vi-mode#-execute-extra-commands
       (lib.mkOrder 1290 ''
         zvm_after_init() {
+          # fzf's ^R history / ^T file widgets.
           if (( $+widgets[fzf-history-widget] )); then
             bindkey -M emacs '^R' fzf-history-widget
             bindkey -M viins '^R' fzf-history-widget
             bindkey -M emacs '^T' fzf-file-widget
             bindkey -M viins '^T' fzf-file-widget
+          fi
+          # fzf-tab: reclaim Tab. HM's fzf integration (fzf --zsh) rebinds ^I
+          # to its own fzf-completion widget — sourced after fzf-tab, so it
+          # wins — whose fallback runs the UNwrapped expand-or-complete,
+          # silently bypassing fzf-tab. Without this, fzf-tab loads but Tab
+          # never reaches it.
+          if (( $+widgets[fzf-tab-complete] )); then
+            bindkey -M emacs '^I' fzf-tab-complete
+            bindkey -M viins '^I' fzf-tab-complete
           fi
         }
       '')
