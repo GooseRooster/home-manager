@@ -23,4 +23,9 @@
 
   home.modules.wsl.enable = true;
   home.modules.podmanAlias.enable = true;
+
+  # zsh as the default shell: drives the bash hand-off above (and, on
+  # NixOS-integrated hosts, ghostty's command + termapp). Flip to "nu" to
+  # revert the experiment everywhere at once.
+  home.modules.defaultShell = "zsh";
 }

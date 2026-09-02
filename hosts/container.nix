@@ -12,4 +12,8 @@
 
   # home.bundles.base is default-on — nothing to enable here. Add per-image
   # feature flags (home.modules.*) below if a container needs them.
+
+  # zsh as the default interactive shell (same flag as hosts/wsl.nix; on
+  # NixOS-integrated hosts it also drives ghostty's command + termapp).
+  home.modules.defaultShell = "zsh";
 }

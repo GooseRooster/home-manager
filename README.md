@@ -41,8 +41,8 @@ use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 
 | Target | Use | Flags on |
 |--------|-----|----------|
-| `container` | lean dev container (standalone) | `bundles.base` (default) |
-| `wsl` | foreign-WSL dev host (standalone) | `bundles.wsl`, `wsl`, `podmanAlias` |
+| `container` | lean dev container (standalone) | `bundles.base` (default), `defaultShell: zsh` |
+| `wsl` | foreign-WSL dev host (standalone) | `bundles.wsl`, `wsl`, `podmanAlias`, `defaultShell: zsh` |
 
 The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 `hmModules.default` through `nixos-config`'s
@@ -50,8 +50,10 @@ The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
-Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl` (see
-`modules/flavors.nix`) plus the `bundles` switches (see
+Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl`,
+`defaultShell` (`nu` | `zsh`; drives ghostty's `command`, the WSL bash
+hand-off and nixos-config's `termapp` together — see `modules/flavors.nix`)
+plus the `bundles` switches (see
 `modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
 owl.jpg) 
 

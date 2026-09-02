@@ -21,9 +21,13 @@ in
     package = null;
     systemd.enable = false;
 
-    # The shell is the Nix nu.
+    # The shell: nix nu or nix zsh, per home.modules.defaultShell (termapp on
+    # the nixos-config side reads the same flag so both paths agree).
     settings = {
-      command = "${pkgs.nushell}/bin/nu";
+      command =
+        if cfg.defaultShell == "zsh"
+        then "${pkgs.zsh}/bin/zsh"
+        else "${pkgs.nushell}/bin/nu";
       confirm-close-surface = false;
       adjust-cell-height = "15%";
       font-size = 14;

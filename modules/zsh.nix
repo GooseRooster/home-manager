@@ -12,6 +12,18 @@
 # (pkgs/base.nix) so there's no "missing binary" case to guard against here.
 let
   cfg = config.home.modules;
+
+  # Per-host override scaffold (~/.config/zsh/extra.zsh): the zsh twin of
+  # nu's env.local.nu (modules/nushell.nix). Materialized ONCE by the
+  # activation below, then never touched again — user-owned thereafter.
+  extraScaffold = ''
+    # Per-host zsh overrides: env vars, secrets, aliases.
+    #
+    # Managed by Home Manager ONLY on first apply: materialized here from the
+    # scaffold, then never touched again. Edit freely — your changes are safe.
+    # To reset to the scaffold, delete this file and re-run
+    # `home-manager switch`. Sourced from ~/.zshrc on every interactive start.
+  '';
 in
 {
   programs.zsh = {
@@ -60,6 +72,24 @@ in
     # zoxide=851, syntax-highlighting/fast-syntax-highlighting=1200,
     # history-substring-search=1250):
     initContent = lib.mkMerge [
+      # Session env mirroring nu's env.nu (modules/nushell.nix): SSH-agent
+      # fallback + the per-host override file. Runs before everything else
+      # so env-vars secrets/overrides land before any plugin reads them.
+      (lib.mkOrder 550 ''
+        # SSH agent: if no socket is set (or points at nothing), fall back to
+        # the well-known user-agent path — services.ssh-agent exports it on
+        # WSL; gcr-ssh-agent sets SSH_AUTH_SOCK via the systemd user env on
+        # the desktop. Same semantics as nu's env.nu fallback.
+        if [[ -z "''${SSH_AUTH_SOCK:-}" || ! -e "''${SSH_AUTH_SOCK:-}" ]]; then
+          : "''${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+          export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+        fi
+
+        # Per-host overrides (env vars, secrets) — scaffolded once by
+        # materializeZshExtra below, then user-owned.
+        [[ -f "$HOME/.config/zsh/extra.zsh" ]] && source "$HOME/.config/zsh/extra.zsh"
+      '')
+
       # Custom functions ported from files/nushell/config.nu
       # (get-os-release-field, distro-glyph, fastfetch wrapper, l., mkcd,
       # home, notebook, backup, copy, the dotnet completion shim). After
@@ -95,6 +125,22 @@ in
         source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
       '')
 
+      # tv — rebind. zsh-vi-mode (just above) rebinds insert-mode keys at
+      # source time (zsh-vi-mode.zsh: `zvm_bindkey viins '^R'
+      # history-incremental-search-backward`), which silently clobbers the
+      # ^R/^T bindings tv's init installed at order 900 — this is why
+      # Ctrl+R history via tv did nothing under zsh. Rebind both in the
+      # keymaps that matter after zvm has had its say. Guarded on the
+      # widget, so this is a no-op wherever tv init didn't run.
+      (lib.mkOrder 1310 ''
+        if (( $+widgets[tv-shell-history] )); then
+          bindkey -M emacs '^R' tv-shell-history
+          bindkey -M viins '^R' tv-shell-history
+          bindkey -M emacs '^T' tv-smart-autocomplete
+          bindkey -M viins '^T' tv-smart-autocomplete
+        fi
+      '')
+
       # Greeting: same fastfetch banner nushell shows on every interactive
       # shell start (see files/zsh/functions.zsh's fastfetch() for the
       # container/CONTAINER_ID guard).
@@ -119,4 +165,18 @@ in
     enableZshIntegration = true;
     enableNushellIntegration = false;
   };
+
+  # extra.zsh: materialize once, never overwrite (mirrors nu's
+  # env.local.nu handling in modules/nushell.nix). NOT xdg.configFile —
+  # that would clobber user edits on every switch.
+  home.activation.materializeZshExtra = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run() {
+      local target="$HOME/.config/zsh/extra.zsh"
+      if [ ! -e "$target" ]; then
+        mkdir -p "$(dirname "$target")"
+        cp ${pkgs.writeText "extra.zsh" extraScaffold} "$target"
+      fi
+    }
+    run
+  '';
 }
