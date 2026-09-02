@@ -11,6 +11,5 @@ with pkgs; [
   fastfetch
   zk
   lazydocker
-  herdr
   openfortivpn
 ]

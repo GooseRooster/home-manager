@@ -8,7 +8,6 @@ with pkgs; [
   chafa
   fastfetch
   zk
-  herdr
   lazydocker
   ramalama
   claude-code

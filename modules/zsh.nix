@@ -99,9 +99,16 @@ in
       # tv — fuzzy finder shell integration (see modules/television.nix for
       # the cable-channel config). Guarded the zsh-native way, mirroring
       # nushell's try-cmd-init: skip gracefully if the binary isn't on PATH.
+      #
+      # The sed patch: upstream's _tv_shell_history pipes `history -n -1 0`
+      # into the picker (television #379). On zsh 5.9.2 (NixOS 26.11) that
+      # event range resolves to nothing, so Ctrl+R opens an EMPTY picker.
+      # `fc -ln 1` lists the full in-memory history (no event numbers),
+      # including entries not yet flushed to $HISTFILE — the exact intent of
+      # the upstream change. Drop the patch if a future tv fixes its init.
       (lib.mkOrder 900 ''
         if (( $+commands[tv] )); then
-          source <(tv init zsh)
+          source <(tv init zsh | sed 's/history -n -1 0/fc -ln 1/')
         fi
       '')
 
@@ -121,24 +128,10 @@ in
       # per upstream's documented compatibility guidance for plugins that
       # register their own widgets/keybindings:
       # https://github.com/jeffreytse/zsh-vi-mode#execute-extra-commands
+      # (zvm 0.12.0 binds nothing on ^R/^T, so tv's own ^R/^T bindings from
+      # the order-900 block above survive — no rebind needed.)
       (lib.mkOrder 1300 ''
         source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
-      '')
-
-      # tv — rebind. zsh-vi-mode (just above) rebinds insert-mode keys at
-      # source time (zsh-vi-mode.zsh: `zvm_bindkey viins '^R'
-      # history-incremental-search-backward`), which silently clobbers the
-      # ^R/^T bindings tv's init installed at order 900 — this is why
-      # Ctrl+R history via tv did nothing under zsh. Rebind both in the
-      # keymaps that matter after zvm has had its say. Guarded on the
-      # widget, so this is a no-op wherever tv init didn't run.
-      (lib.mkOrder 1310 ''
-        if (( $+widgets[tv-shell-history] )); then
-          bindkey -M emacs '^R' tv-shell-history
-          bindkey -M viins '^R' tv-shell-history
-          bindkey -M emacs '^T' tv-smart-autocomplete
-          bindkey -M viins '^T' tv-smart-autocomplete
-        fi
       '')
 
       # Greeting: same fastfetch banner nushell shows on every interactive

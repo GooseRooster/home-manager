@@ -58,12 +58,7 @@ in
     NVIM_PROFILE = "minimal";
   };
 
-  xdg.configFile = {
-    "herdr/config.toml" = {
-      source = ../files/herdr/config.toml;
-      force = true;
-    };
-  };
+  # herdr's config lives in modules/herdr.nix (programs.herdr).
 
   home.file = lib.mkMerge [
     # GUI/desktop-only (skipped in containers/WSL). mpv.conf is declarative
