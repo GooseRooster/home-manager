@@ -113,6 +113,27 @@ in
       # confirmed cosmetic: exit 0, styles are set correctly either way).
       (lib.mkOrder 1210 "fast-theme -q base16 2>/dev/null")
 
+      # zsh-vi-mode: define zvm's documented post-init hook BEFORE the plugin
+      # is sourced. zvm does NOT init at source time — by default (lazy
+      # ZVM_INIT_MODE) zvm_init runs at the first prompt, i.e. after this
+      # whole .zshrc — where its `bindkey -v` + viins bindings clobber any
+      # ^R/^T binds made statically (verified via `zsh -x` in a pty:
+      # zvm_init's `bindkey -M viins '^R' history-incremental-search-backward`
+      # lands AFTER our earlier rebinds). zvm_after_init runs at the end of
+      # zvm_init, so rebinding here wins regardless of when zvm initializes.
+      # Guarded on the widget, so this is a no-op without the fzf
+      # integration. https://github.com/jeffreytse/zsh-vi-mode#-execute-extra-commands
+      (lib.mkOrder 1290 ''
+        zvm_after_init() {
+          if (( $+widgets[fzf-history-widget] )); then
+            bindkey -M emacs '^R' fzf-history-widget
+            bindkey -M viins '^R' fzf-history-widget
+            bindkey -M emacs '^T' fzf-file-widget
+            bindkey -M viins '^T' fzf-file-widget
+          fi
+        }
+      '')
+
       # zsh-vi-mode has no native HM option. Sourced last (after
       # autosuggestions/fast-syntax-highlighting/history-substring-search),
       # per upstream's documented compatibility guidance for plugins that
@@ -120,23 +141,6 @@ in
       # https://github.com/jeffreytse/zsh-vi-mode#execute-extra-commands
       (lib.mkOrder 1300 ''
         source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
-      '')
-
-      # fzf — rebind. zvm_init (zsh-vi-mode.zsh — a data file that plain grep
-      # flags as binary, so it hides from key searches) runs `bindkey -v` and
-      # `zvm_bindkey viins '^R' history-incremental-search-backward` at source
-      # time, which clobbers fzf's ^R/^T bindings installed by HM's fzf
-      # integration (those bound the emacs main keymap, before zvm's
-      # bindkey -v switched main to viins). Rebind both in the keymaps that
-      # matter after zvm has had its say. Guarded on the widget, so this is a
-      # no-op wherever the fzf integration didn't run.
-      (lib.mkOrder 1310 ''
-        if (( $+widgets[fzf-history-widget] )); then
-          bindkey -M emacs '^R' fzf-history-widget
-          bindkey -M viins '^R' fzf-history-widget
-          bindkey -M emacs '^T' fzf-file-widget
-          bindkey -M viins '^T' fzf-file-widget
-        fi
       '')
 
       # Greeting: same fastfetch banner nushell shows on every interactive
