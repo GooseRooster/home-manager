@@ -20,6 +20,7 @@ with pkgs; [
   fzf
   gh
   delta
+  deja
   imagemagick
   jq
   lazygit

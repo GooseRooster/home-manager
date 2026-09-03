@@ -78,7 +78,7 @@ in
     # zoxide=851, syntax-highlighting/fast-syntax-highlighting=1200,
     # history-substring-search=1250):
     initContent = lib.mkMerge [
-      # Session env mirroring nu's env.nu (modules/nushell.nix): SSH-agent
+      # SSH-agent
       # fallback + the per-host override file. Runs before everything else
       # so env-vars secrets/overrides land before any plugin reads them.
       (lib.mkOrder 550 ''
@@ -96,7 +96,7 @@ in
         [[ -f "$HOME/.config/zsh/extra.zsh" ]] && source "$HOME/.config/zsh/extra.zsh"
       '')
 
-      # Custom functions ported from files/nushell/config.nu
+      # Custom functions 
       # (get-os-release-field, distro-glyph, fastfetch wrapper, l., mkcd,
       # home, notebook, backup, copy, the dotnet completion shim). After
       # compinit (needed by the dotnet compdef), before the plugins below.
@@ -163,6 +163,16 @@ in
       # https://github.com/jeffreytse/zsh-vi-mode#execute-extra-commands
       (lib.mkOrder 1300 ''
         source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
+      '')
+
+
+      # Source deja 
+      (lib.mkOrder 1500 '' 
+            if [[ -r "$HOME/.local/share/deja/init.zsh" ]]; then
+              source "$HOME/.local/share/deja/init.zsh"
+            else
+              eval "$(deja init zsh)"
+            fi
       '')
 
       # Greeting: same fastfetch banner nushell shows on every interactive
