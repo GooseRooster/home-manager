@@ -167,11 +167,14 @@ in
 
       # Source deja, replaces autosuggestions
       (lib.mkOrder 1500 '' 
+
+            export DEJA_CYCLE_KEY='^[[Z'
             if [[ -r "$HOME/.local/share/deja/init.zsh" ]]; then
               source "$HOME/.local/share/deja/init.zsh"
             else
               eval "$(deja init zsh)"
             fi
+
       '')
 
       # Greeting: same fastfetch banner nushell shows on every interactive
