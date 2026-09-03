@@ -23,5 +23,5 @@
   # with -l (tree glyphs inline in the long columns); lt already trees via
   # the module's own alias. Plain value beats the module's mkDefault
   # alias, so this overrides `ls = "eza"` cleanly.
-  programs.zsh.shellAliases.ls = "eza --tree --level=2";
+  programs.zsh.shellAliases.ls = "eza --tree --level=1";
 }
