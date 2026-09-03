@@ -56,7 +56,6 @@ in
     };
 
     # ── Plugins ───────────────────────────────────────────────────────────
-    autosuggestion.enable = true;
 
     # fast-syntax-highlighting, not the plain zsh-syntax-highlighting.
     fastSyntaxHighlighting.enable = true;
@@ -166,7 +165,7 @@ in
       '')
 
 
-      # Source deja 
+      # Source deja, replaces autosuggestions
       (lib.mkOrder 1500 '' 
             if [[ -r "$HOME/.local/share/deja/init.zsh" ]]; then
               source "$HOME/.local/share/deja/init.zsh"
