@@ -8,6 +8,8 @@
   # $DEVSHELL_TEMPLATES_DIR).
   #
   # No host gate: both remaining flavors (desktop, wsl) want this.
+  home.sessionPath = [ "$HOME/.local/bin" ];
+
   home.file = {
     ".local/bin/devshell-init" = {
       source = ../files/scripts/devshell-init;
