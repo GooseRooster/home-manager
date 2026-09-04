@@ -3,6 +3,10 @@
   #
   # Provides:
   #   * .NET SDK 10 (bump the attribute when you need a different major).
+  #   * roslyn-ls (Microsoft.CodeAnalysis.LanguageServer) — the C# LSP behind
+  #     C# Dev Kit, incl. Razor/Blazor cohosting. Built against the nixpkgs
+  #     dotnet runtime, so no dynamically-linked dotnet-tool headaches. Point
+  #     your editor's LSP client at `Microsoft.CodeAnalysis.LanguageServer`.
   #   * dart-sass, exposing `sass` on PATH. Drop it from the packages list if
   #     your project has no SCSS.
   #   * .config/dotnet-tools.json restored on shell entry — pin project-shared
@@ -39,6 +43,7 @@
           #               back only if you actually need npm.
           packages = with pkgs; [
             dotnetCorePackages.sdk_10_0
+            roslyn-ls
             dart-sass
           ];
 
