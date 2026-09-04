@@ -14,11 +14,13 @@
 --   NVIM_PROFILE = "full" | "minimal"   coarse override (optional)
 --   NVIM_LANGS   = "rust,python,..."    comma list of extra langs (minimal only)
 --
--- Defaults: a host resolves to "full" (everything), a dev container resolves to
--- "minimal" (baseline below + whatever NVIM_LANGS opts in). Set NVIM_PROFILE=minimal
--- on a host to force the lean, env-driven behavior anyway; NVIM_PROFILE=full lets a
--- container opt into everything.
---
+-- Defaults: everything resolves to "minimal" — baseline below plus whatever
+-- NVIM_LANGS opts in (typically via a project .envrc). "full" is a deliberate
+-- per-machine opt-in (NVIM_PROFILE=full) for hosts that genuinely carry every
+-- toolchain; an accidental launch with the env unset must never be able to pull
+-- the kitchen sink. On NixOS a stray "full" resolve is actively harmful: mason
+-- would install prebuilt native servers (clangd, rust-analyzer, ...) that
+-- cannot run there at all (see nix_substitutes below).
 -- NOTE: do not run `:LazyExtras` — it writes `lazyvim.json`, which LazyVim imports
 -- outside this gate. The `features` map below is the source of truth for extras.
 
@@ -183,7 +185,10 @@ M.baseline_treesitter = {}
 
 -- Universal languages enabled even in the minimal profile (markdown highlighting
 -- comes from LazyVim core's treesitter list, so it needs no feature here).
-M.minimal_langs = { "git", "json", "yaml", "docker", "nushell" }
+-- python earns a place here: standalone scripts show up everywhere, and its
+-- whole toolchain is mason-safe on NixOS (pyright = node, ruff = static,
+-- debugpy = pip), so it never needs a project devshell to work.
+M.minimal_langs = { "python", "git", "json", "yaml", "docker", "nushell" }
 
 function M.is_container()
 	return env("CONTAINER_ID") ~= nil
@@ -198,7 +203,9 @@ local function resolve_profile()
 	if p == "full" or p == "minimal" then
 		return p
 	end
-	return M.is_host() and "full" or "minimal"
+	-- Hosts and containers share the same lean default; "full" is always an
+	-- explicit opt-in. See the header comment for why.
+	return "minimal"
 end
 
 local function resolve_langs()
@@ -235,6 +242,46 @@ end
 -- pointless with zero languages.
 function M.any_lang()
 	return next(M.langs) ~= nil
+end
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Environment-sourced tools (home profile / project devshell).
+--
+-- Mason's downloads for these packages are prebuilt *native* binaries; on
+-- NixOS such ELFs cannot run (no /lib64 loader — the stub-ld error), so on
+-- NixOS they must always come from the environment: the home profile
+-- (pkgs/base.nix) or a project devshell. Everywhere else mason stays a fine
+-- fallback — the tools simply prefer whatever is already on PATH.
+--
+-- Keyed by mason package name -> the PATH binary to look for.
+M.nix_substitutes = {
+	["lua-language-server"] = "lua-language-server",
+	clangd = "clangd",
+	["rust-analyzer"] = "rust-analyzer",
+	neocmakelsp = "neocmakelsp",
+	codelldb = "codelldb",
+	stylua = "stylua",
+}
+
+function M.is_nixos()
+	return vim.fn.filereadable("/etc/NIXOS") == 1
+end
+
+--- How a tool mason would otherwise install should actually be sourced.
+---   "system" — binary is on PATH: use it, keep mason out of it
+---   "skip"   — on NixOS with no binary: leave the tool off entirely rather
+---              than let mason install a copy that can't run
+---   "mason"  — not a substituted tool (or generic Linux, no binary): mason,
+---              exactly as before
+function M.tool_source(mason_pkg)
+	local bin = M.nix_substitutes[mason_pkg]
+	if bin == nil then
+		return "mason"
+	end
+	if vim.fn.executable(bin) == 1 then
+		return "system"
+	end
+	return M.is_nixos() and "skip" or "mason"
 end
 
 return M

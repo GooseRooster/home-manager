@@ -11,6 +11,9 @@ via `devshell-init dotnet` (see `~/repos/home-manager` for the scaffolder).
 - **`.config/dotnet-tools.json`** — pinned local tool manifest, empty by
   default. Add project-shared tools here (nswag, jb ReSharper CLI,
   dotnet-ef, ...); `dotnet tool restore` runs on shell entry.
+- **`.envrc`** — `use flake` plus `NVIM_LANGS=...,dotnet`, so nvim's dotnet
+  feature (easy-dotnet/Roslyn LSP, Razor support) loads only inside this
+  shell.
 - **`.certs/localhost.{pem,key}`** exported from `dotnet dev-certs https`
   on first shell entry, with `ASPNETCORE_Kestrel__Certificates__Default__*`
   env vars pre-set to point at them.

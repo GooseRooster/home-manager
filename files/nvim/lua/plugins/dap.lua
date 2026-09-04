@@ -96,4 +96,23 @@ return {
     dependencies = { "mfussenegger/nvim-dap" },
     opts = {},
   },
+
+  -- codelldb never comes from mason when the environment provides it (see
+  -- config/profile.lua `nix_substitutes`): mason-nvim-dap's default handler
+  -- would re-point the adapter at the mason binary — unrunnable on NixOS —
+  -- and automatic_installation would keep (re)installing that copy. Other
+  -- adapters (js-debug, java-debug, ...) keep their default behavior.
+  {
+    "jay-babu/mason-nvim-dap.nvim",
+    enabled = enabled,
+    opts = function(_, opts)
+      if require("config.profile").tool_source("codelldb") ~= "mason" then
+        opts.automatic_installation = { exclude = { "codelldb" } }
+        opts.handlers = vim.tbl_extend("force", opts.handlers or {}, {
+          codelldb = function() end,
+        })
+      end
+      return opts
+    end,
+  },
 }

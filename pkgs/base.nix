@@ -24,6 +24,7 @@ with pkgs; [
   imagemagick
   jq
   lazygit
+  lua-language-server
   neovim
   nushell
   p7zip

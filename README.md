@@ -184,6 +184,25 @@ the data dir instead (see `files/nvim/lua/config/lazy.lua`).
 A weekly CI `update-starter` job mirrors upstream into `vendor/` and opens a
 PR (`bash scripts/update-starter.sh` works locally too).
 
+### Environment profile & mason on NixOS
+
+Which languages load is decided at runtime by the environment profile
+(`files/nvim/lua/config/profile.lua`): everything defaults to the lean
+baseline + `NVIM_LANGS` opt-ins (typically `export NVIM_LANGS=...,rust` from
+a project `.envrc`); `NVIM_PROFILE=full` is a deliberate per-machine opt-in
+for hosts that genuinely carry every toolchain.
+
+Mason remains the installer for anything that runs fine from a prebuilt
+download (node/jar/pip/python-venv/static-Go packages — pyright, vtsls,
+hadolint, ...). A small set of **native** tools (`lua-language-server`,
+`clangd`, `rust-analyzer`, `neocmakelsp`, `codelldb`, `stylua`) is instead
+resolved from PATH — home profile or project devshell — because mason's
+prebuilt ELFs cannot run on NixOS. See `nix_substitutes` in `profile.lua`;
+`plugins/lsp.lua`, `plugins/mason.lua` and `plugins/dap.lua` consume it.
+Consequence for projects: a rust/clang/cmake project must provide its
+tooling via the devshell (`devshell-init rust` / `clang` scaffolds it) —
+opening nvim outside such a shell simply leaves those servers off.
+
 ## Devshell templates
 
 Reusable Nix devShell scaffolds for project-local dev environments, shipped in
@@ -197,6 +216,15 @@ Currently available:
   cert export to `./.certs/` + optional `./.dev.local.sh` personal hook. See
   `files/devshell-templates/dotnet/README.md` for adoption details and a
   couple of NLog gotchas worth remembering.
+- **`rust`** — `rust-analyzer` + `codelldb` (vscode-lldb standalone adapter)
+  on PATH + `NVIM_LANGS=...,rust`, so nvim's rust extra loads only inside
+  the shell. Toolchain itself comes from the host's rustup.
+- **`clang`** — `clang-tools` (clangd) + `codelldb` + `cmake`/`neocmakelsp` +
+  `NVIM_LANGS=...,clang,cmake` for C/C++ (+ CMake) projects.
+
+The rust/clang templates exist because mason's prebuilt native servers can't
+run on NixOS — those tools are environment-sourced, per the
+[Environment profile](#environment-profile--mason-on-nixos) section above.
 
 Usage from any repo:
 

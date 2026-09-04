@@ -15,16 +15,30 @@ local profile = require("config.profile")
 
 local ensure_installed = vim.list_extend({}, profile.baseline_mason)
 for _, name in ipairs(profile.feature_order) do
-  if profile.has(name) then
-    vim.list_extend(ensure_installed, profile.features[name].mason)
-  end
+	if profile.has(name) then
+		vim.list_extend(ensure_installed, profile.features[name].mason)
+	end
 end
 
+-- Environment-sourced tools (profile / devshell) and NixOS-unrunnable ones
+-- never go through mason — see profile.tool_source. Note LazyVim core's own
+-- mason spec still merges {"stylua", "shfmt"} here via opts_extend; that
+-- copy is harmless at worst: PATH = "append" below keeps it from ever
+-- shadowing the working binary on PATH.
+ensure_installed = vim.tbl_filter(function(tool)
+	return profile.tool_source(tool) == "mason"
+end, ensure_installed)
+
 return {
-  {
-    "mason-org/mason.nvim",
-    opts = {
-      ensure_installed = ensure_installed,
-    },
-  },
+	{
+		"mason-org/mason.nvim",
+		opts = {
+			ensure_installed = ensure_installed,
+			-- Keep mason's shim dir BEHIND the home-profile / devshell PATH.
+			-- With the default "prepend", any mason-installed copy (e.g. the
+			-- core-merged stylua above) would shadow the environment's binary
+			-- — on NixOS that shadow copy is unrunnable, and it would win.
+			PATH = "append",
+		},
+	},
 }
