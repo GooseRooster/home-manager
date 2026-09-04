@@ -11,6 +11,7 @@
     ./modules/zsh.nix
     ./modules/wsl-shell-launcher.nix
     ./modules/eza.nix
+    ./modules/direnv.nix
     ./modules/yazi.nix
     ./modules/nvim.nix
     ./modules/herdr.nix
