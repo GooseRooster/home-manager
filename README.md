@@ -167,9 +167,7 @@ mirrors `modules.desktop.session`).
 
 Plugins are fully declarative: pinned to a `rev` + `hash` in
 `modules/yazi.nix` via `programs.yazi.plugins` (fetched from the Nix store,
-no runtime network or git). To update one, bump its `rev`/`hash` — or let the
-weekly CI `yazi-plugins` job open a PR doing exactly that
-(`bash scripts/update-yazi-plugins.sh` works locally too).
+no runtime network or git). To update one, bump its `rev`/`hash` — or (`bash scripts/update-yazi-plugins.sh`).
 
 ## LazyVim starter updates
 
@@ -181,8 +179,7 @@ overlay wins on conflict, and the starter's inert example plugin is dropped.
 The vendored copy is a read-only store symlink, so `lazy-lock.json` lives in
 the data dir instead (see `files/nvim/lua/config/lazy.lua`).
 
-A weekly CI `update-starter` job mirrors upstream into `vendor/` and opens a
-PR (`bash scripts/update-starter.sh` works locally too).
+`bash scripts/update-starter.sh` to update the vendored copy.
 
 ### Environment profile & mason on NixOS
 
@@ -243,7 +240,7 @@ something worth propagating back to future scaffolds.
 
 | Tool | Mechanism |
 |------|-----------|
-| LazyVim starter | `vendor/lazyvim-starter/` + eval-time merge (CI-synced) |
+| LazyVim starter | `vendor/lazyvim-starter/` + eval-time merge |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
 | tinty theme repos | tinty-managed; run `tinty sync` once per machine |
