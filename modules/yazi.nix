@@ -21,8 +21,8 @@ let
   pluginsRepo = fetchPlugin {
     owner = "yazi-rs";
     repo = "plugins";
-    rev = "c591a36e7263e95497715d525e9c46c2f0a880ac";
-    hash = "sha256-mWT0yF2iG9+gYEuNiffpM93POlBqY+QKdFh5jSAxYls=";
+    rev = "4dc7f1b6458c2578f4494f10d468c68c1082214f";
+    hash = "sha256-BSAOkL4H4LVMbTRFv4kzGGRpLgtKkfNTEsDH2EQ219Q=";
   };
 
   plugins = {
@@ -32,7 +32,7 @@ let
     compress = fetchPlugin { owner = "KKV9"; repo = "compress.yazi"; rev = "80e5268ec74c7ac17d4d739e13a9958cba4c70d3"; hash = "sha256-9cdA8D/TtwHcLqrtoyIixA0YJmTs+c8FSNrjxp8CYI0="; };
     starship = fetchPlugin { owner = "Rolv-Apneseth"; repo = "starship.yazi"; rev = "ea92cf49380466f07231c952b409831e6afd2156"; hash = "sha256-Jvoc/7YaOOppu8K2lJaVgiuBIyanRHHjEA6ZvnrFtiQ="; };
     mount = "${pluginsRepo}/mount.yazi";
-    what-size = fetchPlugin { owner = "pirafrank"; repo = "what-size.yazi"; rev = "ec94d9a8496241d91dcfb2a864214871c326ddc5"; hash = "sha256-slM9qypEy8A4l3KodE7bmyixA+1c4X7hgoGcQP7R25k="; };
+    what-size = fetchPlugin { owner = "pirafrank"; repo = "what-size.yazi"; rev = "1cb456f8c428a393a65708b45b8c56404d52f326"; hash = "sha256-lhanC44L4haM7cgqCOhfxk0Rpi/FueBgIdXDiXuzevc="; };
     yatline = fetchPlugin { owner = "imsi32"; repo = "yatline.yazi"; rev = "c5d4b487d6277dd68ea9d3c6537641bf4ae9cf8e"; hash = "sha256-HjTRAfUHs6vlEWKruQWeA2wT/Mcd+WEHM90egFTYcWQ="; };
     yatline-modified-time = fetchPlugin { owner = "wekauwau"; repo = "yatline-modified-time.yazi"; rev = "2d334719fc24ca034e46affb05187bcb2ee55225"; hash = "sha256-sus3GNM6CEfL5AmhJfRLT56MH3+xU20vcIfW9+C1RLg="; };
     yatline-selected-size = fetchPlugin { owner = "pakhromov"; repo = "yatline-selected-size.yazi"; rev = "d15f43104d925dea9aa67e74d739e21b3f7fb71e"; hash = "sha256-+KUXxnsrHNKVthmSvY3YdSPcX8gdAOmc0e84uYJc+1U="; };
@@ -42,7 +42,7 @@ let
     ouch = fetchPlugin { owner = "ndtoan96"; repo = "ouch.yazi"; rev = "cfe4f507ef7337c8ad4c90eef68ea91fc6694759"; hash = "sha256-t1kUo4+YODeTG9d5Yq/vxElcmRHIebC5TRv+uDGG88c="; };
     yatline-githead = fetchPlugin { owner = "imsi32"; repo = "yatline-githead.yazi"; rev = "929e52cd6ff9ef0130756260ee5f0af69ce5debe"; hash = "sha256-1r7AY0Yzr32YZl2g74ylx+1vGoNg04PMkDXnaB0X+lk="; };
     linemode-plus = fetchPlugin { owner = "barbanevosa"; repo = "linemode-plus.yazi"; rev = "4d0d034c08aaa7c62666456ce4f0d63f1ac4eda5"; hash = "sha256-ekQI1yyZEmX44YjicFz51Eh6csN9OwVXoh8Ituk/jJs="; };
-    mediainfo = fetchPlugin { owner = "boydaihungst"; repo = "mediainfo.yazi"; rev = "73a36587bd896a20a0c84c0b79b341a0cb7e7b92"; hash = "sha256-cdIVIqVxsr+V1I/pqAhr2dxfujTL/de7DFTAOd2jfUk="; };
+    mediainfo = fetchPlugin { owner = "boydaihungst"; repo = "mediainfo.yazi"; rev = "d2dd310bfbc3a819acf1c9c9c32f402ab6774d3a"; hash = "sha256-nmhn2lcs5F+MRlmqBPbsU74NNiO0Y0Js4YEjRfD9IPE="; };
   };
 in
 {
