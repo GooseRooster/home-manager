@@ -1,5 +1,12 @@
 require("full-border"):setup()
 
+-- Shell prompt (top header line). No padded-border snippet: it conflicts with
+-- full-border's Tab.build override.
+require("starship"):setup()
+
+-- Disk space meter in the status bar (uses `df`).
+require("sduf"):setup()
+
 require("recycle-bin"):setup()
 
 require("bunny"):setup({

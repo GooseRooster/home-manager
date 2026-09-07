@@ -37,6 +37,7 @@ let
     ouch = fetchPlugin { owner = "ndtoan96"; repo = "ouch.yazi"; rev = "cfe4f507ef7337c8ad4c90eef68ea91fc6694759"; hash = "sha256-t1kUo4+YODeTG9d5Yq/vxElcmRHIebC5TRv+uDGG88c="; };
     linemode-plus = fetchPlugin { owner = "barbanevosa"; repo = "linemode-plus.yazi"; rev = "4d0d034c08aaa7c62666456ce4f0d63f1ac4eda5"; hash = "sha256-ekQI1yyZEmX44YjicFz51Eh6csN9OwVXoh8Ituk/jJs="; };
     mediainfo = fetchPlugin { owner = "boydaihungst"; repo = "mediainfo.yazi"; rev = "d2dd310bfbc3a819acf1c9c9c32f402ab6774d3a"; hash = "sha256-nmhn2lcs5F+MRlmqBPbsU74NNiO0Y0Js4YEjRfD9IPE="; };
+    sduf = fetchPlugin { owner = "shafayetejaman"; repo = "sduf.yazi"; rev = "f43ba4afd1a1192a4f59c9ac63bf534a9bb26124"; hash = "sha256-Ey9bJSb4Vewv28rZIcdgc2dwcRTt+dvyt6Upl9cIsKc="; };
   };
 in
 {

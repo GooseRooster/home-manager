@@ -44,6 +44,7 @@ with pkgs; [
   zoxide
   unzip
   nodejs
+  ouch
   file
   shellcheck
   stylua
