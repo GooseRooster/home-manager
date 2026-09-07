@@ -5,7 +5,7 @@ require("full-border"):setup()
 require("starship"):setup()
 
 -- Disk space meter in the status bar (uses `df`).
-require("sduf"):setup()
+-- require("sduf"):setup()
 
 require("recycle-bin"):setup()
 
