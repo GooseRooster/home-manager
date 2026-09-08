@@ -11,9 +11,14 @@ via `devshell-init clang` (see `~/repos/home-manager` for the scaffolder).
   PATH.
 - **`cmake` + `neocmakelsp`** — the cmake nvim feature's LSP, same
   environment-sourced treatment.
-- **`.envrc`** with `use flake` plus `NVIM_LANGS=...,clang,cmake` so the nvim
-  clangd/cmake extras load only inside this shell.
-- **`./.dev.local.sh`** sourced if present — the per-developer hook.
+- **`.envrc`** with `use flake`. Deliberately does *not* set `NVIM_LANGS`
+  (that's a personal-editor concern, not a project-shared one); see
+  `.dev.local.sh` below.
+- **`./.dev.local.sh`** — the per-developer hook, sourced if present.
+  `devshell-init` auto-creates it from `.dev.local.sh.example` on scaffold
+  (gitignored, never overwritten on re-run), pre-wired with
+  `NVIM_LANGS=...,clang,cmake` so the nvim clangd/cmake extras load with
+  zero manual steps.
 
 The compiler itself comes from the host (gcc is on the home profile); add a
 pinned `clang` in `flake.nix` if the project needs a specific version.
@@ -28,7 +33,8 @@ After `devshell-init clang`:
    /.direnv/
    ```
 2. Enter the shell: `direnv allow` or `nix develop`.
-3. (Optional) add a `.dev.local.sh` for personal tools / env vars.
+3. `.dev.local.sh` is already there (auto-created by `devshell-init`) — edit
+   it for additional personal tools / env vars / aliases.
 4. Verify nvim inside the shell: `:checkhealth vim.lsp` and
    `:lua print(vim.fn.exepath("clangd"))` should point at the devshell PATH.
 

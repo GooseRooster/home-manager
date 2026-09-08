@@ -11,14 +11,17 @@ via `devshell-init dotnet` (see `~/repos/home-manager` for the scaffolder).
 - **`.config/dotnet-tools.json`** — pinned local tool manifest, empty by
   default. Add project-shared tools here (nswag, jb ReSharper CLI,
   dotnet-ef, ...); `dotnet tool restore` runs on shell entry.
-- **`.envrc`** — `use flake` plus `NVIM_LANGS=...,dotnet`, so nvim's dotnet
-  feature (easy-dotnet/Roslyn LSP, Razor support) loads only inside this
-  shell.
+- **`.envrc`** — `use flake`. Deliberately does *not* set `NVIM_LANGS`
+  (that's a personal-editor concern, not a project-shared one); see
+  `.dev.local.sh` below.
 - **`.certs/localhost.{pem,key}`** exported from `dotnet dev-certs https`
   on first shell entry, with `ASPNETCORE_Kestrel__Certificates__Default__*`
   env vars pre-set to point at them.
-- **`./.dev.local.sh`** sourced if present — the per-developer hook. Copy
-  `.dev.local.sh.example` to opt in.
+- **`./.dev.local.sh`** — the per-developer hook, sourced if present.
+  `devshell-init` auto-creates it from `.dev.local.sh.example` on scaffold
+  (gitignored, never overwritten on re-run), pre-wired with
+  `NVIM_LANGS=...,dotnet` and `EasyDotnet` in `personal_tools` so nvim's
+  easy-dotnet/Roslyn LSP loads with zero manual steps.
 
 ## Adoption checklist
 
@@ -40,8 +43,8 @@ After `devshell-init dotnet`:
 3. Enter the shell: `direnv allow` or `nix develop`.
 4. Populate `.config/dotnet-tools.json` with any tools the project needs,
    then `dotnet tool restore`.
-5. (Optional) `cp .dev.local.sh.example .dev.local.sh` and edit for personal
-   tools / env vars / aliases.
+5. `.dev.local.sh` is already there (auto-created by `devshell-init`) —
+   edit it for additional personal tools / env vars / aliases.
 
 ## NLog: repo-local log file for `tail -F`
 

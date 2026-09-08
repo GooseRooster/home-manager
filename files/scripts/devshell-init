@@ -9,8 +9,11 @@
 #   devshell-init <template-name> --force        # allow overwriting existing files
 #
 # Files are dropped at the target's ROOT (flake.nix, .envrc,
-# .config/dotnet-tools.json, .dev.local.sh.example, README of the
-# template) — that's how Nix devShells are meant to sit.
+# .config/dotnet-tools.json) — that's how Nix devShells are meant to sit.
+# README.md is deliberately NOT copied (scaffolder-only reference docs), and
+# .dev.local.sh.example is auto-materialized into .dev.local.sh (the
+# per-developer hook — NVIM_LANGS etc. live there, not in .envrc) rather
+# than copied verbatim.
 #
 # Templates are looked up in $DEVSHELL_TEMPLATES_DIR (default:
 # ~/.local/share/devshell-templates), which is materialized by
@@ -71,9 +74,48 @@ if [[ "$FORCE" != true ]]; then
 fi
 
 # Copy template contents (dotfiles included) into the target root.
-cp -rT "$TEMPLATE_SRC" "$TARGET_DIR"
+#
+# Every file under $TEMPLATES_DIR is itself a symlink into the Nix store
+# (home.file with recursive=true symlinks leaves, not the whole tree), so a
+# plain recursive cp preserves those symlinks verbatim — the target repo
+# ends up with dangling-on-other-machines links back into /nix/store instead
+# of real files. `-L` dereferences every symlink into real content;
+# `--no-preserve=mode` drops the store's read-only 444 so the copies land as
+# normal writable files.
+#
+# README.md is intentionally skipped: it's scaffolder/reference
+# documentation, not something a consuming repo needs to carry around. It
+# stays readable from $TEMPLATE_SRC/README.md instead.
+#
+# .dev.local.sh.example is also handled separately below, so it can be
+# auto-materialized into .dev.local.sh rather than left as a manual step.
+shopt -s dotglob
+for entry in "$TEMPLATE_SRC"/*; do
+  base="$(basename "$entry")"
+  case "$base" in
+  README.md | .dev.local.sh.example) continue ;;
+  esac
+  cp -rL --no-preserve=mode "$entry" "$TARGET_DIR/$base"
+done
+shopt -u dotglob
 
 echo "Copied '$TEMPLATE_NAME' template into $TARGET_DIR"
+
+# Auto-materialize the personal dev hook from the template's example, so
+# NVIM_LANGS and friends are wired up with zero manual steps. Never
+# clobbers an existing .dev.local.sh (it's gitignored/personal — you may
+# have already edited it), even under --force.
+DEV_LOCAL_NOTE=""
+if [[ -f "$TEMPLATE_SRC/.dev.local.sh.example" ]]; then
+  if [[ -f "$TARGET_DIR/.dev.local.sh" ]]; then
+    DEV_LOCAL_NOTE="  - $TARGET_DIR/.dev.local.sh already exists — left untouched."
+  else
+    cp -L --no-preserve=mode "$TEMPLATE_SRC/.dev.local.sh.example" "$TARGET_DIR/.dev.local.sh"
+    chmod +x "$TARGET_DIR/.dev.local.sh"
+    DEV_LOCAL_NOTE="  - Personal hook ready at $TARGET_DIR/.dev.local.sh (NVIM_LANGS + personal tools — edit freely, gitignored)."
+  fi
+fi
+
 echo ""
 echo "Next steps:"
 echo "  - Append to $TARGET_DIR/.gitignore:"
@@ -85,6 +127,7 @@ echo "      /.config/.tools-restored"
 echo "  - Trust the dev cert on this host (one-off):"
 echo "      dotnet dev-certs https --trust"
 echo "  - Enter the shell:  direnv allow   (or: nix develop)"
-echo "  - Personalize (optional): cp $TARGET_DIR/.dev.local.sh.example \\"
-echo "                              $TARGET_DIR/.dev.local.sh  (gitignored)"
-echo "  - Read $TARGET_DIR/README.md for template-specific gotchas."
+if [[ -n "$DEV_LOCAL_NOTE" ]]; then
+  echo "$DEV_LOCAL_NOTE"
+fi
+echo "  - Read $TEMPLATE_SRC/README.md for template-specific gotchas."

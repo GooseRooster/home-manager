@@ -186,8 +186,9 @@ the data dir instead (see `files/nvim/lua/config/lazy.lua`).
 Which languages load is decided at runtime by the environment profile
 (`files/nvim/lua/config/profile.lua`): everything defaults to the lean
 baseline + `NVIM_LANGS` opt-ins (typically `export NVIM_LANGS=...,rust` from
-a project `.envrc`); `NVIM_PROFILE=full` is a deliberate per-machine opt-in
-for hosts that genuinely carry every toolchain.
+a project's `.dev.local.sh` — the personal/gitignored hook, not `.envrc`);
+`NVIM_PROFILE=full` is a deliberate per-machine opt-in for hosts that
+genuinely carry every toolchain.
 
 Mason remains the installer for anything that runs fine from a prebuilt
 download (node/jar/pip/python-venv/static-Go packages — pyright, vtsls,
@@ -210,18 +211,26 @@ template into a target repo. Deployed by `modules/scripts.nix` (every host).
 Currently available:
 
 - **`dotnet`** — .NET SDK 10 + `dart-sass` + local-tool-manifest restore + dev
-  cert export to `./.certs/` + optional `./.dev.local.sh` personal hook. See
+  cert export to `./.certs/` + auto-created `./.dev.local.sh` personal hook
+  (pre-wired with `NVIM_LANGS=...,dotnet` + `EasyDotnet`). See
   `files/devshell-templates/dotnet/README.md` for adoption details and a
   couple of NLog gotchas worth remembering.
 - **`rust`** — `rust-analyzer` + `codelldb` (vscode-lldb standalone adapter)
-  on PATH + `NVIM_LANGS=...,rust`, so nvim's rust extra loads only inside
-  the shell. Toolchain itself comes from the host's rustup.
-- **`clang`** — `clang-tools` (clangd) + `codelldb` + `cmake`/`neocmakelsp` +
-  `NVIM_LANGS=...,clang,cmake` for C/C++ (+ CMake) projects.
+  on PATH; `./.dev.local.sh` is auto-created with `NVIM_LANGS=...,rust` so
+  nvim's rust extra loads only inside the shell. Toolchain itself comes from
+  the host's rustup.
+- **`clang`** — `clang-tools` (clangd) + `codelldb` + `cmake`/`neocmakelsp`;
+  `./.dev.local.sh` is auto-created with `NVIM_LANGS=...,clang,cmake` for
+  C/C++ (+ CMake) projects.
 
 The rust/clang templates exist because mason's prebuilt native servers can't
 run on NixOS — those tools are environment-sourced, per the
 [Environment profile](#environment-profile--mason-on-nixos) section above.
+
+`devshell-init` copies real, writable files (dereferencing the Nix-store
+symlinks that back the templates) — never symlinks back into the store —
+and skips each template's `README.md` (reference docs only, read it
+straight from `~/.local/share/devshell-templates/<name>/README.md`).
 
 Usage from any repo:
 

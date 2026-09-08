@@ -42,7 +42,7 @@
 
           shellHook = ''
             # ── Personal hook. Gitignored; teammates without one see nothing.
-            #    Create .dev.local.sh to opt in.
+            #    Auto-created by devshell-init from .dev.local.sh.example.
             if [ -f ./.dev.local.sh ]; then
               # shellcheck source=/dev/null
               . ./.dev.local.sh

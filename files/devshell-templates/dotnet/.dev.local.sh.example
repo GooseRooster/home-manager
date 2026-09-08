@@ -25,7 +25,7 @@ personal_tools=(
     # Roslyn language server for neovim / editor use:
     # csharp-ls
     # easy-dotnet.nvim's companion binary:
-    # EasyDotnet
+    EasyDotnet
     # EF Core CLI:
     # dotnet-ef
     # Interactive .NET REPL:
@@ -54,6 +54,14 @@ if [ "${#personal_tools[@]}" -gt 0 ]; then
 fi
 
 # ─── Personal env vars ─────────────────────────────────────────────────────
+#
+# NVIM_LANGS tells nvim's environment profile (files/nvim/lua/config/
+# profile.lua) which editor features to load in this shell. This lives here
+# (not .envrc) because it's a personal-editor concern, not a project-shared
+# one — .envrc is tracked and every teammate/consumer gets it verbatim.
+# Compose-safe: keeps any host-default langs; the parser tolerates the empty
+# leading token.
+export NVIM_LANGS="${NVIM_LANGS:-},dotnet"
 #
 # Handy for pointing local runs at non-default environments without touching
 # committed appsettings files.

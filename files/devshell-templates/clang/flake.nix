@@ -37,8 +37,8 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           # Intentionally minimal — the nvim-relevant tooling only. Drop
-          # cmake/neocmakelsp from `packages` (and `cmake` from .envrc's
-          # NVIM_LANGS) if the project doesn't use CMake.
+          # cmake/neocmakelsp from `packages` (and `cmake` from
+          # .dev.local.sh's NVIM_LANGS) if the project doesn't use CMake.
           packages = with pkgs; [
             clang-tools
             vscode-extensions.vadimcn.vscode-lldb.adapter
@@ -48,7 +48,7 @@
 
           shellHook = ''
             # ── Personal hook. Gitignored; teammates without one see nothing.
-            #    Create .dev.local.sh to opt in.
+            #    Auto-created by devshell-init from .dev.local.sh.example.
             if [ -f ./.dev.local.sh ]; then
               # shellcheck source=/dev/null
               . ./.dev.local.sh

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Personal dev hook — auto-created as ./.dev.local.sh by devshell-init
+# (gitignored). The flake's shellHook sources ./.dev.local.sh at the end of
+# shell setup, so anything you export or run here happens after the
+# toolchain is already on PATH.
+#
+# This file is only a template — the real ./.dev.local.sh is entirely yours.
+# Teammates without one see nothing (the source is guarded).
+
+# ─── Personal env vars ─────────────────────────────────────────────────────
+#
+# NVIM_LANGS tells nvim's environment profile (files/nvim/lua/config/
+# profile.lua) which editor features to load in this shell. This lives here
+# (not .envrc) because it's a personal-editor concern, not a project-shared
+# one — .envrc is tracked and every teammate/consumer gets it verbatim.
+# Compose-safe: keeps any host-default langs; the parser tolerates the empty
+# leading token. Drop ",cmake" if the project doesn't use CMake.
+export NVIM_LANGS="${NVIM_LANGS:-},clang,cmake"
+#
+# export SOME_LOCAL_SECRET=...
+
+# ─── Personal aliases / functions ──────────────────────────────────────────
+#
+# alias build='cmake --build build'
+# alias configure='cmake -B build -S .'

@@ -95,7 +95,7 @@
             export ASPNETCORE_Kestrel__Certificates__Default__KeyPath="$PWD/.certs/localhost.key"
 
             # ── Personal hook. Gitignored; teammates without one see nothing.
-            #    Copy .dev.local.sh.example -> .dev.local.sh to opt in.
+            #    Auto-created by devshell-init from .dev.local.sh.example.
             if [ -f ./.dev.local.sh ]; then
               # shellcheck source=/dev/null
               . ./.dev.local.sh
