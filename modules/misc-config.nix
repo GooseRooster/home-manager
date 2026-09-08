@@ -84,10 +84,8 @@ in
       };
     })
 
-    # Theming (tinty scheme sync + gnomad schemes) — desktop only. tinty is a
-    # gnome-session-only tool: Noctalia's builtin templates own app theming in
-    # the noctalia session, so the tinty/gnomad files are dropped there.
-    (lib.mkIf (cfg.theming.enable && cfg.session == "gnome") {
+    # Theming (tinty scheme sync + gnomad schemes) — desktop only.
+    (lib.mkIf cfg.theming.enable {
       ".config/gnomad/schemes/dragon-ember.yaml" = {
         source = ../files/gnomad/schemes/dragon-ember.yaml;
         force = true;
@@ -111,22 +109,6 @@ in
       ".config/tinted-theming/tinty/config.toml" = {
         force = true;
         source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
-      };
-    })
-
-    # Theming - desktop only. Noctalia custom schemes.
-    (lib.mkIf (cfg.theming.enable && cfg.session == "noctalia") {
-      ".config/noctalia/palettes/peat.json" = {
-          force = true;
-          source = ../files/noctalia/palettes/peat.json;
-      };
-      ".config/noctalia/palettes/peat_bog.json" = {
-          force = true;
-          source = ../files/noctalia/palettes/peat_bog.json;
-      };
-      ".config/noctalia/palettes/peat_mist.json" = {
-          force = true;
-          source = ../files/noctalia/palettes/peat_mist.json;
       };
     })
   ];

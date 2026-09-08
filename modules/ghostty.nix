@@ -32,13 +32,10 @@ in
       adjust-cell-height = "15%";
       font-size = 14;
     } // lib.optionalAttrs cfg.theming.enable {
-      # The `theme` line points at whichever retint mechanism the session
-      # uses: tinty writes ~/.config/ghostty/themes/tinted-theming, while
-      # Noctalia's builtin ghostty template writes
-      # ~/.config/ghostty/themes/noctalia (and its apply.sh no-ops on configs
-      # already set to `theme = noctalia`, which matters because HM's config
-      # is a read-only symlink).
-      theme = if cfg.session == "noctalia" then "noctalia" else "tinted-theming";
+      # tinty retints ghostty live: its hook copies the rendered theme to
+      # ~/.config/ghostty/themes/tinted-theming and SIGUSR2s ghostty (see
+      # modules/misc-config.nix).
+      theme = "tinted-theming";
     };
   };
 }
