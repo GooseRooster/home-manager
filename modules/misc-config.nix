@@ -41,9 +41,9 @@ let
       name = "tinted-zen";
       themes-dir = "output";
       hook = ''
-        profile_dir="$HOME/.config/zen/$(awk -F= '/^\[Profile/{path=""} /^Path=/{path=$2} /^Default=1/{print path; exit}' "$HOME/.config/zen/profiles.ini")"
+        profile_dir="$HOME/.config/zen/$(awk -F= "/^\[Profile/{path=\"\"} /^Path=/{path=\$2} /^Default=1/{print path; exit}" "$HOME/.config/zen/profiles.ini")"
         mkdir -p "''${profile_dir}/chrome"
-        command cp -f "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
+        cp -f "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
       '';
       supported-systems = ["base16" "base24" "tinted8"];
     }
