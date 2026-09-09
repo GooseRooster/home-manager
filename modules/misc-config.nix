@@ -43,7 +43,7 @@ let
       hook = ''
         profile_dir="$HOME/.config/zen/$(awk -F= '/^\[Profile/{path=""} /^Path=/{path=$2} /^Default=1/{print path; exit}' "$HOME/.config/zen/profiles.ini")"
         mkdir -p "''${profile_dir}/chrome"
-        cp "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
+        command cp -f "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
       '';
       supported-systems = ["base16" "base24" "tinted8"];
     }
