@@ -47,7 +47,7 @@ let
       '';
       supported-systems = ["base16" "base24" "tinted8"];
     }
-  ] ++ lib.optional cfg.gaming.enable [
+  ] ++ lib.optionals cfg.gaming.enable [
       {
         # Vesktop (Discord)
         path = "https://github.com/deathbeam/base16-discord.git";
