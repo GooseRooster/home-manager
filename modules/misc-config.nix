@@ -6,8 +6,7 @@ let
   # GUI/desktop-only configs are skipped on WSL.
   desktopOnly = !cfg.wsl.enable;
 
-  # Tinty scheme-sync items. The Vesktop entry is appended only with the
-  # gaming flag.
+  # Tinty scheme-sync items.
   tintyItems = [
     {
       path = "https://github.com/tinted-theming/tinted-shell";
@@ -37,15 +36,36 @@ let
       '';
       supported-systems = [ "base16" "base24" ];
     }
-  ] ++ lib.optional cfg.gaming.enable {
-    # Vesktop (Discord)
-    path = "https://github.com/deathbeam/base16-discord.git";
-    name = "base16-discord";
-    themes-dir = "themes";
-    theme-file-extension = ".theme.css";
-    supported-systems = [ "base16" ];
-    hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
-  };
+    {
+      path = "https://github.com/tinted-theming/tinted-zen";
+      name = "tinted-zen";
+      themes-dir = "output";
+      hook = ''
+        profile_dir="$HOME/.config/zen/$(basename "$(ls -d "$HOME"/.config/zen/* | grep -i 'Default Profile' | head -1)")"
+        mkdir -p "''${profile_dir}/chrome"
+        cp "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
+      '';
+      supported-systems = ["base16" "base24" "tinted8"];
+    }
+  ] ++ lib.optional cfg.gaming.enable [
+      {
+        # Vesktop (Discord)
+        path = "https://github.com/deathbeam/base16-discord.git";
+        name = "base16-discord";
+        themes-dir = "themes";
+        theme-file-extension = ".theme.css";
+        supported-systems = [ "base16" ];
+        hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
+      }
+      {
+       # Steam Millenium
+        path = "https://github.com/GooseRooster/tinted-material-millennium";
+        name = "tinted-material-millennium";
+        themes-dir = "output";
+        hook = "cp \"$TINTY_THEME_FILE_PATH\" ~/.steam/steam/steamui/skins/Material-Theme/css/main/colors/matugen.css";
+        supported-systems = ["base16"];
+      }
+  ];
 in
 {
   # Shell-agnostic session env. home.sessionVariables feeds the systemd user
