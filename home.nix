@@ -29,6 +29,16 @@
   programs.home-manager.enable = true;
   xdg.enable = true;
 
+  # User-level GC: prunes this user's nix profile generations (older than the
+  # window) and garbage-collects user-reachable store paths. Runs as a systemd
+  # user timer; complements the system-level nix.gc in nixos-config, which
+  # never touches per-user profiles.
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 14d";
+  };
+
   # The NixOS hosts consume this repo through nixos-config's
   # `home-manager.users.<name>.imports = [ dotfiles.hmModules.default ]`, which
   # sets home-manager.backupFileExtension (hm-backup) on its side.
