@@ -342,6 +342,24 @@ Phases (0–3 done so far):
     dependency problem) disappears with it. LuaSnip itself may remain a
     non-active plugin in `~/.local/share/nvim-minimax` — `:Pack`'s `X`
     (clean non-active) removes it.
+  - **`plugin/50-custom/inline-diagnostic.lua`** — port of the LazyVim
+    setup's tiny-inline-diagnostic.nvim (`powerline` preset); registers
+    after '10_options.lua's diagnostic config so `virtual_text = false`
+    wins and the built-in per-line virtual text doesn't duplicate the
+    float.
+  - **`plugin/50-custom/formatting.lua`** — wires the base bundle's tools:
+    conform gains `formatters_by_ft` (stylua for lua, shfmt for sh/bash —
+    conform's `setup()` merges, so this extends MiniMax's stock bare
+    setup), nvim-lint runs shellcheck on sh/bash on save/InsertLeave.
+    Filetypes without entries fall through to `lsp_format = 'fallback'`
+    (ruff formats python, roslyn C#). `shfmt` added to `pkgs/base.nix`
+    alongside the existing stylua/shellcheck.
+  - **DAP adapters** (in `dap.lua`) — codelldb (rust + C/C++, gated on the
+    feature and the devshell-provided binary on PATH) and python/debugpy
+    (gated on `import debugpy` probing the project env, registered
+    asynchronously). Launch configs point at the usual build dirs
+    (`target/debug/`, `build/`); easy-dotnet keeps registering its own
+    dotnet adapter; typescript's js-debug stays unwired (npm-only).
   - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
     nothing about mini.clue; without a group clue the `<Leader>a` popup
     showed an anonymous "+4 entries". `herdr-nvim.lua` now appends

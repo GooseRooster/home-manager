@@ -59,5 +59,6 @@ with pkgs; [
   ouch
   file
   shellcheck
+  shfmt
   stylua
 ]

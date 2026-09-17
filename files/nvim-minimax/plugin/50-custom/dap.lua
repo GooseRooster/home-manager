@@ -61,6 +61,77 @@ Config.later(function()
     { mode = 'n', keys = '<Leader>d', desc = '+Debug' }
   )
 
+  -- ── Per-language adapters/configurations ─────────────────────────────
+  -- Registered only when the feature is on AND the adapter binary is on
+  -- PATH (same philosophy as 'lsp.lua' — missing tool, silently no adapter).
+  -- dotnet needs nothing here: easy-dotnet registers its own adapter and
+  -- configurations (`debugger.auto_register_dap` in 'easy-dotnet.lua').
+  -- typescript's js-debug adapter is npm-only and deliberately not wired.
+  local profile = require('config.profile')
+
+  -- codelldb (vscode-lldb standalone; devshell templates put it on PATH)
+  -- drives both rust and C/C++ sessions. Launch config points at the usual
+  -- per-ecosystem build dir; a project `.nvim.lua` can add richer targets.
+  if
+    (profile.has('rust') or profile.has('clang'))
+    and vim.fn.executable('codelldb') == 1
+  then
+    dap.adapters.codelldb = {
+      type = 'server',
+      port = '${port}',
+      executable = {
+        command = vim.fn.exepath('codelldb'),
+        args = { '--port', '${port}' },
+      },
+    }
+
+    local launch_config = function(build_dir)
+      return {
+        name = 'Launch (codelldb)',
+        type = 'codelldb',
+        request = 'launch',
+        program = function()
+          return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. build_dir, 'file')
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
+      }
+    end
+
+    if profile.has('rust') then
+      dap.configurations.rust = { launch_config('/target/debug/') }
+    end
+    if profile.has('clang') then
+      dap.configurations.c = { launch_config('/build/') }
+      dap.configurations.cpp = { launch_config('/build/') }
+    end
+  end
+
+  -- python/debugpy: debugpy lives inside the project's env (pip/uv), not on
+  -- PATH as a binary — probe it once asynchronously and only then register
+  -- the adapter.
+  if profile.has('python') then
+    vim.system({ 'python3', '-c', 'import debugpy' }, {}, function(res)
+      if res.code ~= 0 then return end
+      vim.schedule(function()
+        dap.adapters.python = {
+          type = 'executable',
+          command = 'python3',
+          args = { '-m', 'debugpy.adapter' },
+        }
+        dap.configurations.python = {
+          {
+            name = 'Launch file',
+            type = 'python',
+            request = 'launch',
+            program = '${file}',
+            console = 'integratedTerminal',
+          },
+        }
+      end)
+    end)
+  end
+
   -- Always-on left column: variables/scope, breakpoints, repl. Narrower than
   -- CSPWeb's 45-col inspector-only column since repl shares the space here.
   local base_layout = {
