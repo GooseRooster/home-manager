@@ -353,18 +353,66 @@ Phases (0–3 done so far):
   (`$XDG_CACHE_HOME/nvim-minimax/osc-colors-palette.lua`, separate namespace
   from the LazyVim config's cache) via the same live `UIEnter`/`FocusGained`
   OSC query your LazyVim setup already went through once.
-- [ ] **Phase 5 — LSP layer, Mason-free.** One `after/lsp/<server>.lua` +
-  `vim.lsp.enable(name, profile.has(feature))` per entry in `profile.lua`'s
-  existing `feature_order` (python, rust, typescript, java, clang, cmake,
-  docker, sql, json, yaml, nushell, git, dotnet) — server defaults sourced
-  from each LazyVim extra as reference, not a dependency. `profile.lua`'s
-  language-selection logic ports almost as-is; `nix_substitutes`/
-  `tool_source()`/`mason.lua` are dropped entirely (nothing routes through
-  Mason in this config — binaries come from `pkgs/base.nix` or project
-  devshells, same as the NixOS-unsafe tools already do today). Languages
-  needing more than a bare lspconfig entry (rust → rustaceanvim, typescript →
-  vtsls settings, dotnet → existing easy-dotnet/lazydotnet) get their extra
-  plugin added via `vim.pack.add()` per-language as reached.
+- [ ] **Phase 5 — LSP layer, Mason-free (in progress).** One
+  `after/lsp/<server>.lua` + `vim.lsp.enable(name, profile.has(feature))` per
+  entry in `profile.lua`'s existing `feature_order` (python, rust,
+  typescript, java, clang, cmake, docker, sql, json, yaml, nushell, git,
+  dotnet) — server defaults sourced from each LazyVim extra as reference, not
+  a dependency. `profile.lua`'s language-selection logic ports almost as-is;
+  `nix_substitutes`/`tool_source()`/`mason.lua` are dropped entirely (nothing
+  routes through Mason in this config — binaries come from `pkgs/base.nix`
+  or project devshells, same as the NixOS-unsafe tools already do today).
+  Languages needing more than a bare lspconfig entry (rust → rustaceanvim,
+  typescript → vtsls settings, dotnet → existing easy-dotnet/lazydotnet) get
+  their extra plugin added via `vim.pack.add()` per-language as reached.
+
+  Also sweeping up the LazyVim side's stack-agnostic `core_extras` (always
+  on, not gated by any of the 13 language features) alongside the
+  language-specific ones, since they're the same shape of work. Approach for
+  these: port the LazyVim extra close to verbatim rather than redesign —
+  they're small, self-contained, and already well-tuned. First one done:
+  `plugin/50-custom/kulala.lua` (`lazyvim.plugins.extras.util.rest`) —
+  verbatim keymap set, `<Leader>R` group appended to
+  `Config.leader_group_clues`, treesitter parsers for `http`/`graphql` added
+  matching `40_plugins.lua`'s own `ensure_installed` pattern. One deviation:
+  lazy.nvim's per-key `ft = "http"` restriction (some keymaps only existed
+  in `.http` buffers) has no `vim.pack` equivalent, so every key is global
+  now — harmless, kulala's own functions no-op/error gracefully outside an
+  `.http` buffer, and a couple of them (scratchpad, replay) are meant to be
+  reachable from anywhere anyway. Verified live (`.http` scratch file,
+  `NVIM_APPNAME=nvim-minimax`): filetype detection, both a buffer-scoped key
+  (`<Leader>Rs`) and a global one (`<Leader>Rb`), module loads cleanly,
+  parsers install successfully.
+  `core_extras` disposition, decided explicitly rather than porting all of
+  them: **kept** — mini-surround (already native), yanky, dial, inc-rename,
+  navic, mini-animate, mini-hipatterns (already native), startuptime.
+  **Ditched** — neogen, illuminate, outline, smear-cursor, dot.
+
+  All six newly-ported ones (`plugin/50-custom/{yanky,dial,inc-rename,navic,
+  mini-animate,startuptime}.lua`) verified live (real `home-manager switch`,
+  real `vim.pack` install, `NVIM_APPNAME=nvim-minimax`), including the two
+  worth flagging specifically:
+  - `yanky.lua`'s `[y`/`]y` (cycle yank-history forward/backward)
+    intentionally shadows `mini.bracketed`'s own "yank" target (`:h
+    MiniBracketed.yank`, active by default, same keys, different mechanism)
+    — confirmed `]y` resolves to yanky's `<Plug>(YankyCycleForward)`, not
+    mini.bracketed's. Also shadows MiniMax's stock `[p`/`]p` (a strict
+    subset of yanky's indent-aware put) for the same reason.
+  - `inc-rename.lua`'s `<Leader>lr` intentionally overrides MiniMax's stock
+    `vim.lsp.buf.rename()` binding on the same key (a strict upgrade, live
+    preview) — confirmed the live mapping resolves to inc-rename.lua's own
+    function, not the stock one.
+  - `navic.lua`: winbar is set directly per-window (`LspAttach`/
+    `BufWinEnter`/`WinEnter`), not through a statusline plugin's `winbar`
+    section like the LazyVim setup's own `lualine.lua` does it (no lualine
+    here) — confirmed empty (not a permanently-reserved blank line) for
+    windows with no navic-capable attached client.
+  - `startuptime.lua`: no "append one item" API on `mini.starter` — its
+    `config.items` stays `nil` unless set explicitly (falls back to a
+    private default list at render time). Replicated that exact default
+    composition via the same public `MiniStarter.sections.*` generators
+    upstream uses internally, plus one new "Startup time" item — confirmed
+    present in the resolved `MiniStarter.config.items`.
 
 `bash scripts/update-minimax.sh` to refresh `vendor/minimax/` against
 upstream (review the diff manually; nothing auto-merges).
