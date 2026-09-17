@@ -390,7 +390,48 @@ Phases (0–3 done so far):
     `vim.fn.jobpid()` on the buffer's `channel` — errors (E900) once the
     shell exits; `term_getjob()` doesn't exist in 0.12. Verified headlessly:
     open/hide/reopen reuses the same buffer id; killing the shell yields a
-    fresh buffer on the next toggle.
+    fresh buffer on the next toggle. Also: both open paths end in
+    `startinsert` (mini.basics' TermOpen hook only covers fresh terminals —
+    reused buffers never re-fire it), and closing as the *only* window
+    deletes the buffer instead of erroring E444 on `:hide`.
+  - **Testing-session refinements** (user-reported):
+    - `q` in Normal mode = close (window via `:close`; as the only window,
+      delete the current buffer via mini.bufremove — refuses on modified
+      buffers). Deliberate trade-off: the macro recorder and `q:`/`q/`
+      cmdline windows are gone globally; buffer-local `q` maps
+      (mini.files/pickers/help) still win.
+    - `Treesitter: skipping unsupported language: jsonc` — nvim-treesitter
+      has no jsonc parser; dropped from the json bundle (json covers it).
+    - **Razor highlighting** — the razor parser's `injections.scm` injects
+      `html` into markup `(element)` regions (and inherits c_sharp), so
+      razor highlighting needs the **html parser installed** — it's now in
+      the dotnet (and typescript) tree-sitter bundles. The parallel to
+      easy-dotnet's razor LSP cohosting (markup via vscode-html-language-
+      server) is deliberate. Also, tree-sitter start failures are now
+      *reported* (via vim.notify, which mini.notify routes to the history)
+      instead of silently swallowed — an unhighlighted filetype is
+      diagnosable. Note: the missing html parser was only visible as
+      "no highlighting, no errors" because the razor parser itself attached
+      fine; interactive sessions resolve the injection now.
+    - Pickers (`mini.pick` + `mini.extra`) navigate with `<C-j>`/`<C-k>`
+      (replacing `<C-n>`/`<C-p>`; arrows keep working). No conflict with
+      mini.snippets' insert-mode `<C-j>` expand: while a picker is active
+      its loop reads keys through `getcharstr()`, which bypasses real
+      mappings — verified — so expand never fires inside a picker.
+    - **DAP: profiler bottom row removed** (the debuggee-log panel that
+      wouldn't close): dap-ui now always opens with just the left column,
+      and the terminated/exited listeners explicitly close easy-dotnet's
+      managed-terminal panel (`easy-dotnet.terminal.hide()` — its own
+      auto-hide only triggers on exit code 0). The CPU/mem widgets stay
+      registered (`mem_cpu_usage = true`) for per-project layouts.
+    - **Kulala scoped to .http buffers** — all `<Leader>R*` maps and the
+      `+Rest` group clue are now buffer-local (FileType http via
+      `config.clue.add_buf`, with the first-buffer gap handled and an
+      idempotent `setup_buf` guard), replacing the previous global
+      registration; scratchpad/replay are .http-only now too.
+    - **Inline diagnostics gutter icons** — sign text is icon-only for all
+      four severities (`   󰌵`, the LazyVim-style set) instead of E/W
+      letters; stock limited signs to WARN+ only.
   - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
     nothing about mini.clue; without a group clue the `<Leader>a` popup
     showed an anonymous "+4 entries". `herdr-nvim.lua` now appends

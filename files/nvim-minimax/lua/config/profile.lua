@@ -82,16 +82,16 @@ M.feature_lsp = {
 M.feature_treesitter = {
 	python = { "python" },
 	rust = { "rust", "ron" },
-	typescript = { "typescript", "tsx", "javascript" },
+	typescript = { "typescript", "tsx", "javascript", "html" },
 	clang = { "c", "cpp" },
 	cmake = { "cmake" },
 	docker = { "dockerfile" },
 	sql = { "sql" },
-	json = { "json", "jsonc", "json5" },
+	json = { "json", "json5" }, -- no jsonc parser in nvim-treesitter (unsupported language); json covers it
 	yaml = { "yaml" },
 	nushell = { "nu" },
 	git = { "gitcommit", "gitignore", "git_rebase", "gitattributes" },
-	dotnet = { "c_sharp", "razor" },
+	dotnet = { "c_sharp", "razor", "html" }, -- html is required by razor's injections.scm for markup regions
 }
 
 local function resolve_profile()

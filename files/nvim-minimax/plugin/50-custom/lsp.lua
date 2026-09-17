@@ -73,8 +73,10 @@ local function install_and_start_parsers(langs)
 	end
 
 	-- 40_plugins.lua's `ts_start` equivalent, for the languages *this* layer
-	-- brought in. pcall-guarded: `vim.treesitter.start` errors when the parser
-	-- binary isn't built yet (install() is asynchronous on first run).
+	-- brought in. A failed start is reported (not silently swallowed): the
+	-- usual cause is the parser not being built yet on first run (install()
+	-- is asynchronous), but an unhighlighted filetype would otherwise be
+	-- undiagnosable.
 	local filetypes = {}
 	for _, lang in ipairs(langs) do
 		for _, ft in ipairs(vim.treesitter.language.get_filetypes(lang)) do
@@ -82,7 +84,13 @@ local function install_and_start_parsers(langs)
 		end
 	end
 	local ts_start = function(ev)
-		pcall(vim.treesitter.start, ev.buf)
+		local ok, err = pcall(vim.treesitter.start, ev.buf)
+		if not ok then
+			vim.notify(
+				("tree-sitter could not start for %s: %s"):format(vim.bo[ev.buf].filetype, err),
+				vim.log.levels.WARN
+			)
+		end
 	end
 	Config.new_autocmd("FileType", filetypes, ts_start, "Start tree-sitter (profile bundles)")
 end

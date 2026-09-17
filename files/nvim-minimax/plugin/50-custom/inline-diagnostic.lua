@@ -3,9 +3,11 @@
 -- virtual text.
 --
 -- Registers after '10_options.lua's own `later()`-deferred
--- `vim.diagnostic.config(...)` call, so the `virtual_text = false` here
--- wins: tiny-inline-diagnostic renders its own virtual text and would
--- otherwise duplicate the built-in per-line one.
+-- `vim.diagnostic.config(...)` call, so this wins: the built-in per-line
+-- virtual text is off (tiny-inline-diagnostic renders its own), and the
+-- gutter signs become icon-only markers for every severity (stock config
+-- shows E/W letters for WARN+ only — with everything inline, the gutter
+-- carries all four).
 Config.later(function()
   vim.pack.add({ 'https://github.com/rachartier/tiny-inline-diagnostic.nvim' })
 
@@ -16,5 +18,12 @@ Config.later(function()
     disabled_ft = {},
   })
 
-  vim.diagnostic.config({ virtual_text = false })
+  vim.diagnostic.config({
+    virtual_text = false,
+    signs = {
+      priority = 9999,
+      severity = { min = 'HINT', max = 'ERROR' },
+      text = { '', '', '', '' },
+    },
+  })
 end)

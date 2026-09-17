@@ -15,4 +15,6 @@
 -- guaranteed here since `later()` callbacks fire in registration order (see
 -- 'plugin/45_keymaps_extra.lua' for the same reasoning), and this file
 -- sorts after '30_mini.lua' alphabetically either way.
-Config.later(function() require('mini.clue').config.window.delay = 0 end)
+Config.later(function()
+	require("mini.clue").config.window.delay = 250
+end)

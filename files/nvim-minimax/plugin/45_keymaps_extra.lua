@@ -32,6 +32,21 @@ vim.keymap.set('n', '<Leader>/', '<Cmd>Pick grep_live<CR>', { desc = 'Grep live'
 vim.keymap.set('n', '<C-j>', '<C-d>', { desc = 'Scroll down half page' })
 vim.keymap.set('n', '<C-k>', '<C-u>', { desc = 'Scroll up half page' })
 
+-- Close the current window with `q`. Deliberate trade-off: this gives up the
+-- normal-mode macro recorder (`qq`, `q:`/`q/`/`q?` cmdline windows included)
+-- and any plugin relying on a *global* `q`; buffer-local `q` bindings
+-- (mini.files, mini.pick, help windows, ...) still win over this. As the
+-- only window there's nothing to close, so it falls back to deleting the
+-- current buffer (mini.bufremove refuses on modified buffers instead of
+-- losing changes).
+vim.keymap.set('n', 'q', function()
+  if vim.fn.winnr('$') > 1 then
+    vim.cmd('close')
+  else
+    require('mini.bufremove').delete(0)
+  end
+end, { desc = 'Close window (or buffer when last)' })
+
 -- Window navigation — all Alt. Intentionally shadows MiniMax's *stock*
 -- `<A-hjkl>` normal-mode bindings: 'mini.move' (set up in a `later()` at
 -- '30_mini.lua:622') uses them to move lines/selection. Registered in a
@@ -67,9 +82,20 @@ end)
 -- markers (shell exited) are deleted and replaced on the next toggle. The
 -- buffer is unlisted, so it never shows up in 'mini.tabline' as a tab —
 -- only the toggle ever brings it up.
+--
+-- Both open paths end in Terminal mode (`startinsert`), so the toggle is
+-- immediately typeable. mini.basics already does this via its `TermOpen`
+-- autocmd, but only for *fresh* terminals — reused buffers don't re-fire
+-- that event, so this is done explicitly here.
 local toggle_horizontal_term = function()
   if vim.bo.buftype == 'terminal' then
-    vim.cmd('hide')
+    -- `:hide` fails on the last window; with nothing left to show, the
+    -- single-buffer invariant makes deleting the buffer the right close.
+    if vim.fn.winnr('$') == 1 then
+      vim.api.nvim_buf_delete(vim.api.nvim_get_current_buf(), { force = true })
+    else
+      vim.cmd('hide')
+    end
     return
   end
 
@@ -80,6 +106,7 @@ local toggle_horizontal_term = function()
       local channel = vim.bo[buf].channel
       if type(channel) == 'number' and channel > 0 and pcall(vim.fn.jobpid, channel) then
         vim.cmd(('horizontal sbuffer %d'):format(buf))
+        vim.cmd('startinsert')
         return
       else
         -- Stale marker (shell exited since last use): clean it up so the
@@ -92,6 +119,7 @@ local toggle_horizontal_term = function()
   vim.cmd('horizontal term')
   vim.b.minimax_term = true
   vim.bo.buflisted = false
+  vim.cmd('startinsert')
 end
 for _, mode in ipairs({ 'n', 't' }) do
   vim.keymap.set(mode, '<C-/>', toggle_horizontal_term, { desc = 'Toggle terminal (horizontal)' })
