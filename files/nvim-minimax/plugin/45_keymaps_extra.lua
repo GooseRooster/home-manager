@@ -55,17 +55,43 @@ end)
 -- │ Terminal toggle (<C-/> / <C-_>)                     │
 -- └─────────────────────────────────────────────────────┘
 --
--- In a terminal → close the split (buffer survives via `:hide`), else →
--- open a horizontal split terminal (Neovim 0.12's `:horizontal` modifier +
--- `:term`; same invocation as MiniMax's stock `<Leader>tT`). Mapped in both
--- Normal and Terminal modes, and under both `<C-/>` and `<C-_>` since
--- terminals disagree on which they send.
+-- In a terminal → close the split (`:hide` keeps the buffer and its running
+-- shell alive), else → open a horizontal split terminal (Neovim 0.12's
+-- `:horizontal` modifier + `:term`; same invocation as MiniMax's stock
+-- `<Leader>tT`). Mapped in both Normal and Terminal modes, and under both
+-- `<C-/>` and `<C-_>` since terminals disagree on which they send.
+--
+-- Every toggle-terminal shares ONE buffer, found by the `minimax_term`
+-- buffer-local marker: reopening shows the same buffer (scrollback and
+-- running shell preserved) instead of piling up a new one per press. Dead
+-- markers (shell exited) are deleted and replaced on the next toggle. The
+-- buffer is unlisted, so it never shows up in 'mini.tabline' as a tab —
+-- only the toggle ever brings it up.
 local toggle_horizontal_term = function()
   if vim.bo.buftype == 'terminal' then
     vim.cmd('hide')
-  else
-    vim.cmd('horizontal term')
+    return
   end
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buftype == 'terminal' and vim.b[buf].minimax_term then
+      -- Liveness: a terminal buffer's `channel` job answers `jobpid()` while
+      -- running and errors (E900) once its shell exited.
+      local channel = vim.bo[buf].channel
+      if type(channel) == 'number' and channel > 0 and pcall(vim.fn.jobpid, channel) then
+        vim.cmd(('horizontal sbuffer %d'):format(buf))
+        return
+      else
+        -- Stale marker (shell exited since last use): clean it up so the
+        -- single-buffer invariant holds, then fall through to a fresh one.
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+    end
+  end
+
+  vim.cmd('horizontal term')
+  vim.b.minimax_term = true
+  vim.bo.buflisted = false
 end
 for _, mode in ipairs({ 'n', 't' }) do
   vim.keymap.set(mode, '<C-/>', toggle_horizontal_term, { desc = 'Toggle terminal (horizontal)' })

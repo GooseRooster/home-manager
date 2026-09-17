@@ -376,6 +376,15 @@ Phases (0–3 done so far):
     became `if $nu.is-interactive and not ("NVIM" in $env) { fastfetch }`.
     Manual `fastfetch` calls (and the `home` clear-and-greet functions)
     still work inside a terminal by design — only the greeting is gated.
+  - **Terminal toggle: single reusable buffer** — the `<C-/>` toggle now
+    keeps exactly one terminal buffer per session (found via a `minimax_term`
+    buffer-local marker): reopening reuses it (scrollback and running shell
+    preserved), it's unlisted so it never shows as a `mini.tabline` tab, and
+    a stale marker (shell exited) is deleted and replaced. Liveness check is
+    `vim.fn.jobpid()` on the buffer's `channel` — errors (E900) once the
+    shell exits; `term_getjob()` doesn't exist in 0.12. Verified headlessly:
+    open/hide/reopen reuses the same buffer id; killing the shell yields a
+    fresh buffer on the next toggle.
   - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
     nothing about mini.clue; without a group clue the `<Leader>a` popup
     showed an anonymous "+4 entries". `herdr-nvim.lua` now appends
