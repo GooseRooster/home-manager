@@ -432,6 +432,17 @@ Phases (0–3 done so far):
     - **Inline diagnostics gutter icons** — sign text is icon-only for all
       four severities (`   󰌵`, the LazyVim-style set) instead of E/W
       letters; stock limited signs to WARN+ only.
+  - **mini.files tweaks** (`plugin/50-custom/files.lua`) — preview pane
+    widened to 60 columns (`windows.width_preview`, default 25; it
+    materializes only when focus+preview fit the terminal width) and
+    `<CR>` = "open this": directories navigate into, files open *and*
+    close the explorer. That mapping is literally
+    `MiniFiles.go_in({ close_on_file = true })` — the behavior of mini.files'
+    own `go_in_plus` (`L`), bound buffer-locally via the documented
+    'MiniFilesBufferCreate' event; stock `l`/`L` keep working. Verified
+    headlessly: preview width applied, `<CR>` on a file opens it and closes
+    the explorer, `<CR>` on a directory navigates deeper with the explorer
+    open.
   - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
     nothing about mini.clue; without a group clue the `<Leader>a` popup
     showed an anonymous "+4 entries". `herdr-nvim.lua` now appends
