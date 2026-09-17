@@ -23,6 +23,35 @@ Config.later(function()
     'https://github.com/GustavEikaas/easy-dotnet.nvim',
   })
 
+  -- `preload_roslyn` calls `vim.lsp.start(cap)` without options, which
+  -- attaches the client to the *current* buffer unconditionally (buf_attach_client
+  -- ignores `filetypes`; only the `vim.lsp.enable` FileType autocmd machinery
+  -- gates attachment). At startup in a solution folder the current buffer is the
+  -- mini.starter dashboard (`filetype=ministarter`), so roslyn ends up attached to
+  -- it. easy-dotnet's `refresh_diag` (run on `workspace/projectInitializationComplete`
+  -- and `workspace/textDocumentContent/refresh`) then pulls `textDocument/diagnostic`
+  -- for that buffer; the Roslyn server never got a didOpen for it and throws
+  -- `Failed to get language for textDocument/diagnostic` (StreamJsonRpc code
+  -- -30099) — see dotnet/roslyn#81410. Patched here to start the server with
+  -- `attach = false`: preloading (warm server while the dashboard shows) is
+  -- preserved and real cs/razor buffers still attach via `vim.lsp.enable`'s
+  -- FileType gating (set up by `M.enable`, which runs before preload).
+  -- Must be installed *before* `dotnet.setup()` — setup() itself calls
+  -- `preload_roslyn` (easy-dotnet/lua/easy-dotnet/init.lua).
+  -- TODO: drop once upstream fixes `M.preload_roslyn` (GustavEikaas/easy-dotnet.nvim).
+  local roslyn_lsp = require('easy-dotnet.roslyn.lsp')
+  roslyn_lsp.preload_roslyn = function(opts)
+    local sln = require('easy-dotnet.current_solution').try_get_selected_solution()
+    if sln and opts.preload_roslyn == true then
+      local cap = vim.tbl_deep_extend(
+        'force',
+        vim.lsp.config[require('easy-dotnet.constants').lsp_client_name],
+        { root_dir = vim.fs.dirname(sln) }
+      )
+      vim.lsp.start(cap, { attach = false })
+    end
+  end
+
   local dotnet = require('easy-dotnet')
   dotnet.setup({
     managed_terminal = {

@@ -22,7 +22,9 @@ Config.later(function()
         if _G.MiniSessions == nil then return {} end
         return starter.sections.sessions(5, true)()
       end,
-      starter.sections.recent_files(5, false, false),
+      -- Second arg (`current_dir`) scopes `v:oldfiles` to the cwd and its
+      -- subdirectories — see 'MiniStarter.sections.recent_files'.
+      starter.sections.recent_files(5, true, false),
       starter.sections.builtin_actions(),
       { name = 'Startup time', action = 'StartupTime', section = 'Utilities' },
     },
