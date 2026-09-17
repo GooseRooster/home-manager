@@ -1,0 +1,18 @@
+-- Make mini.clue's popup appear instantly instead of after MiniMax's stock
+-- 1-second debounce ('vendor/minimax/plugin/30_mini.lua' calls
+-- `miniclue.setup({ clues = ..., triggers = ... })` with no `window`
+-- override, so it uses mini.clue's own default `window.delay = 1000`).
+--
+-- Mutating `MiniClue.config.window.delay` directly (rather than re-calling
+-- `.setup()` with a full clues/triggers replica) works because mini.clue
+-- reads `MiniClue.config` fresh every time it's about to show the window
+-- (`H.state_advance()` in 'lua/mini/clue.lua' calls `H.get_config().window`
+-- on every trigger, it's not cached at setup time) — so changing just this
+-- one field after the fact is enough, with no need to duplicate (and risk
+-- drifting from) the vendored clues/triggers list.
+--
+-- Must run after MiniMax's own mini.clue `later()`-deferred setup() call —
+-- guaranteed here since `later()` callbacks fire in registration order (see
+-- 'plugin/45_keymaps_extra.lua' for the same reasoning), and this file
+-- sorts after '30_mini.lua' alphabetically either way.
+Config.later(function() require('mini.clue').config.window.delay = 0 end)

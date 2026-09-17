@@ -302,11 +302,18 @@ Phases (0–3 done so far):
     *source*, not a specific engine); the `jsregexp` build step is wired via
     `Config.on_packchanged`, matching `40_plugins.lua`'s own
     `nvim-treesitter` `:TSUpdate` hook pattern.
-  - `cairn.lua` — remapped off its own `<leader>m*` defaults to `<leader>a*`:
-    MiniMax's stock `20_keymaps.lua` already claims `<leader>m` for
-    `mini.map`. No actual keymap collision (different exact sequences), but
-    `mini.clue` would've had two different group descriptions registered for
-    the same prefix.
+  - `cairn.lua` — remapped off its own `<leader>m*` defaults twice now.
+    First move: `<leader>m*` → `<leader>a*` (MiniMax's stock `20_keymaps.lua`
+    already claims `<leader>m` for `mini.map`; no actual keymap collision,
+    different exact sequences, but `mini.clue` would've had two different
+    group descriptions on the same prefix). Second move, found later:
+    `<leader>a` turned out already taken too — by `herdr-nvim`'s own
+    *default* prefix (`herdr-nvim.lua` doesn't override it, so it's the
+    prefix your primary LazyVim setup already has as established muscle
+    memory). Landed on `<leader>c` ("cairn") — confirmed via a full dump of
+    every registered `<Leader>`-prefixed mapping (`nvim --headless` +
+    `vim.api.nvim_get_keymap('n')`) that nothing else collides, in either
+    direction.
 - [x] **Phase 3 — explorer & clues.** `yazi.nvim` dropped, stock `mini.files`
   used (nothing to port — already default). which-key group labels
   translated to `mini.clue`: global groups (`cairn.lua`) append to
@@ -326,6 +333,14 @@ Phases (0–3 done so far):
   `markdown.lua`, `easy-dotnet.lua` all call their buffer-setup function once
   directly, in addition to registering the ongoing autocmd, to cover that
   buffer too — see the comments in those files).
+
+  Also, `plugin/50-custom/mini-clue-tweaks.lua`: MiniMax's stock 1-second
+  `window.delay` before the clue popup appears felt sluggish — set to `0`
+  (instant) by mutating `require('mini.clue').config.window.delay` directly
+  after the fact, rather than re-calling `.setup()` with a full
+  clues/triggers replica (confirmed against the source that
+  `H.state_advance()` reads `MiniClue.config` fresh on every trigger, not
+  cached at setup time, so this one-field mutation is sufficient).
 
   All of the above verified with a real headless `vim.pack` install (network,
   not just `nix build`) against a scratch `$XDG_CONFIG_HOME`/`$XDG_DATA_HOME`,

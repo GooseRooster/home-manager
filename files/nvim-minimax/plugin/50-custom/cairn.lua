@@ -4,14 +4,20 @@
 -- stanza — MiniMax uses 'mini.tabline' and never had bufferline in the first
 -- place, so there's nothing to disable.
 --
--- Remapped off cairn's own `<leader>m*` defaults: MiniMax's stock
--- 'plugin/20_keymaps.lua' already claims `<Leader>m` for 'mini.map'
--- (`mf`/`mr`/`ms`/`mt`). Nothing would actually break — cairn's default
--- `<leader>ma`/`md`/`mm` are different exact sequences from mini.map's, Vim
--- keymaps don't "claim" a whole prefix — but 'mini.clue' would end up with
--- two different group *descriptions* registered for the same `<Leader>m`
--- (see 'plugin/45_keymaps_extra.lua' for how the clue table works), which is
--- ambiguous. `<Leader>a` ("arena") is free in MiniMax's own group list.
+-- Remapped off cairn's own `<leader>m*` defaults twice now:
+--   1. MiniMax's stock 'plugin/20_keymaps.lua' claims `<Leader>m` for
+--      'mini.map' (`mf`/`mr`/`ms`/`mt`) — first move was to `<Leader>a`
+--      ("arena").
+--   2. `<Leader>a` turned out already taken too: `herdr-nvim.lua` uses
+--      herdr-nvim's own *default* `prefix = "<leader>a"` — unmodified, so
+--      it's the one your primary LazyVim setup already has as established
+--      muscle memory (`files/nvim/lua/plugins/herdr-nvim.lua` doesn't
+--      override it either). No hard keymap clash either time (different
+--      exact leaf sequences — herdr uses `ac`/`al`/`as`/`aS`, cairn used
+--      `aa`/`ad`/`am`), but two unrelated plugins sharing one `mini.clue`
+--      group prefix is exactly the ambiguity flagged the first time around.
+--   Landed on `<Leader>c` ("cairn", matching the plugin's own name) — fully
+--   unclaimed by MiniMax stock, herdr, or anything else in this overlay.
 --
 -- which-key's global `wk.add({ { "<leader>m", group = "cairn", ... } })` is
 -- translated to an append onto `Config.leader_group_clues` (read by
@@ -22,12 +28,13 @@ Config.later(function()
   require('cairn').setup({
     track_cursor = true,
     keymaps = {
-      add = '<Leader>aa',
-      remove = '<Leader>ad',
-      picker = '<Leader>am',
+      add = '<Leader>ca',
+      remove = '<Leader>cd',
+      picker = '<Leader>cm',
       -- index_prefix left at cairn's own default ("<Leader>", i.e. bare
-      -- <Leader>1..<Leader>N for arena slots) — MiniMax doesn't bind any
-      -- <Leader><digit> combos, so no collision there.
+      -- <Leader>1..<Leader>N for arena slots) — nothing else in this config
+      -- binds bare <Leader><digit>, and keeping these as short as possible
+      -- matters for a frequently-used quick-jump feature.
     },
     arena = {
       enabled = true,
@@ -43,6 +50,6 @@ Config.later(function()
 
   table.insert(
     Config.leader_group_clues,
-    { mode = 'n', keys = '<Leader>a', desc = '+arena (cairn)' }
+    { mode = 'n', keys = '<Leader>c', desc = '+cairn (arena)' }
   )
 end)
