@@ -376,6 +376,12 @@ Phases (0–3 done so far):
     became `if $nu.is-interactive and not ("NVIM" in $env) { fastfetch }`.
     Manual `fastfetch` calls (and the `home` clear-and-greet functions)
     still work inside a terminal by design — only the greeting is gated.
+  - **Shell greeting skip in cramped terminals** — both `fastfetch` shell
+    wrappers (files/zsh/functions.zsh, files/nushell/config.nu) skip
+    argument-less (greeting) calls when the terminal is narrower than 80
+    columns (zsh `$COLUMNS`, nushell `term size`), so the banner no longer
+    overflows in small splits. Manual calls with args always render, and
+    non-tty/unknown-size contexts fall back to rendering.
   - **Terminal toggle: single reusable buffer** — the `<C-/>` toggle now
     keeps exactly one terminal buffer per session (found via a `minimax_term`
     buffer-local marker): reopening reuses it (scrollback and running shell
