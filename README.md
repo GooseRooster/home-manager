@@ -201,6 +201,84 @@ Consequence for projects: a rust/clang/cmake project must provide its
 tooling via the devshell (`devshell-init rust` / `clang` scaffolds it) —
 opening nvim outside such a shell simply leaves those servers off.
 
+## MiniMax experiment (roadmap)
+
+An experimental, side-by-side [MiniMax](https://github.com/nvim-mini/MiniMax)
+config lives at `~/.config/nvim-minimax`, booted via `nvim-minimax` (zsh alias
+/ nu `def`, both set `NVIM_APPNAME=nvim-minimax`). It never touches
+`~/.config/nvim` or the primary LazyVim setup's data/state dirs — fully
+additive, safe to ignore.
+
+Rationale: MiniMax leans almost entirely on `mini.nvim` (one maintainer, ~35
+modules) plus Neovim's built-in `vim.pack`, instead of LazyVim's dozen+
+separate plugin authors + lazy.nvim + Mason. Smaller dependency surface,
+config meant to be read start-to-end, no auto-updating "distribution" layer —
+traded against real capability gaps out of the box (`mini.completion` vs
+blink.cmp, `mini.pick` vs snacks picker, no Mason/DAP/testing baseline). The
+goal here isn't to replace LazyVim outright, but to dogfood it far enough to
+make that call deliberately.
+
+Vendoring mirrors the LazyVim starter pattern with one structural difference:
+LazyVim is a real runtime plugin dependency (`vendor/lazyvim-starter` is just
+the empty project skeleton; actual behavior comes from the separately-fetched
+`LazyVim/LazyVim` plugin). MiniMax has no such split — there is no "MiniMax"
+plugin to `import`; the upstream repo's `configs/nvim-<version>/` directory
+*is* the entire config, meant to be copied once and diverged from. So
+`vendor/minimax/` + `scripts/update-minimax.sh` only track upstream's
+reference config for review; nothing regenerates automatically.
+
+`vim.pack`'s own lockfile (`nvim-pack-lock.json`) is written straight into
+`~/.config/nvim-minimax` at runtime, same as `lazyvim.json` already sits
+happily inside `~/.config/nvim` today — `recursive = true` home-manager file
+sets materialize as a real writable directory of per-file store symlinks, not
+one read-only directory symlink, so this needed no lazy.nvim-style
+`lockfile = ...` workaround.
+
+Phases (only Phase 0 done so far):
+
+- [x] **Phase 0 — scaffolding.** `vendor/minimax/`, `modules/nvim-minimax.nix`,
+  `scripts/update-minimax.sh`, `nvim-minimax` shell alias/def. Stock MiniMax,
+  no custom overlay yet.
+- [ ] **Phase 1 — keymap parity.** `<leader><leader>` → `Pick files`,
+  `<leader>/` → `Pick grep_live` (additions; MiniMax's own `<leader>ff`/
+  `<leader>fg` stay).
+- [ ] **Phase 2 — plugin port (low-risk bucket).** Verbatim-portable custom
+  plugins from `files/nvim/lua/plugins/` (diff, early-retirement, hotreload,
+  herdr-nvim, numbertoggle, wrapping, twilight, zk, referencer, easy-dotnet,
+  lazydotnet, luasnip — LuaSnip coexists fine with `mini.snippets`, no
+  rewrite needed) as a `files/nvim-minimax/` overlay, merged the same way
+  `modules/nvim.nix` layers `files/nvim/lua` over `vendor/lazyvim-starter`.
+  Plus a trimmed `dap.lua`: breakpoints/REPL only, no multi-pane `dapui`
+  layout; easy-dotnet's profilers stay gated behind the `dotnet` feature.
+- [ ] **Phase 3 — explorer & clues.** Drop `yazi.nvim`, use stock
+  `mini.files`. Translate `which-key` group labels to `mini.clue`: global
+  groups (e.g. `cairn.lua`) become entries in MiniMax's own
+  `Config.leader_group_clues` table; buffer-scoped groups (`easy-dotnet.lua`,
+  `markdown.lua`, `zk.lua`) need `mini.clue`'s buffer-local equivalent
+  (`MiniClue.set_mapping_desc()`/`ensure_buf_triggers()` from the same
+  `FileType` autocmd) — different API shape than which-key's `wk.add()`,
+  worth resolving per-file rather than assuming a 1:1 translation.
+- [ ] **Phase 4 — theme polish.** `osc-colors.nvim`'s own project (separate
+  agent tracking this) — add a `highlights/mini.lua` integration module,
+  following the existing `highlights/lualine.lua`/`highlights/snacks.lua`
+  pattern. Not blocking; mini modules link to sane base groups
+  (`StatusLine`, `Pmenu`, `FloatBorder`, ...) in the meantime.
+- [ ] **Phase 5 — LSP layer, Mason-free.** One `after/lsp/<server>.lua` +
+  `vim.lsp.enable(name, profile.has(feature))` per entry in `profile.lua`'s
+  existing `feature_order` (python, rust, typescript, java, clang, cmake,
+  docker, sql, json, yaml, nushell, git, dotnet) — server defaults sourced
+  from each LazyVim extra as reference, not a dependency. `profile.lua`'s
+  language-selection logic ports almost as-is; `nix_substitutes`/
+  `tool_source()`/`mason.lua` are dropped entirely (nothing routes through
+  Mason in this config — binaries come from `pkgs/base.nix` or project
+  devshells, same as the NixOS-unsafe tools already do today). Languages
+  needing more than a bare lspconfig entry (rust → rustaceanvim, typescript →
+  vtsls settings, dotnet → existing easy-dotnet/lazydotnet) get their extra
+  plugin added via `vim.pack.add()` per-language as reached.
+
+`bash scripts/update-minimax.sh` to refresh `vendor/minimax/` against
+upstream (review the diff manually; nothing auto-merges).
+
 ## Devshell templates
 
 Reusable Nix devShell scaffolds for project-local dev environments, shipped in
@@ -250,6 +328,7 @@ something worth propagating back to future scaffolds.
 | Tool | Mechanism |
 |------|-----------|
 | LazyVim starter | `vendor/lazyvim-starter/` + eval-time merge |
+| MiniMax (experimental) | `vendor/minimax/` + eval-time copy; `nvim-pack-lock.json` written at runtime |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
 | tinty theme repos | tinty-managed; run `tinty sync` once per machine |

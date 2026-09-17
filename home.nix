@@ -14,6 +14,7 @@
     ./modules/direnv.nix
     ./modules/yazi.nix
     ./modules/nvim.nix
+    ./modules/nvim-minimax.nix
     ./modules/herdr.nix
     ./modules/starship.nix
     ./modules/topgrade.nix
