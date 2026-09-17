@@ -1,14 +1,12 @@
--- Port of nvim-navic, as configured in the LazyVim setup's own
--- 'files/nvim/lua/plugins/lualine.lua' (not LazyVim's stock
--- `editor.navic` extra, which tunes it slightly differently and wires it
--- into lualine's own winbar section) — same opts, same `LspAttach` gate.
+-- Code-context breadcrumbs (SmiteshP/nvim-navic) rendered directly in the
+-- window winbar (this config has no statusline plugin with a `winbar`
+-- section to route through).
 --
--- MiniMax has no lualine, so the winbar itself is set directly instead of
--- through a statusline plugin's `winbar` config. Re-applied on every
--- `LspAttach`/`BufWinEnter`/`WinEnter` (all per-window events) rather than
--- once globally, so windows without a navic-capable attached client (mini
--- pickers/starter/files, plain buffers with no LSP, ...) get an empty
--- winbar instead of a permanently-reserved blank line everywhere.
+-- The winbar is re-applied on every `LspAttach`/`BufWinEnter`/`WinEnter`
+-- (all per-window events) rather than once globally, so windows without a
+-- navic-capable attached client (mini pickers/starter/files, plain buffers
+-- with no LSP, ...) get an empty winbar instead of a permanently-reserved
+-- blank line everywhere.
 Config.later(function()
   vim.pack.add({ 'https://github.com/SmiteshP/nvim-navic' })
 

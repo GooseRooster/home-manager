@@ -1,18 +1,9 @@
--- Port of LazyVim's `lazyvim.plugins.extras.ui.mini-animate` extra.
+-- Cursor/scroll animations (mini.animate, ships inside 'mini.nvim' but is
+-- left commented out in MiniMax's own '30_mini.lua' — this file is that
+-- opt-in, done from the overlay instead of touching the vendored file).
 --
--- `mini.animate` itself needs no `vim.pack.add()` — it ships inside
--- `mini.nvim`, already vendored by MiniMax core. It's just commented out by
--- default there (`vendor/minimax/plugin/30_mini.lua`: "not enabled by
--- default because its effects are a matter of taste") — this file is that
--- opt-in, done from the overlay instead of touching the vendored file.
---
--- Dropped from the original (no equivalent here): the "disable snacks
--- scroll when animate is enabled" stanza (no snacks.nvim in this config at
--- all) and the `grug-far` filetype disable (grug-far.nvim isn't part of
--- this plugin set). The `Snacks.toggle(...)` UI toggle is reimplemented as
--- a plain keymap instead, since there's no snacks toggle framework here —
--- added under MiniMax's own `<Leader>o` ("Other") group rather than
--- inventing a new one for a single mapping.
+-- Plus a plain keymap toggle under MiniMax's `<Leader>o` ("Other") group,
+-- and the neovide guard: neovide has its own animations.
 Config.later(function()
   if vim.g.neovide ~= nil then return end -- neovide has its own animations
 

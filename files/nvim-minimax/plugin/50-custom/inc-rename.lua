@@ -1,16 +1,11 @@
--- Port of LazyVim's `lazyvim.plugins.extras.editor.inc-rename` extra.
+-- Incremental rename with live LSP preview (smjonas/inc-rename.nvim).
 --
--- The original registered its keymap (`<leader>cr`) via LazyVim's
--- lspconfig-integration convention (`servers['*'].keys`, gated on the
--- attached client's `rename` capability) — no equivalent here, so this is a
--- plain global keymap instead. Deliberately reuses MiniMax's own existing
--- `<Leader>lr` (its stock 'plugin/20_keymaps.lua' binds that to plain
--- `vim.lsp.buf.rename()`) rather than adding a new key: inc-rename is a
--- strict upgrade of the exact same action (adds a live command-preview),
--- same spirit as how dial.lua/yanky.lua override existing keys elsewhere in
--- this overlay. Worst case with no attached client / no rename capability:
--- `:IncRename <word>` fails gracefully with an LSP error, same as the
--- plain `vim.lsp.buf.rename()` it replaces would.
+-- Deliberately registered on MiniMax's own stock `<Leader>lr` (plain
+-- `vim.lsp.buf.rename()` in '20_keymaps.lua') rather than a new key: this is
+-- a strict upgrade of the exact same action (adds the live command
+-- preview). Worst case with no attached client / no rename capability:
+-- `:IncRename <word>` fails gracefully with an LSP error, same as the stock
+-- mapping would.
 Config.later(function()
   vim.pack.add({ 'https://github.com/smjonas/inc-rename.nvim' })
   require('inc_rename').setup({})

@@ -1,27 +1,16 @@
--- Port of the LazyVim setup's 'files/nvim/lua/plugins/cairn.lua'.
+-- File arena/quick-jump plugin (GooseRooster/cairn.nvim).
 --
--- Dropped: the original's `{ "akinsho/bufferline.nvim", enabled = false }`
--- stanza — MiniMax uses 'mini.tabline' and never had bufferline in the first
--- place, so there's nothing to disable.
+-- Keymaps landed on `<Leader>c*` (matching the plugin's own name) after two
+-- collisions with cairn's own `<leader>m*` defaults: MiniMax's stock
+-- 'plugin/20_keymaps.lua' claims `<Leader>m` for 'mini.map', and
+-- `herdr-nvim` owns `<Leader>a` by its own default prefix. No hard keymap
+-- clash in either spot (different exact leaf sequences), but two unrelated
+-- plugins sharing one mini.clue group prefix is exactly the ambiguity to
+-- avoid.
 --
--- Remapped off cairn's own `<leader>m*` defaults twice now:
---   1. MiniMax's stock 'plugin/20_keymaps.lua' claims `<Leader>m` for
---      'mini.map' (`mf`/`mr`/`ms`/`mt`) — first move was to `<Leader>a`
---      ("arena").
---   2. `<Leader>a` turned out already taken too: `herdr-nvim.lua` uses
---      herdr-nvim's own *default* `prefix = "<leader>a"` — unmodified, so
---      it's the one your primary LazyVim setup already has as established
---      muscle memory (`files/nvim/lua/plugins/herdr-nvim.lua` doesn't
---      override it either). No hard keymap clash either time (different
---      exact leaf sequences — herdr uses `ac`/`al`/`as`/`aS`, cairn used
---      `aa`/`ad`/`am`), but two unrelated plugins sharing one `mini.clue`
---      group prefix is exactly the ambiguity flagged the first time around.
---   Landed on `<Leader>c` ("cairn", matching the plugin's own name) — fully
---   unclaimed by MiniMax stock, herdr, or anything else in this overlay.
---
--- which-key's global `wk.add({ { "<leader>m", group = "cairn", ... } })` is
--- translated to an append onto `Config.leader_group_clues` (read by
--- '30_mini.lua's `later()`-deferred `MiniClue.setup()`).
+-- The global group clue is appended onto `Config.leader_group_clues` (read
+-- by '30_mini.lua's `later()`-deferred `MiniClue.setup()`; the nested list
+-- is re-flattened at query time, so later appends are seen).
 Config.later(function()
   vim.pack.add({ 'https://github.com/GooseRooster/cairn.nvim' })
 
@@ -31,10 +20,12 @@ Config.later(function()
       add = '<Leader>ca',
       remove = '<Leader>cd',
       picker = '<Leader>cm',
-      -- index_prefix left at cairn's own default ("<Leader>", i.e. bare
-      -- <Leader>1..<Leader>N for arena slots) — nothing else in this config
-      -- binds bare <Leader><digit>, and keeping these as short as possible
-      -- matters for a frequently-used quick-jump feature.
+      -- index_prefix = '' disables cairn's bare `<Leader>1..<Leader>N`
+      -- arena-slot jump maps (its own `init.lua` skips registration when the
+      -- prefix is empty). Deliberate: bare `<Leader><digit>` was
+      -- which-key/clue-free noise here, and the picker (`<Leader>cm`) covers
+      -- quick jumps.
+      index_prefix = '',
     },
     arena = {
       enabled = true,

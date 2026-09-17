@@ -1,19 +1,19 @@
--- Port of the LazyVim setup's 'files/nvim/lua/plugins/easy-dotnet.lua'.
+-- .NET integration (GustavEikaas/easy-dotnet.nvim): solution/test-runner/
+-- secrets/debugging surface, plus its own roslyn language server.
 --
--- Gated on `profile.has('dotnet')` (see 'lua/config/profile.lua') — same as
--- the original's lazy.nvim `enabled = ...`. Only loaded (and only downloads
--- roslyn) when the dotnet feature is on for this environment.
+-- Gated on `profile.has('dotnet')` (see 'lua/config/profile.lua') — only
+-- loaded (and only downloads roslyn) when the dotnet feature is on for this
+-- environment.
 --
--- Picker changed from "snacks" to "basic": MiniMax has no `folke/snacks.nvim`
--- (nor telescope/fzf-lua) — pulling one in just for this one plugin's
--- picker would undercut the whole point of a mini-first config, and
--- easy-dotnet has no native `mini.pick` integration (its own priority list
--- is snacks -> fzf -> telescope -> basic). "basic" (`vim.ui.select`-backed)
--- is the least-slick but zero-extra-dependency option; revisit if
--- easy-dotnet ever gains mini.pick support upstream.
+-- `picker = 'basic'` (`vim.ui.select`-backed): easy-dotnet has no
+-- 'mini.pick' integration (its own priority list is snacks -> fzf ->
+-- telescope -> basic) and this config doesn't carry any of the first three;
+-- 'basic' is the zero-extra-dependency option. Revisit if easy-dotnet ever
+-- gains mini.pick support upstream.
 --
--- which-key's buffer-scoped `wk.add({ { "<leader>r", group = "dotnet", ... } })`
--- is translated to `require('config.clue').add_buf(...)`.
+-- The buffer-scoped `<Leader>r` group clue is registered via
+-- `require('config.clue').add_buf(...)` (mini.clue's buffer-local mechanism
+-- — see 'lua/config/clue.lua').
 Config.later(function()
   if not require('config.profile').has('dotnet') then return end
 

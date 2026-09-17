@@ -2,10 +2,18 @@
 # (default-on for every target).
 { pkgs }:
 
+# The LSP binaries here back the MiniMax config's base profile
+# (files/nvim-minimax/lua/config/profile.lua: base_lsp + minimal_langs, gated
+# on PATH presence at enable time — a host without them just silently skips
+# attach instead of erroring). All are node/static-based, so they're
+# NixOS-safe unlike Mason's prebuilt native binaries.
 with pkgs; [
+  bash-language-server
   bat
   btop
   carapace
+  docker-compose-language-service
+  dockerfile-language-server-nodejs
   dust
   dysk
   eza
@@ -14,6 +22,7 @@ with pkgs; [
   go
   mediainfo
   python3
+  pyright
   rustup
   ffmpeg-full
   fish
@@ -32,6 +41,7 @@ with pkgs; [
   poppler-utils
   resvg
   ripgrep
+  ruff
   starship
   tealdeer
   topgrade
@@ -39,6 +49,8 @@ with pkgs; [
   tree-sitter
   uutils-coreutils
   uv
+  vscode-langservers-extracted
+  yaml-language-server
   yazi
   zip
   zoxide

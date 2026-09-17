@@ -313,7 +313,69 @@ Phases (0–3 done so far):
     memory). Landed on `<leader>c` ("cairn") — confirmed via a full dump of
     every registered `<Leader>`-prefixed mapping (`nvim --headless` +
     `vim.api.nvim_get_keymap('n')`) that nothing else collides, in either
-    direction.
+    direction. Also: `keymaps.index_prefix = ''` now disables cairn's bare
+    `<Leader>1..9` arena-slot jump maps entirely (unused; the picker covers
+    quick jumps, and `<Leader><digit>` stays free for future use).
+
+  Session notes (Phase 5 session, alongside the LSP layer):
+  - **Comment sweep** — all overlay files now carry only what-it-does/
+    how-it-works comments; LazyVim-provenance/phase narrative moved here
+    (the roadmap is the rationale home). Functional mentions of other
+    projects (e.g. easy-dotnet's own snacks→fzf→telescope→basic picker
+    priority, CSPWeb's `.nvim.lua` as the multi-pane dap-ui precedent)
+    stay, since they explain current behavior, not history.
+  - **LuaSnip dropped** — `plugin/50-custom/luasnip.lua` is gone. The C#
+    `/// <summary>` XML-doc snippet (the only thing LuaSnip provided that
+    mini.snippets didn't) is now a mini.snippets *function snippet*:
+    `lua/config/xmldoc.lua` holds the signature parser and a snippet-file
+    function element (called at expansion time with `{ buf_id, lang }`),
+    and `snippets/{cs,c_sharp,razor}.lua` (3-line wrappers) let the loader
+    reach it from every context the language can resolve to. Behavior
+    change: not an autosnippet anymore — type `///` on the line above a
+    method signature and press `<C-j>` (mini.snippets' insert-mode expand
+    mapping, `:h MiniSnippets-mappings`) instead of it firing on trigger.
+    Verified live headlessly: expansion over
+    `public void Test(int foo, string bar)` yields summary + both param
+    tags and no `<returns>`; razor/c_sharp contexts load via their own
+    files (treesitter-resolved lang is `c_sharp`, not `cs`). Side effect:
+    the LuaSnip `make install_jsregexp` PackChanged hook (and its `make`
+    dependency problem) disappears with it. LuaSnip itself may remain a
+    non-active plugin in `~/.local/share/nvim-minimax` — `:Pack`'s `X`
+    (clean non-active) removes it.
+  - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
+    nothing about mini.clue; without a group clue the `<Leader>a` popup
+    showed an anonymous "+4 entries". `herdr-nvim.lua` now appends
+    n-mode + x-mode `<Leader>a` group clues to `Config.leader_group_clues`
+    (same mechanism as cairn). Note the precedence subtlety verified against
+    mini.clue's source: `MiniClue.setup()` runs in a `later()` registered by
+    '30_mini.lua' *before* any 50-custom callback, and its setup
+    `tbl_deep_extend`s the clues list — but `Config.leader_group_clues`
+    itself is *nested inside* that list by reference, so later appends to it
+    still flatten in at query time (`H.clues_normalize` recurses nested
+    lists; `H.get_config()` is recomputed per trigger).
+  - `45_keymaps_extra.lua` — ports of the LazyVim setup's keymaps.lua:
+    `<C-j>`/`<C-k>` → half-page scroll (shadows mini.basics' `<C-hjkl>`
+    window nav — same trade-off as the LazyVim side), `<A-hjkl>` →
+    `<C-w>h/j/k/l` window nav as compensation, and `<C-/>`+`<C-_>` (n and
+    terminal modes) as a horizontal-split terminal **toggle** (`:horizontal
+    term` / `:hide`). Two collisions worth remembering: mini.move's stock
+    `<M-hjkl>` *normal-mode* line-moving is shadowed by the Alt block (it
+    re-registers in a `later()` after mini.move's own setup; Visual-mode
+    selection-moving and everything else stay untouched), and the
+    `<A-j>`/`<A-k>` entries on mini.starter's screen are starter's own
+    buffer-local nav — untouched.
+  - `plugin/15_options_extra.lua` (new) — `vim.o.clipboard =
+    'unnamedplus'` (system-clipboard sync; wl-clipboard is in the base
+    bundle) and `vim.o.shell = '@shell@'`, substituted at build time by
+    `modules/nvim-minimax.nix` with the host's `home.modules.defaultShell`
+    (same mechanism as modules/nvim.nix — MiniMax never set `'shell'`
+    before, so `:term` fell back to /bin/sh).
+  - `plugin/50-custom/pack-ui.lua` (new) — nvim-pack-ui (Codeberg
+    cryptomilk/nvim-pack-ui), a floating UI over `vim.pack`
+    (`:Pack`, `:Pack check`). Registered via `Config.now` so it installs
+    first on a fresh data dir; deliberately **no** auto-open —
+    `vim.pack.add()` is synchronous, so any UI opened from the `PackChanged`
+    event stream renders stale state mid-batch.
 - [x] **Phase 3 — explorer & clues.** `yazi.nvim` dropped, stock `mini.files`
   used (nothing to port — already default). which-key group labels
   translated to `mini.clue`: global groups (`cairn.lua`) append to
@@ -368,7 +430,7 @@ Phases (0–3 done so far):
   (`$XDG_CACHE_HOME/nvim-minimax/osc-colors-palette.lua`, separate namespace
   from the LazyVim config's cache) via the same live `UIEnter`/`FocusGained`
   OSC query your LazyVim setup already went through once.
-- [ ] **Phase 5 — LSP layer, Mason-free (in progress).** One
+- [x] **Phase 5 — LSP layer, Mason-free.** One
   `after/lsp/<server>.lua` + `vim.lsp.enable(name, profile.has(feature))` per
   entry in `profile.lua`'s existing `feature_order` (python, rust,
   typescript, java, clang, cmake, docker, sql, json, yaml, nushell, git,
@@ -380,6 +442,48 @@ Phases (0–3 done so far):
   Languages needing more than a bare lspconfig entry (rust → rustaceanvim,
   typescript → vtsls settings, dotnet → existing easy-dotnet/lazydotnet) get
   their extra plugin added via `vim.pack.add()` per-language as reached.
+
+  As landed (`plugin/50-custom/lsp.lua` + `lua/config/profile.lua`'s
+  `M.base_lsp`/`M.feature_lsp`/`M.feature_treesitter` bundles):
+  - **Enable gating is `profile.has(feature)` AND a PATH executable check**
+    on lspconfig's resolved `cmd[1]` (with a small override table for the
+    servers whose lspconfig `cmd` is a *function* — jsonls/yamlls — mapping
+    to their fallback binary). A missing binary means the server silently
+    never attaches; no errors on FileType, no Mason anywhere. Base servers
+    (`bashls`, `lua_ls`) enable in every profile, feature or not.
+  - Tree-sitter parsers for enabled features install via the same
+    not-already-installed filter `40_plugins.lua` uses, and a `FileType`
+    autocmd starts tree-sitter for them (pcall-guarded — parser builds are
+    asynchronous on first run). MiniMax's stock `40_plugins.lua` list only
+    covers lua/vimdoc/markdown; this layer owns the rest.
+  - `after/lsp/` ports: `ruff.lua` (hover disabled in favor of pyright, the
+    python extra's on_attach), `vtsls.lua` (settings verbatim; `gD`/`gR`
+    source-definition keymaps dropped — they drive `LazyVim.lsp.execute`
+    which needs snacks), `yamlls.lua` (foldingRange capability + settings),
+    `jsonls.lua`. One deviation in json/yaml: LazyVim swaps the servers'
+    built-in schemaStore support for the SchemaStore.nvim *plugin*; MiniMax
+    keeps the built-in (HTTP-backed) support — same catalog, no extra
+    plugin.
+  - Explicitly resolved deviations: **sql** — the LazyVim sql extra has no
+    LSP either (treesitter + sqlfluff only), so `sql` gets parsers, no
+    server; **dotnet** — roslyn stays easy-dotnet's own business, the
+    profile carries the markup half instead (`html`/`cssls`/`somesass_ls`
+    for Razor cohosting + SCSS, plus `c_sharp`/`razor` parsers);
+    **java** — no entry yet (jdtls port deferred); **git** — no LSP on the
+    LazyVim side either, treesitter parsers only.
+  - `some-sass-language-server` is npm-only (not in nixpkgs — verified) —
+    devshell-template territory, not config code.
+  - Verified headlessly in an isolated `XDG_*` scratch env (real first-run
+    `vim.pack` installs + parser builds): base profile enables `lua_ls`/
+    `nushell` on and everything binary-less stays off; a stubbed dotnet+rust
+    devshell (`NVIM_LANGS=dotnet,rust` + fake PATH binaries) enables
+    `rust_analyzer`/`html`/`cssls`/`somesass_ls`, installs the c_sharp/razor
+    parsers, and loads easy-dotnet — 45/45 + 16/16 checks green.
+  - Backing the base profile, `pkgs/base.nix` gained the LSP binaries it
+    needs: bash-language-server, pyright, ruff, vscode-langservers-extracted
+    (json/html/css), yaml-language-server, dockerfile-language-server-nodejs,
+    docker-compose-language-service (all node/static-based, NixOS-safe;
+    nixpkgs availability verified per package).
 
   Also sweeping up the LazyVim side's stack-agnostic `core_extras` (always
   on, not gated by any of the 13 language features) alongside the

@@ -1,16 +1,12 @@
--- Port of the LazyVim setup's 'files/nvim/lua/plugins/markdown.lua'.
+-- Markdown buffer setup: rendered preview (render-markdown.nvim) + table/
+-- link extras (markdown-plus.nvim).
 --
--- `nvim-treesitter`/`mini.nvim` deps are already present in MiniMax core, so
--- render-markdown.nvim needs no extra `vim.pack.add()` beyond itself.
--- `ft = "markdown"` (both plugins, in the original) becomes
--- `Config.on_filetype('markdown', ...)` — see 'plugin/50-custom/zk.lua' for
--- why the buffer-scoped setup below is called both from a persistent
--- autocmd (future buffers) and once directly (the buffer that triggered
--- this callback).
---
--- which-key's 16 buffer-scoped `wk.add({ ..., buffer = bufnr })` group
--- labels are translated to a single `require('config.clue').add_buf(bufnr, {...})`
--- call (mini.clue's buffer-local equivalent — see 'lua/config/clue.lua').
+-- Buffer-scoped setup runs both from a persistent `FileType` autocmd (future
+-- buffers) and once directly (the buffer that triggered this callback —
+-- a freshly-registered autocmd doesn't retroactively apply to the event
+-- currently being processed; see 'plugin/50-custom/zk.lua' for the general
+-- case). Buffer-scoped group clues go through
+-- `require('config.clue').add_buf(...)` — see 'lua/config/clue.lua'.
 Config.on_filetype('markdown', function()
   vim.pack.add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
   require('render-markdown').setup({})

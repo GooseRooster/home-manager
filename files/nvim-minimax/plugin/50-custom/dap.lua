@@ -1,31 +1,24 @@
--- Trimmed port of the LazyVim setup's 'files/nvim/lua/plugins/dap.lua'.
+-- Debug adapter UI (nvim-dap + nvim-dap-ui).
 --
--- Middle ground between "no UI at all" and the full multi-pane dap-ui layout
--- (see e.g. ~/repos/CSPWeb's `.nvim.lua` for what the latter looks like: a
--- 45-col left inspector + a 40-col right REPL/console column + a bottom
--- perfmon row — plenty of screen real estate for a project that wants it,
--- but too much to be a sane *default* here):
+-- Layout is a deliberate middle ground between "no UI at all" and the full
+-- multi-pane dap-ui layout (see e.g. ~/repos/CSPWeb's `.nvim.lua` for the
+-- latter: 45-col left inspector + 40-col right REPL/console column + a
+-- bottom perfmon row — plenty of screen real estate for a project that
+-- wants it, but too much to be a sane *default* here):
 --   - A single, narrower left column (scopes + breakpoints + repl) is always
---     shown — "current variables and scope, repl, and breakpoints", per the
---     roadmap discussion. No separate stacks/watches/console panes, no
---     right column.
+--     shown. No separate stacks/watches/console panes, no right column.
 --   - The bottom easy-dotnet profiler row (CPU/mem) is added to the layout
 --     dynamically, only for sessions actually driven by easy-dotnet's own
 --     DAP adapter — not shown (and not just empty/useless) for other
 --     languages' debug sessions.
 --
--- Still dropped entirely (vs. the original LazyVim `dap.lua`):
---   - nvim-dap-virtual-text — inline value hints; add back if wanted.
---   - mason-nvim-dap — no Mason in this config at all (see the roadmap);
---     debug adapters (codelldb, netcoredbg, js-debug, ...) are expected on
---     PATH via the environment (pkgs/base.nix / project devshells), same as
---     LSP servers will be once Phase 5 lands.
---
--- Per-language `dap.adapters.*`/`dap.configurations.*` wiring (codelldb for
--- rust/clang, js-debug for typescript, ...) is Phase 5 territory, alongside
--- the LSP layer. easy-dotnet registers its own adapter/configuration itself
--- (`debugger.auto_register_dap = true` in 'easy-dotnet.lua'), so dotnet
--- debugging already works without anything here.
+-- Not included: nvim-dap-virtual-text (inline value hints; add back if
+-- wanted); per-language `dap.adapters.*`/`dap.configurations.*` wiring
+-- (codelldb for rust/clang, js-debug for typescript, ...) — debug adapters
+-- are expected on PATH via the environment ('pkgs/base.nix' / project
+-- devshells), same as the LSP servers. easy-dotnet registers its own
+-- adapter/configuration itself (`debugger.auto_register_dap = true` in
+-- 'easy-dotnet.lua'), so dotnet debugging works without anything here.
 --
 -- A project can still fully override this (different layout, more panes,
 -- whatever) via its own `.nvim.lua` calling `require('dapui').setup({...})`

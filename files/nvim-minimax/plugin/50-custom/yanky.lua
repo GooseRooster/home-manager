@@ -1,24 +1,17 @@
--- Port of LazyVim's `lazyvim.plugins.extras.coding.yanky` extra.
+-- Yank history / indented put (gbprod/yanky.nvim) with yanky's own
+-- `:YankyRingHistory` UI. `sync_with_ring` is off over SSH (clipboard is
+-- remote there).
 --
--- The yank-history picker keymap originally branched on which picker
--- (telescope/snacks) LazyVim.pick resolved to, falling back to yanky's own
--- built-in `:YankyRingHistory` UI otherwise. MiniMax has neither telescope
--- nor snacks — always use yanky's own UI directly (no picker-integration
--- loss versus the fallback path the original already had).
---
--- Two real, worth-flagging overlaps with MiniMax's own stock bindings:
---   - `[p`/`]p`: 'vendor/minimax/plugin/20_keymaps.lua' already binds these
---     to a simple linewise put-above/below. Yanky's versions (put *indented*
+-- Two intentional shadows of MiniMax's own stock bindings:
+--   - `[p`/`]p`: 'vendor/minimax/plugin/20_keymaps.lua' binds these to a
+--     simple linewise put-above/below; yanky's versions (put *indented*
 --     linewise before/after cursor) are a strict superset of the same
---     conceptual action, so this intentionally shadows the stock mapping
---     rather than picking different keys.
+--     conceptual action.
 --   - `[y`/`]y`: 'mini.bracketed's own "yank" target (`:h MiniBracketed.yank`,
---     active by default in '30_mini.lua') already claims these for a
---     different mechanism (replace latest put region with an older/newer
---     yank-history entry, using its own history store). Yanky's cycle-
---     forward/backward is conceptually similar but uses yanky's own ring —
---     this intentionally shadows mini.bracketed's version too. If you want
---     mini.bracketed's `[y`/`]y` back, rebind yanky's cycle keys elsewhere.
+--     active by default in '30_mini.lua') claims these for a different
+--     mechanism (replace latest put region with an older/newer yank-history
+--     entry, using its own history store). If you want mini.bracketed's
+--     `[y`/`]y` back, rebind yanky's cycle keys elsewhere.
 Config.later(function()
   vim.pack.add({ 'https://github.com/gbprod/yanky.nvim' })
   require('yanky').setup({

@@ -1,13 +1,11 @@
--- Port of the LazyVim setup's 'files/nvim/lua/plugins/zk.lua'.
+-- zk note-taking (zk-org/zk-nvim). Loaded only when `zk` is on PATH, only
+-- for markdown buffers.
 --
--- Original used lazy.nvim's `cond`/`ft` to install+load only when `zk` is on
--- PATH and only for markdown buffers; `Config.on_filetype` is MiniMax's
--- equivalent lazy-load primitive for the `ft` part (see 'init.lua'). Note
--- `on_filetype` fires once, on the *first* markdown buffer — the buffer-scoped
--- keymap autocmd registered below only fires for *subsequent* markdown
--- buffers (a freshly-registered autocmd doesn't retroactively apply to the
--- event currently being processed), so the setup function is called once
--- directly for that first buffer too, further down.
+-- `Config.on_filetype` fires once, on the *first* markdown buffer — the
+-- buffer-scoped keymap autocmd registered below only fires for *subsequent*
+-- markdown buffers (a freshly-registered autocmd doesn't retroactively apply
+-- to the event currently being processed), so the setup function is called
+-- once directly for that first buffer too, further down.
 Config.on_filetype('markdown', function()
   if vim.fn.executable('zk') ~= 1 then return end
 

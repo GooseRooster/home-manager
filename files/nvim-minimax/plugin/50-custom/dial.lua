@@ -1,8 +1,6 @@
--- Port of LazyVim's `lazyvim.plugins.extras.editor.dial` extra — close to
--- verbatim, it's entirely generic config with no LazyVim-specific
--- dependencies. Overrides Vim's built-in `<C-a>`/`<C-x>` (plain number
--- increment/decrement) with dial's extended version (dates, booleans,
--- ordinals, weekdays, ...), same as it does in any setup.
+-- Extended increment/decrement (monaqa/dial.nvim): overrides Vim's built-in
+-- `<C-a>`/`<C-x>` (plain number increment) with dial's version (dates,
+-- booleans, ordinals, weekdays, ...).
 local M = {}
 
 ---@param increment boolean

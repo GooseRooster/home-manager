@@ -6,12 +6,22 @@
 # primary LazyVim setup (modules/nvim.nix). Boots as `nvim-minimax` via
 # $NVIM_APPNAME, so it never touches ~/.config/nvim or its data/state dirs.
 #
-# `vendor/minimax/` is a pure upstream mirror (see scripts/update-minimax.sh);
-# `files/nvim-minimax/` is the custom overlay merged on top here — its own
-# directory structure (`lua/config/...`, `plugin/50-custom/...`) already
-# mirrors the destination layout directly, so the whole tree is just
-# copied onto $out (unlike modules/nvim.nix's single-subdirectory overlay,
-# there's no `lua/plugins/example.lua`-style file to strip here).
+# `shellCmd` mirrors modules/nvim.nix: 'files/nvim-minimax/
+# plugin/15_options_extra.lua' ships an '@shell@' placeholder that is
+# substituted with the host's chosen interactive shell (home.modules.
+# defaultShell) so `:!`/`:term` shell out to the binary the user expects.
+let
+  cfg = config.home.modules;
+
+  # See modules/nvim.nix for why nu/zsh specifically.
+  shellCmd = if cfg.defaultShell == "zsh" then "zsh" else "nu";
+
+  # `vendor/minimax/` is a pure upstream mirror (see scripts/update-minimax.sh);
+  # `files/nvim-minimax/` is the custom overlay merged on top here — its own
+  # directory structure (`lua/config/...`, `plugin/50-custom/...`) already
+  # mirrors the destination layout directly, so the whole tree is just
+  # copied onto $out (unlike modules/nvim.nix's single-subdirectory overlay,
+  # there's no `lua/plugins/example.lua`-style file to strip here).
 #
 # `nvim-pack-lock.json` is deliberately DROPPED from $out (see below) — do
 # not reintroduce it without re-reading this comment.
@@ -43,14 +53,15 @@
 # than "stock pinned, everything else not". `vendor/minimax/nvim-pack-lock.json`
 # itself is untouched (still a normal tracked file, still useful as a
 # diffable reference of what upstream had installed at vendoring time) —
-# only the copy that would've landed in the live config is removed.
-let
+  # only the copy that would've landed in the live config is removed.
   minimaxConfig = pkgs.runCommand "nvim-minimax-config" { } ''
     mkdir -p $out
     cp -r ${../vendor/minimax}/. $out/
     chmod -R u+w $out
     rm -f $out/nvim-pack-lock.json
     cp -rf ${../files/nvim-minimax}/. $out/
+    substituteInPlace $out/plugin/15_options_extra.lua \
+      --replace-fail '@shell@' '${shellCmd}'
   '';
 in
 {

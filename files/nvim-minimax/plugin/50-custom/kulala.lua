@@ -1,19 +1,12 @@
--- Port of LazyVim's own `lazyvim.plugins.extras.util.rest` extra — ported
--- close to verbatim per your call: kulala.nvim is stack-agnostic (was in
--- `core_extras` on the LazyVim side, not gated by any of the 13 language
--- features), so there's little to meaningfully rewrite here beyond the
--- lazy.nvim -> vim.pack/mini.clue mechanics.
+-- REST client (mistweaverco/kulala.nvim) for .http files. Always on —
+-- stack-agnostic, independent of the language features in
+-- 'lua/config/profile.lua'.
 --
--- Deviates from the original in one way: lazy.nvim's per-key `ft = "http"`
--- restriction (some of these keymaps only existed while in an .http buffer)
--- has no vim.pack equivalent, so every key is registered globally instead.
--- Harmless — kulala's own functions no-op/error gracefully outside an .http
--- buffer, and a couple of these (scratchpad, replay) are meant to be
--- reachable from anywhere anyway.
---
--- Not gated behind `config.profile` — like the LazyVim side's
--- `core_extras`, this is always on, independent of the 13 language features
--- Phase 5 otherwise gates.
+-- All keymaps below are registered globally: kulala's own functions no-op or
+-- error gracefully outside an .http buffer, and a couple of them
+-- (scratchpad, replay) are meant to be reachable from anywhere anyway. The
+-- `<Leader>R` group clue is appended to `Config.leader_group_clues` (read by
+-- '30_mini.lua's `later()`-deferred `MiniClue.setup()`).
 vim.filetype.add({
   extension = {
     ['http'] = 'http',

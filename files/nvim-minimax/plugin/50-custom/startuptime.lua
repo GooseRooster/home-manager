@@ -1,6 +1,5 @@
--- Port of LazyVim's `lazyvim.plugins.extras.util.startuptime` extra, plus
--- your call to hook it into the existing mini.starter dashboard rather than
--- leaving it as a command you have to remember.
+-- Startup-time profiling (dstein64/vim-startuptime) hooked into the
+-- existing mini.starter dashboard.
 --
 -- 'mini.starter' has no "append one item" API — `MiniStarter.config.items`
 -- stays `nil` unless explicitly set (mini.starter falls back to its own
