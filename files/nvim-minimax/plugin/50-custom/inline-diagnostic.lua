@@ -9,21 +9,12 @@
 -- shows E/W letters for WARN+ only — with everything inline, the gutter
 -- carries all four).
 Config.later(function()
-  vim.pack.add({ 'https://github.com/rachartier/tiny-inline-diagnostic.nvim' })
+	vim.pack.add({ "https://github.com/rachartier/tiny-inline-diagnostic.nvim" })
 
-  require('tiny-inline-diagnostic').setup({
-    preset = 'powerline',
-    transparent_bg = false,
-    transparent_cursorline = true,
-    disabled_ft = {},
-  })
-
-  vim.diagnostic.config({
-    virtual_text = false,
-    signs = {
-      priority = 9999,
-      severity = { min = 'HINT', max = 'ERROR' },
-      text = { '', '', '', '' },
-    },
-  })
+	require("tiny-inline-diagnostic").setup({
+		preset = "powerline",
+		transparent_bg = false,
+		transparent_cursorline = true,
+		disabled_ft = {},
+	})
 end)
