@@ -216,7 +216,9 @@ source ~/.config/nushell/podman-alias.nu
 # protocol data or script output on stdout. Unguarded output here — like
 # this banner — gets mixed into that stream and corrupts it (e.g. neovim's
 # LSP client fails to find "Content-Length" because fastfetch's art is
-# sitting in front of it).
-if $nu.is-interactive {
+# sitting in front of it). Also skipped when spawned by a running Neovim
+# ($NVIM = its listen address, exported to `:term` and `:!` children) —
+# a banner there is just noise.
+if $nu.is-interactive and not ("NVIM" in $env) {
     fastfetch
 }

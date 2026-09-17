@@ -360,6 +360,22 @@ Phases (0–3 done so far):
     asynchronously). Launch configs point at the usual build dirs
     (`target/debug/`, `build/`); easy-dotnet keeps registering its own
     dotnet adapter; typescript's js-debug stays unwired (npm-only).
+  - **Notification history routing** — `plugin/50-custom/notify.lua`
+    assigns `vim.notify = require('mini.notify').make_notify()`. MiniMax
+    stock sets up 'mini.notify' but leaves `vim.notify` untouched (module
+    default too), so notifications never entered the history; now every
+    `vim.notify()` call lands there and `<Leader>en` (Notification history,
+    stock keymap) is the single review surface. Verified headlessly: a
+    `vim.notify('...', WARN)` call appears in `MiniNotify.get_all()`
+    (make_notify is schedule_wrap'ped — history read must follow the tick).
+  - **Shell greeting skip inside Neovim** — both fastfetch greeting call
+    sites skip when spawned by a running Neovim: Neovim exports `$NVIM`
+    (its listen address) to child processes (`:term` and `:!` alike), so
+    zsh's `initContent` greeting (modules/zsh.nix, mkOrder 1900) became
+    `[[ -z "${NVIM:-}" ]] && fastfetch`, and nushell's config.nu greeting
+    became `if $nu.is-interactive and not ("NVIM" in $env) { fastfetch }`.
+    Manual `fastfetch` calls (and the `home` clear-and-greet functions)
+    still work inside a terminal by design — only the greeting is gated.
   - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
     nothing about mini.clue; without a group clue the `<Leader>a` popup
     showed an anonymous "+4 entries". `herdr-nvim.lua` now appends

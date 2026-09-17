@@ -182,8 +182,12 @@ in
 
       # Greeting: same fastfetch banner nushell shows on every interactive
       # shell start (see files/zsh/functions.zsh's fastfetch() for the
-      # container/CONTAINER_ID guard).
-      (lib.mkOrder 1900 "fastfetch")
+      # container/CONTAINER_ID guard). Skipped when spawned by a running
+      # Neovim ($NVIM = its listen address, exported to `:term` and `:!`
+      # children) — a banner there is just noise.
+      (lib.mkOrder 1900 ''
+        [[ -z "''${NVIM:-}" ]] && fastfetch
+      '')
     ];
   };
 
