@@ -13,7 +13,7 @@ with pkgs; [
   btop
   carapace
   docker-compose-language-service
-  dockerfile-language-server-nodejs
+  dockerfile-language-server
   dust
   dysk
   eza
