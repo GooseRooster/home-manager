@@ -234,35 +234,99 @@ sets materialize as a real writable directory of per-file store symlinks, not
 one read-only directory symlink, so this needed no lazy.nvim-style
 `lockfile = ...` workaround.
 
-Phases (only Phase 0 done so far):
+Phases (0–3 done so far):
 
 - [x] **Phase 0 — scaffolding.** `vendor/minimax/`, `modules/nvim-minimax.nix`,
-  `scripts/update-minimax.sh`, `nvim-minimax` shell alias/def. Stock MiniMax,
-  no custom overlay yet.
-- [ ] **Phase 1 — keymap parity.** `<leader><leader>` → `Pick files`,
-  `<leader>/` → `Pick grep_live` (additions; MiniMax's own `<leader>ff`/
-  `<leader>fg` stay).
-- [ ] **Phase 2 — plugin port (low-risk bucket).** Verbatim-portable custom
-  plugins from `files/nvim/lua/plugins/` (diff, early-retirement, hotreload,
-  herdr-nvim, numbertoggle, wrapping, twilight, zk, referencer, easy-dotnet,
-  lazydotnet, luasnip — LuaSnip coexists fine with `mini.snippets`, no
-  rewrite needed) as a `files/nvim-minimax/` overlay, merged the same way
-  `modules/nvim.nix` layers `files/nvim/lua` over `vendor/lazyvim-starter`.
-  Plus a trimmed `dap.lua`: breakpoints/REPL only, no multi-pane `dapui`
-  layout; easy-dotnet's profilers stay gated behind the `dotnet` feature.
-- [ ] **Phase 3 — explorer & clues.** Drop `yazi.nvim`, use stock
-  `mini.files`. Translate `which-key` group labels to `mini.clue`: global
-  groups (e.g. `cairn.lua`) become entries in MiniMax's own
-  `Config.leader_group_clues` table; buffer-scoped groups (`easy-dotnet.lua`,
-  `markdown.lua`, `zk.lua`) need `mini.clue`'s buffer-local equivalent
-  (`MiniClue.set_mapping_desc()`/`ensure_buf_triggers()` from the same
-  `FileType` autocmd) — different API shape than which-key's `wk.add()`,
-  worth resolving per-file rather than assuming a 1:1 translation.
-- [ ] **Phase 4 — theme polish.** `osc-colors.nvim`'s own project (separate
-  agent tracking this) — add a `highlights/mini.lua` integration module,
-  following the existing `highlights/lualine.lua`/`highlights/snacks.lua`
-  pattern. Not blocking; mini modules link to sane base groups
-  (`StatusLine`, `Pmenu`, `FloatBorder`, ...) in the meantime.
+  `scripts/update-minimax.sh`, `nvim-minimax` shell alias/def.
+- [x] **Phase 1 — keymap parity.** `<leader><leader>` → `Pick files`,
+  `<leader>/` → `Pick grep_live` (`files/nvim-minimax/plugin/45_keymaps_extra.lua`;
+  additions — MiniMax's own `<leader>ff`/`<leader>fg` stay).
+- [x] **Phase 2 — plugin port (low-risk bucket).** Ported as a
+  `files/nvim-minimax/` overlay (`lua/config/{profile,clue}.lua` +
+  `plugin/50-custom/*.lua`), merged onto `vendor/minimax/` in
+  `modules/nvim-minimax.nix` the same way `modules/nvim.nix` layers
+  `files/nvim/lua` over `vendor/lazyvim-starter`. `lua/config/profile.lua` is
+  a trimmed fork of the LazyVim side's module — same `NVIM_PROFILE`/
+  `NVIM_LANGS` env vars, `nix_substitutes`/`tool_source()`/Mason dropped
+  entirely (see Phase 5). Notable deviations from a literal port:
+  - `dap.lua` — a middle ground, not a straight trim: a single narrow left
+    column (scopes + breakpoints + repl, 42 cols) is always shown; the
+    easy-dotnet CPU/mem profiler row is added to the layout dynamically, only
+    for sessions actually driven by easy-dotnet's own DAP adapter (detected
+    via `session.config.type == 'easy-dotnet'` — verified against
+    easy-dotnet.nvim's own `auto_register_dap`/`constants.debug_adapter_name`
+    source). No separate stacks/watches/console panes, no right column — for
+    a full multi-pane layout (45-col left + 40-col right + bottom perfmon
+    row), see `~/repos/CSPWeb`'s `.nvim.lua`, which still works unchanged as
+    a per-project override (`require('dapui').setup({...})` again). Still
+    dropped: `nvim-dap-virtual-text`, `mason-nvim-dap` (no Mason at all —
+    debug adapters expected on PATH via the environment). Verified headlessly
+    by invoking the `dap.listeners.before.launch.dapui_config` callback
+    directly with fake session objects (no session / `easy-dotnet` type /
+    other adapter type) and inspecting `require('dapui.config').layouts` —
+    bottom panel present only for the `easy-dotnet` case, and correctly gone
+    again for a subsequent non-dotnet session (no leaked state). Per-language
+    `dap.adapters.*`/`dap.configurations.*` wiring is Phase 5 territory.
+  - `easy-dotnet.lua` — picker changed `"snacks"` → `"basic"`: MiniMax has no
+    snacks/telescope/fzf-lua, and easy-dotnet has no native `mini.pick`
+    integration (its own fallback order is snacks → fzf → telescope →
+    basic). Revisit if that changes upstream.
+  - `luasnip.lua` — LuaSnip coexists fine with `mini.snippets` (different
+    concern: `mini.completion` only needs an omnifunc + optional snippet
+    *source*, not a specific engine); the `jsregexp` build step is wired via
+    `Config.on_packchanged`, matching `40_plugins.lua`'s own
+    `nvim-treesitter` `:TSUpdate` hook pattern.
+  - `cairn.lua` — remapped off its own `<leader>m*` defaults to `<leader>a*`:
+    MiniMax's stock `20_keymaps.lua` already claims `<leader>m` for
+    `mini.map`. No actual keymap collision (different exact sequences), but
+    `mini.clue` would've had two different group descriptions registered for
+    the same prefix.
+- [x] **Phase 3 — explorer & clues.** `yazi.nvim` dropped, stock `mini.files`
+  used (nothing to port — already default). which-key group labels
+  translated to `mini.clue`: global groups (`cairn.lua`) append to
+  `Config.leader_group_clues`; buffer-scoped groups (`easy-dotnet.lua`,
+  `markdown.lua`, `zk.lua`) use a small shared helper
+  (`lua/config/clue.lua`'s `add_buf()`) that appends to
+  `vim.b[bufnr].miniclue_config.clues` — verified against `mini.clue`'s own
+  source (`H.get_config` *concatenates* global + buffer-local clue lists, it
+  doesn't override) that this is the correct, collision-safe mechanism, since
+  more than one `FileType` autocmd can target the same buffer (e.g. both
+  `markdown.lua` and `zk.lua` fire on `FileType markdown`).
+
+  One correctness subtlety worth remembering if you touch these files:
+  `Config.on_filetype`/`Config.later` fire the *first* matching event once,
+  so a *newly*-registered `FileType` autocmd inside that callback won't
+  retroactively fire for the very buffer that triggered it (`zk.lua`,
+  `markdown.lua`, `easy-dotnet.lua` all call their buffer-setup function once
+  directly, in addition to registering the ongoing autocmd, to cover that
+  buffer too — see the comments in those files).
+
+  All of the above verified with a real headless `vim.pack` install (network,
+  not just `nix build`) against a scratch `$XDG_CONFIG_HOME`/`$XDG_DATA_HOME`,
+  opening markdown/`.cs` scratch files, with and without `NVIM_LANGS=dotnet` —
+  no Lua errors, correct plugins/keymaps/clues present or absent as expected.
+
+- [x] **Phase 4 — theme polish.** `osc-colors.nvim` gained a
+  `highlights/mini.lua` integration upstream (registered in its
+  `integrations` table alongside `lualine`/`snacks`/..., `mini = true` by
+  default). Wired into MiniMax via `plugin/50-custom/theme.lua` — overrides
+  the stock `miniwinter` colorscheme (`vendor/minimax/plugin/30_mini.lua`,
+  left untouched; this file runs later in the same synchronous `now()` phase
+  and repaints over it, so there's no flash — nothing reaches the screen
+  until all of `plugin/*.lua` finishes sourcing regardless). `use_lazy_specs`
+  explicitly disabled (a no-op without lazy.nvim anyway, but there's nothing
+  for it to ever find in this config). Verified headlessly two ways: a fresh
+  sandbox with no cached OSC-query palette correctly no-ops and leaves
+  `miniwinter` in place (documented behavior — `osc-colors` needs a real
+  terminal round-trip or a prior cache, neither exists in `--headless` with
+  no UI); copying in the *actual* cached palette from `~/.cache/nvim/osc-colors-palette.lua`
+  (same file your LazyVim setup already produced) makes it apply correctly —
+  `vim.g.colors_name == 'osc-colors'` and `MiniStatuslineModeNormal` etc. get
+  real palette-derived colors, not fallback links. First real interactive
+  launch of `nvim-minimax` will populate its own cache
+  (`$XDG_CACHE_HOME/nvim-minimax/osc-colors-palette.lua`, separate namespace
+  from the LazyVim config's cache) via the same live `UIEnter`/`FocusGained`
+  OSC query your LazyVim setup already went through once.
 - [ ] **Phase 5 — LSP layer, Mason-free.** One `after/lsp/<server>.lua` +
   `vim.lsp.enable(name, profile.has(feature))` per entry in `profile.lua`'s
   existing `feature_order` (python, rust, typescript, java, clang, cmake,
