@@ -228,11 +228,37 @@ plugin to `import`; the upstream repo's `configs/nvim-<version>/` directory
 reference config for review; nothing regenerates automatically.
 
 `vim.pack`'s own lockfile (`nvim-pack-lock.json`) is written straight into
-`~/.config/nvim-minimax` at runtime, same as `lazyvim.json` already sits
-happily inside `~/.config/nvim` today — `recursive = true` home-manager file
+`~/.config/nvim-minimax` at runtime — `recursive = true` home-manager file
 sets materialize as a real writable directory of per-file store symlinks, not
-one read-only directory symlink, so this needed no lazy.nvim-style
+one read-only directory symlink, so genuinely *new* files (like `lazyvim.json`
+already sitting happily inside `~/.config/nvim` today) need no lazy.nvim-style
 `lockfile = ...` workaround.
+
+**Correction, found the hard way**: that reasoning doesn't extend to a file
+that's *vendored* — `nvim-pack-lock.json` ships as part of MiniMax's own
+upstream repo (a snapshot of revisions its maintainer had installed), so it
+was copied into `vendor/minimax/` during Phase 0 like everything else, which
+made it a managed, read-only symlink into the store at exactly the path
+`vim.pack` needs to *overwrite* every time it installs/updates a plugin —
+breaking every `vim.pack.add()` call outright. Fixed in `modules/nvim-minimax.nix`
+by `rm`-ing it from `$out` before it's ever linked, so home-manager never
+manages that path at all and `vim.pack` is free to create a genuine mutable
+file there on first run (same mechanism as `lazyvim.json`, just reached by
+removal instead of the file never having existed upstream). Verified live:
+`vim.pack.add()` now succeeds and writes a real `nvim-pack-lock.json`, which
+also self-healed (`"Repaired corrupted lock data"`) the revisions for every
+plugin installed while the bug was present, since a lockfile write had never
+actually succeeded before.
+
+One migration wrinkle worth knowing if this ever recurs (a vendored/overlay
+file being removed in a *future* update): `home-manager switch`'s cleanup
+step didn't retroactively delete the stale symlink left over from the
+previous generation — it had to be removed by hand
+(`rm ~/.config/nvim-minimax/nvim-pack-lock.json`) once, after switching, to
+let `vim.pack` actually claim the path. Not fully root-caused (home-manager's
+per-file cleanup for entries inside a `recursive = true` directory apparently
+doesn't always catch up in one switch); a one-time nuisance, not an ongoing
+one, since this specific path is now permanently excluded going forward.
 
 Phases (0–3 done so far):
 
