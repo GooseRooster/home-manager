@@ -6,11 +6,23 @@
 -- Filetypes without an entry here fall through to `lsp_format = 'fallback'`
 -- (set in '40_plugins.lua'): the attached LSP's own formatter is used when
 -- it has one (e.g. ruff for python, roslyn for C#).
+--
+-- `format_on_save = true` — vendor's own conform `setup()` (40_plugins.lua)
+-- never set this, so format-on-save was never actually wired up anywhere;
+-- only the manual `<Leader>lf` binding worked (`require('conform').format()`
+-- always merges in `default_format_opts.lsp_format = 'fallback'` regardless
+-- of `format_on_save`, since that merge happens inside `M.format()` itself —
+-- see conform's `init.lua`). `format_on_save`, by contrast, only registers
+-- its `BufWritePre` autocmd when truthy in the exact `setup()` call that
+-- runs — and conform's `setup()` clears its own augroup on every call — so
+-- it has to be set here, in the *last* `conform.setup()` call in the load
+-- order, for it to actually take effect.
 Config.later(function()
   vim.pack.add({ 'https://github.com/mfussenegger/nvim-lint' })
 
-  -- Format on `<Leader>lf` (MiniMax's stock conform binding)
+  -- Format on `<Leader>lf` (MiniMax's stock conform binding) AND on save.
   require('conform').setup({
+    format_on_save = true,
     formatters_by_ft = {
       lua = { 'stylua' },
       sh = { 'shfmt' },
