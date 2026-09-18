@@ -11,7 +11,19 @@
 -- via the same public `MiniStarter.sections.*` generators upstream uses
 -- internally, plus one new item. Calling `.setup()` again is a normal,
 -- supported way to reconfigure a mini.nvim module.
-Config.later(function()
+--
+-- Must be `Config.now`, not `Config.later`: MiniMax's stock
+-- `require('mini.starter').setup()` (`30_mini.lua`) is itself a `now()`
+-- call, and mini.starter opens its dashboard on `VimEnter` — which fires
+-- once all of `plugin/*.lua` has sourced, well before the `later()` queue
+-- (drained one entry per event-loop tick, starting only once the event
+-- loop gets a turn) has a chance to run. A `later()`-registered `setup()`
+-- here would land after that first auto-open already rendered mini.starter's
+-- own bare internal default items, so the cwd-scoped recent-files section
+-- and the "Startup time" utility item would silently never appear on the
+-- dashboard you actually see on launch (same fix `theme.lua` needed for the
+-- same reason — its colorscheme must also apply before the first frame).
+Config.now(function()
   vim.pack.add({ 'https://github.com/dstein64/vim-startuptime' })
   vim.g.startuptime_tries = 10
 
