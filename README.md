@@ -52,8 +52,10 @@ themselves — one source of truth per host, nothing mirrored between repos
 
 Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl`,
 `defaultShell` (`nu` | `zsh`; drives ghostty's `command`, the WSL bash
-hand-off and nixos-config's `termapp` together — see `modules/flavors.nix`)
-plus the `bundles` switches (see
+hand-off and nixos-config's `termapp` together — see `modules/flavors.nix`),
+`nvimVariant` (`lazyvim` | `minimax`; picks which Neovim config is "main" —
+see [Neovim: LazyVim + MiniMax](#neovim-lazyvim--minimax)) plus the `bundles`
+switches (see
 `modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
 owl.jpg) 
 
@@ -201,438 +203,161 @@ Consequence for projects: a rust/clang/cmake project must provide its
 tooling via the devshell (`devshell-init rust` / `clang` scaffolds it) —
 opening nvim outside such a shell simply leaves those servers off.
 
-## MiniMax experiment (roadmap)
+## Neovim: LazyVim + MiniMax
 
-An experimental, side-by-side [MiniMax](https://github.com/nvim-mini/MiniMax)
-config lives at `~/.config/nvim-minimax`, booted via `nvim-minimax` (zsh alias
-/ nu `def`, both set `NVIM_APPNAME=nvim-minimax`). It never touches
-`~/.config/nvim` or the primary LazyVim setup's data/state dirs — fully
-additive, safe to ignore.
+Two complete, daily-usable Neovim configs live side by side:
 
-Rationale: MiniMax leans almost entirely on `mini.nvim` (one maintainer, ~35
-modules) plus Neovim's built-in `vim.pack`, instead of LazyVim's dozen+
-separate plugin authors + lazy.nvim + Mason. Smaller dependency surface,
-config meant to be read start-to-end, no auto-updating "distribution" layer —
-traded against real capability gaps out of the box (`mini.completion` vs
-blink.cmp, `mini.pick` vs snacks picker, no Mason/DAP/testing baseline). The
-goal here isn't to replace LazyVim outright, but to dogfood it far enough to
-make that call deliberately.
+- **LazyVim** (`modules/nvim.nix`) — the [LazyVim
+  starter](https://github.com/LazyVim/starter), vendored + overlaid, plus
+  Mason for tool installation.
+- **MiniMax** (`modules/nvim-minimax.nix`) — a config built almost entirely on
+  [`mini.nvim`](https://github.com/nvim-mini/mini.nvim) (one maintainer, ~35
+  modules) and Neovim's built-in `vim.pack`, with no Mason. Reached feature
+  parity with the LazyVim side (LSP, DAP/dotnet, test running, REST client,
+  notes, formatting/linting, theming, git, keymap clues) during its own
+  build-out; from here it's an equal option to iterate on, not an
+  experiment being graded against the other.
 
-Vendoring mirrors the LazyVim starter pattern with one structural difference:
-LazyVim is a real runtime plugin dependency (`vendor/lazyvim-starter` is just
-the empty project skeleton; actual behavior comes from the separately-fetched
-`LazyVim/LazyVim` plugin). MiniMax has no such split — there is no "MiniMax"
-plugin to `import`; the upstream repo's `configs/nvim-<version>/` directory
-*is* the entire config, meant to be copied once and diverged from. So
-`vendor/minimax/` + `scripts/update-minimax.sh` only track upstream's
-reference config for review; nothing regenerates automatically.
+`home.modules.nvimVariant` (`"lazyvim"` | `"minimax"`, default `"lazyvim"`,
+declared in `modules/flavors.nix`) picks which one is **main** — the one
+plain `nvim`/`$EDITOR`/`$VISUAL` open. Set it per host:
 
-`vim.pack`'s own lockfile (`nvim-pack-lock.json`) is written straight into
-`~/.config/nvim-minimax` at runtime — `recursive = true` home-manager file
-sets materialize as a real writable directory of per-file store symlinks, not
-one read-only directory symlink, so genuinely *new* files (like `lazyvim.json`
-already sitting happily inside `~/.config/nvim` today) need no lazy.nvim-style
-`lockfile = ...` workaround.
+```nix
+home.modules.nvimVariant = "minimax"; # or "lazyvim"
+```
 
-**Correction, found the hard way**: that reasoning doesn't extend to a file
-that's *vendored* — `nvim-pack-lock.json` ships as part of MiniMax's own
-upstream repo (a snapshot of revisions its maintainer had installed), so it
-was copied into `vendor/minimax/` during Phase 0 like everything else, which
-made it a managed, read-only symlink into the store at exactly the path
-`vim.pack` needs to *overwrite* every time it installs/updates a plugin —
-breaking every `vim.pack.add()` call outright. Fixed in `modules/nvim-minimax.nix`
-by `rm`-ing it from `$out` before it's ever linked, so home-manager never
-manages that path at all and `vim.pack` is free to create a genuine mutable
-file there on first run (same mechanism as `lazyvim.json`, just reached by
-removal instead of the file never having existed upstream). Verified live:
-`vim.pack.add()` now succeeds and writes a real `nvim-pack-lock.json`, which
-also self-healed (`"Repaired corrupted lock data"`) the revisions for every
-plugin installed while the bug was present, since a lockfile write had never
-actually succeeded before.
+Both configs are *always* built and *always* additionally reachable at their
+own fixed path/alias regardless of this flag, so switching never strands the
+other one:
 
-One migration wrinkle worth knowing if this ever recurs (a vendored/overlay
-file being removed in a *future* update): `home-manager switch`'s cleanup
-step didn't retroactively delete the stale symlink left over from the
-previous generation — it had to be removed by hand
-(`rm ~/.config/nvim-minimax/nvim-pack-lock.json`) once, after switching, to
-let `vim.pack` actually claim the path. Not fully root-caused (home-manager's
-per-file cleanup for entries inside a `recursive = true` directory apparently
-doesn't always catch up in one switch); a one-time nuisance, not an ongoing
-one, since this specific path is now permanently excluded going forward.
+| Variant | Fixed path | Shell alias / `def` |
+|---------|-----------|----------------------|
+| LazyVim | `~/.config/nvim-lazyvim` | `nvim-lazyvim` |
+| MiniMax | `~/.config/nvim-minimax` | `nvim-minimax` |
 
-Phases (0–3 done so far):
+`modules/nvim-main.nix` is the piece that actually claims `~/.config/nvim`:
+it reads `config.home.modules.nvimPackages.${nvimVariant}`, an internal
+attrset each of the two config modules populates with its own built
+derivation (`nvimPackages.lazyvim` / `nvimPackages.minimax`). `nvim.nix` and
+`nvim-minimax.nix` themselves stay simple and symmetric — each just builds
+its config and deploys it to its own fixed path; they don't know about the
+toggle at all.
 
-- [x] **Phase 0 — scaffolding.** `vendor/minimax/`, `modules/nvim-minimax.nix`,
-  `scripts/update-minimax.sh`, `nvim-minimax` shell alias/def.
-- [x] **Phase 1 — keymap parity.** `<leader><leader>` → `Pick files`,
-  `<leader>/` → `Pick grep_live` (`files/nvim-minimax/plugin/45_keymaps_extra.lua`;
-  additions — MiniMax's own `<leader>ff`/`<leader>fg` stay).
-- [x] **Phase 2 — plugin port (low-risk bucket).** Ported as a
-  `files/nvim-minimax/` overlay (`lua/config/{profile,clue}.lua` +
-  `plugin/50-custom/*.lua`), merged onto `vendor/minimax/` in
-  `modules/nvim-minimax.nix` the same way `modules/nvim.nix` layers
-  `files/nvim/lua` over `vendor/lazyvim-starter`. `lua/config/profile.lua` is
-  a trimmed fork of the LazyVim side's module — same `NVIM_PROFILE`/
-  `NVIM_LANGS` env vars, `nix_substitutes`/`tool_source()`/Mason dropped
-  entirely (see Phase 5). Notable deviations from a literal port:
-  - `dap.lua` — a middle ground, not a straight trim: a single narrow left
-    column (scopes + breakpoints + repl, 42 cols) is always shown; the
-    easy-dotnet CPU/mem profiler row is added to the layout dynamically, only
-    for sessions actually driven by easy-dotnet's own DAP adapter (detected
-    via `session.config.type == 'easy-dotnet'` — verified against
-    easy-dotnet.nvim's own `auto_register_dap`/`constants.debug_adapter_name`
-    source). No separate stacks/watches/console panes, no right column — for
-    a full multi-pane layout (45-col left + 40-col right + bottom perfmon
-    row), see `~/repos/CSPWeb`'s `.nvim.lua`, which still works unchanged as
-    a per-project override (`require('dapui').setup({...})` again). Still
-    dropped: `nvim-dap-virtual-text`, `mason-nvim-dap` (no Mason at all —
-    debug adapters expected on PATH via the environment). Verified headlessly
-    by invoking the `dap.listeners.before.launch.dapui_config` callback
-    directly with fake session objects (no session / `easy-dotnet` type /
-    other adapter type) and inspecting `require('dapui.config').layouts` —
-    bottom panel present only for the `easy-dotnet` case, and correctly gone
-    again for a subsequent non-dotnet session (no leaked state). Per-language
-    `dap.adapters.*`/`dap.configurations.*` wiring is Phase 5 territory.
-  - `easy-dotnet.lua` — picker changed `"snacks"` → `"basic"`: MiniMax has no
-    snacks/telescope/fzf-lua, and easy-dotnet has no native `mini.pick`
-    integration (its own fallback order is snacks → fzf → telescope →
-    basic). Revisit if that changes upstream.
-  - `luasnip.lua` — LuaSnip coexists fine with `mini.snippets` (different
-    concern: `mini.completion` only needs an omnifunc + optional snippet
-    *source*, not a specific engine); the `jsregexp` build step is wired via
-    `Config.on_packchanged`, matching `40_plugins.lua`'s own
-    `nvim-treesitter` `:TSUpdate` hook pattern.
-  - `cairn.lua` — remapped off its own `<leader>m*` defaults twice now.
-    First move: `<leader>m*` → `<leader>a*` (MiniMax's stock `20_keymaps.lua`
-    already claims `<leader>m` for `mini.map`; no actual keymap collision,
-    different exact sequences, but `mini.clue` would've had two different
-    group descriptions on the same prefix). Second move, found later:
-    `<leader>a` turned out already taken too — by `herdr-nvim`'s own
-    *default* prefix (`herdr-nvim.lua` doesn't override it, so it's the
-    prefix your primary LazyVim setup already has as established muscle
-    memory). Landed on `<leader>c` ("cairn") — confirmed via a full dump of
-    every registered `<Leader>`-prefixed mapping (`nvim --headless` +
-    `vim.api.nvim_get_keymap('n')`) that nothing else collides, in either
-    direction. Also: `keymaps.index_prefix = ''` now disables cairn's bare
-    `<Leader>1..9` arena-slot jump maps entirely (unused; the picker covers
-    quick jumps, and `<Leader><digit>` stays free for future use).
+### Why MiniMax exists as an alternative
 
-  Session notes (Phase 5 session, alongside the LSP layer):
-  - **Comment sweep** — all overlay files now carry only what-it-does/
-    how-it-works comments; LazyVim-provenance/phase narrative moved here
-    (the roadmap is the rationale home). Functional mentions of other
-    projects (e.g. easy-dotnet's own snacks→fzf→telescope→basic picker
-    priority, CSPWeb's `.nvim.lua` as the multi-pane dap-ui precedent)
-    stay, since they explain current behavior, not history.
-  - **LuaSnip dropped** — `plugin/50-custom/luasnip.lua` is gone. The C#
-    `/// <summary>` XML-doc snippet (the only thing LuaSnip provided that
-    mini.snippets didn't) is now a mini.snippets *function snippet*:
-    `lua/config/xmldoc.lua` holds the signature parser and a snippet-file
-    function element (called at expansion time with `{ buf_id, lang }`),
-    and `snippets/{cs,c_sharp,razor}.lua` (3-line wrappers) let the loader
-    reach it from every context the language can resolve to. Behavior
-    change: not an autosnippet anymore — type `///` on the line above a
-    method signature and press `<C-j>` (mini.snippets' insert-mode expand
-    mapping, `:h MiniSnippets-mappings`) instead of it firing on trigger.
-    Verified live headlessly: expansion over
-    `public void Test(int foo, string bar)` yields summary + both param
-    tags and no `<returns>`; razor/c_sharp contexts load via their own
-    files (treesitter-resolved lang is `c_sharp`, not `cs`). Side effect:
-    the LuaSnip `make install_jsregexp` PackChanged hook (and its `make`
-    dependency problem) disappears with it. LuaSnip itself may remain a
-    non-active plugin in `~/.local/share/nvim-minimax` — `:Pack`'s `X`
-    (clean non-active) removes it.
-  - **`plugin/50-custom/inline-diagnostic.lua`** — port of the LazyVim
-    setup's tiny-inline-diagnostic.nvim (`powerline` preset); registers
-    after '10_options.lua's diagnostic config so `virtual_text = false`
-    wins and the built-in per-line virtual text doesn't duplicate the
-    float.
-  - **`plugin/50-custom/formatting.lua`** — wires the base bundle's tools:
-    conform gains `formatters_by_ft` (stylua for lua, shfmt for sh/bash —
-    conform's `setup()` merges, so this extends MiniMax's stock bare
-    setup), nvim-lint runs shellcheck on sh/bash on save/InsertLeave.
-    Filetypes without entries fall through to `lsp_format = 'fallback'`
-    (ruff formats python, roslyn C#). `shfmt` added to `pkgs/base.nix`
-    alongside the existing stylua/shellcheck.
-  - **DAP adapters** (in `dap.lua`) — codelldb (rust + C/C++, gated on the
-    feature and the devshell-provided binary on PATH) and python/debugpy
-    (gated on `import debugpy` probing the project env, registered
-    asynchronously). Launch configs point at the usual build dirs
-    (`target/debug/`, `build/`); easy-dotnet keeps registering its own
-    dotnet adapter; typescript's js-debug stays unwired (npm-only).
-  - **Notification history routing** — `plugin/50-custom/notify.lua`
-    assigns `vim.notify = require('mini.notify').make_notify()`. MiniMax
-    stock sets up 'mini.notify' but leaves `vim.notify` untouched (module
-    default too), so notifications never entered the history; now every
-    `vim.notify()` call lands there and `<Leader>en` (Notification history,
-    stock keymap) is the single review surface. Verified headlessly: a
-    `vim.notify('...', WARN)` call appears in `MiniNotify.get_all()`
-    (make_notify is schedule_wrap'ped — history read must follow the tick).
-  - **Shell greeting skip inside Neovim** — both fastfetch greeting call
-    sites skip when spawned by a running Neovim: Neovim exports `$NVIM`
-    (its listen address) to child processes (`:term` and `:!` alike), so
-    zsh's `initContent` greeting (modules/zsh.nix, mkOrder 1900) became
-    `[[ -z "${NVIM:-}" ]] && fastfetch`, and nushell's config.nu greeting
-    became `if $nu.is-interactive and not ("NVIM" in $env) { fastfetch }`.
-    Manual `fastfetch` calls (and the `home` clear-and-greet functions)
-    still work inside a terminal by design — only the greeting is gated.
-  - **Shell greeting skip in cramped terminals** — both `fastfetch` shell
-    wrappers (files/zsh/functions.zsh, files/nushell/config.nu) skip
-    argument-less (greeting) calls when the terminal is narrower than 80
-    columns (zsh `$COLUMNS`, nushell `term size`), so the banner no longer
-    overflows in small splits. Manual calls with args always render, and
-    non-tty/unknown-size contexts fall back to rendering.
-  - **Terminal toggle: single reusable buffer** — the `<C-/>` toggle now
-    keeps exactly one terminal buffer per session (found via a `minimax_term`
-    buffer-local marker): reopening reuses it (scrollback and running shell
-    preserved), it's unlisted so it never shows as a `mini.tabline` tab, and
-    a stale marker (shell exited) is deleted and replaced. Liveness check is
-    `vim.fn.jobpid()` on the buffer's `channel` — errors (E900) once the
-    shell exits; `term_getjob()` doesn't exist in 0.12. Verified headlessly:
-    open/hide/reopen reuses the same buffer id; killing the shell yields a
-    fresh buffer on the next toggle. Also: both open paths end in
-    `startinsert` (mini.basics' TermOpen hook only covers fresh terminals —
-    reused buffers never re-fire it), and closing as the *only* window
-    deletes the buffer instead of erroring E444 on `:hide`.
-  - **Testing-session refinements** (user-reported):
-    - `q` in Normal mode = close (window via `:close`; as the only window,
-      delete the current buffer via mini.bufremove — refuses on modified
-      buffers). Deliberate trade-off: the macro recorder and `q:`/`q/`
-      cmdline windows are gone globally; buffer-local `q` maps
-      (mini.files/pickers/help) still win.
-    - `Treesitter: skipping unsupported language: jsonc` — nvim-treesitter
-      has no jsonc parser; dropped from the json bundle (json covers it).
-    - **Razor highlighting** — the razor parser's `injections.scm` injects
-      `html` into markup `(element)` regions (and inherits c_sharp), so
-      razor highlighting needs the **html parser installed** — it's now in
-      the dotnet (and typescript) tree-sitter bundles. The parallel to
-      easy-dotnet's razor LSP cohosting (markup via vscode-html-language-
-      server) is deliberate. Also, tree-sitter start failures are now
-      *reported* (via vim.notify, which mini.notify routes to the history)
-      instead of silently swallowed — an unhighlighted filetype is
-      diagnosable. Note: the missing html parser was only visible as
-      "no highlighting, no errors" because the razor parser itself attached
-      fine; interactive sessions resolve the injection now.
-    - Pickers (`mini.pick` + `mini.extra`) navigate with `<C-j>`/`<C-k>`
-      (replacing `<C-n>`/`<C-p>`; arrows keep working). No conflict with
-      mini.snippets' insert-mode `<C-j>` expand: while a picker is active
-      its loop reads keys through `getcharstr()`, which bypasses real
-      mappings — verified — so expand never fires inside a picker.
-    - **DAP: profiler bottom row removed** (the debuggee-log panel that
-      wouldn't close): dap-ui now always opens with just the left column,
-      and the terminated/exited listeners explicitly close easy-dotnet's
-      managed-terminal panel (`easy-dotnet.terminal.hide()` — its own
-      auto-hide only triggers on exit code 0). The CPU/mem widgets stay
-      registered (`mem_cpu_usage = true`) for per-project layouts.
-    - **Kulala scoped to .http buffers** — all `<Leader>R*` maps and the
-      `+Rest` group clue are now buffer-local (FileType http via
-      `config.clue.add_buf`, with the first-buffer gap handled and an
-      idempotent `setup_buf` guard), replacing the previous global
-      registration; scratchpad/replay are .http-only now too.
-    - **Inline diagnostics gutter icons** — sign text is icon-only for all
-      four severities (`   󰌵`, the LazyVim-style set) instead of E/W
-      letters; stock limited signs to WARN+ only.
-  - **mini.files tweaks** (`plugin/50-custom/files.lua`) — preview pane
-    widened to 60 columns (`windows.width_preview`, default 25; it
-    materializes only when focus+preview fit the terminal width) and
-    `<CR>` = "open this": directories navigate into, files open *and*
-    close the explorer. That mapping is literally
-    `MiniFiles.go_in({ close_on_file = true })` — the behavior of mini.files'
-    own `go_in_plus` (`L`), bound buffer-locally via the documented
-    'MiniFilesBufferCreate' event; stock `l`/`L` keep working. Verified
-    headlessly: preview width applied, `<CR>` on a file opens it and closes
-    the explorer, `<CR>` on a directory navigates deeper with the explorer
-    open.
-  - `herdr-nvim.lua` — herdr binds its own `<leader>a*` maps but knows
-    nothing about mini.clue; without a group clue the `<Leader>a` popup
-    showed an anonymous "+4 entries". `herdr-nvim.lua` now appends
-    n-mode + x-mode `<Leader>a` group clues to `Config.leader_group_clues`
-    (same mechanism as cairn). Note the precedence subtlety verified against
-    mini.clue's source: `MiniClue.setup()` runs in a `later()` registered by
-    '30_mini.lua' *before* any 50-custom callback, and its setup
-    `tbl_deep_extend`s the clues list — but `Config.leader_group_clues`
-    itself is *nested inside* that list by reference, so later appends to it
-    still flatten in at query time (`H.clues_normalize` recurses nested
-    lists; `H.get_config()` is recomputed per trigger).
-  - `45_keymaps_extra.lua` — ports of the LazyVim setup's keymaps.lua:
-    `<C-j>`/`<C-k>` → half-page scroll (shadows mini.basics' `<C-hjkl>`
-    window nav — same trade-off as the LazyVim side), `<A-hjkl>` →
-    `<C-w>h/j/k/l` window nav as compensation, and `<C-/>`+`<C-_>` (n and
-    terminal modes) as a horizontal-split terminal **toggle** (`:horizontal
-    term` / `:hide`). Two collisions worth remembering: mini.move's stock
-    `<M-hjkl>` *normal-mode* line-moving is shadowed by the Alt block (it
-    re-registers in a `later()` after mini.move's own setup; Visual-mode
-    selection-moving and everything else stay untouched), and the
-    `<A-j>`/`<A-k>` entries on mini.starter's screen are starter's own
-    buffer-local nav — untouched.
-  - `plugin/15_options_extra.lua` (new) — `vim.o.clipboard =
-    'unnamedplus'` (system-clipboard sync; wl-clipboard is in the base
-    bundle) and `vim.o.shell = '@shell@'`, substituted at build time by
-    `modules/nvim-minimax.nix` with the host's `home.modules.defaultShell`
-    (same mechanism as modules/nvim.nix — MiniMax never set `'shell'`
-    before, so `:term` fell back to /bin/sh).
-  - `plugin/50-custom/pack-ui.lua` (new) — nvim-pack-ui (Codeberg
-    cryptomilk/nvim-pack-ui), a floating UI over `vim.pack`
-    (`:Pack`, `:Pack check`). Registered via `Config.now` so it installs
-    first on a fresh data dir; deliberately **no** auto-open —
-    `vim.pack.add()` is synchronous, so any UI opened from the `PackChanged`
-    event stream renders stale state mid-batch.
-- [x] **Phase 3 — explorer & clues.** `yazi.nvim` dropped, stock `mini.files`
-  used (nothing to port — already default). which-key group labels
-  translated to `mini.clue`: global groups (`cairn.lua`) append to
-  `Config.leader_group_clues`; buffer-scoped groups (`easy-dotnet.lua`,
-  `markdown.lua`, `zk.lua`) use a small shared helper
-  (`lua/config/clue.lua`'s `add_buf()`) that appends to
+Smaller dependency surface than LazyVim's dozen+ plugin authors + lazy.nvim +
+Mason, a config meant to be read start-to-end, no auto-updating
+"distribution" layer — traded against a few capability gaps
+(`mini.completion` vs blink.cmp, `mini.pick` vs a fuzzy-picker-as-a-service
+like snacks/telescope, no bundled test-runner UI beyond what individual
+plugins bring). Worth reaching for when you want to *understand* your whole
+editor config, not just configure it.
+
+### Structure
+
+Vendoring mirrors the LazyVim starter pattern with one structural
+difference: LazyVim is a real runtime plugin dependency
+(`vendor/lazyvim-starter` is just the empty project skeleton; actual
+behavior comes from the separately-fetched `LazyVim/LazyVim` plugin).
+MiniMax has no such split — there is no "MiniMax" plugin to `import`; the
+upstream repo's `configs/nvim-<version>/` directory *is* the entire config,
+meant to be copied once and diverged from. So `vendor/minimax/` +
+`bash scripts/update-minimax.sh` only track upstream's reference config for
+review; nothing regenerates automatically, and nothing auto-merges — review
+the diff by hand after running it.
+
+The repo's own overlay (`files/nvim-minimax/`) layers on top of that vendor
+mirror the same way `files/nvim/lua` layers onto `vendor/lazyvim-starter`:
+`lua/config/{profile,clue,run,xmldoc}.lua` (env-driven language profile,
+mini.clue helpers, the stack-agnostic Run/Unit-test group convention, the C#
+XML-doc snippet) plus `plugin/50-custom/*.lua` (one file per integration —
+LSP, DAP, dotnet, kulala/REST, zk notes, markdown, theming, notifications,
+and so on).
+
+### What's in MiniMax today
+
+- **LSP, Mason-free** (`plugin/50-custom/lsp.lua` + `lua/config/profile.lua`)
+  — the same `NVIM_PROFILE`/`NVIM_LANGS` environment-driven language profile
+  as the LazyVim side, minus Mason: a server enables only when
+  `profile.has(feature)` **and** its binary resolves on PATH (lspconfig's
+  `cmd[1]`, with a fallback-binary override table for servers whose `cmd` is
+  a function). No PATH binary means the server silently never attaches — no
+  errors, no Mason install prompts. Binaries come from `pkgs/base.nix` or a
+  project devshell. Tree-sitter parsers for enabled features install
+  alongside.
+- **DAP + dotnet** (`plugin/50-custom/dap.lua`, `easy-dotnet.lua`) — a single
+  narrow left dapui column (scopes + breakpoints + repl); codelldb
+  (rust/C/C++) and python/debugpy adapters register when their feature +
+  binary are present; easy-dotnet registers its own adapter. Dotnet sessions
+  additionally get a bottom row with the CPU/mem profiler widgets, shown
+  only for `session.config.type == 'easy-dotnet'`. easy-dotnet's managed
+  console (the process's stdout/stderr panel, which pops open unprompted on
+  every run/debug) is patched to auto-hide itself immediately — press
+  `<Leader>rT` to reveal it on demand instead. `<Leader>r`/`<Leader>u` are
+  meant to mean "Run"/"Unit test" regardless of stack (see
+  `lua/config/run.lua` for the letter convention); only dotnet implements
+  them today, and its own bare test-runner shortcuts were moved off
+  `<Leader>r`/`t`/`d`/`e`/`p` onto `<Leader>u*` to avoid shadowing that
+  group. For a full multi-pane dapui layout (extra columns, always-on
+  profiler row), override per-project with a `.nvim.lua` calling
+  `require('dapui').setup({...})` again.
+- **Keymap clues** (`lua/config/clue.lua`, `plugin/50-custom/mini-clue-icons.lua`)
+  — which-key-style group labels via `mini.clue`. Global groups append to
+  `Config.leader_group_clues`; buffer-scoped groups (dotnet, kulala's REST
+  client, zk notes, markdown) go through `add_buf()`, which appends to
   `vim.b[bufnr].miniclue_config.clues` — verified against `mini.clue`'s own
-  source (`H.get_config` *concatenates* global + buffer-local clue lists, it
-  doesn't override) that this is the correct, collision-safe mechanism, since
-  more than one `FileType` autocmd can target the same buffer (e.g. both
-  `markdown.lua` and `zk.lua` fire on `FileType markdown`).
+  source that this *concatenates* rather than overrides, so more than one
+  `FileType` autocmd can safely target the same buffer. Both the global and
+  buffer-local paths prefix a hand-picked Nerd Font glyph onto known group
+  descriptions (written as `\xEF\x..\x..` UTF-8 byte escapes, not literal
+  characters — several editors/terminals silently mangle raw
+  Private-Use-Area bytes on save).
+- **Notifications** (`plugin/50-custom/notify.lua`, `fidget.lua`) — `vim.notify`
+  routes through `mini.notify` so every notification lands in
+  `<Leader>en`'s history, with a hand-rolled wrapper (rather than
+  `mini.notify`'s own bare `make_notify()`) that additionally honors the
+  nvim-notify/snacks `id`/`replace` convention — needed so spinner-style
+  progress messages (e.g. easy-dotnet's job spinner, one `vim.notify` call
+  per animation frame) update one notification in place instead of stacking
+  a new popup per frame. `fidget.nvim` sits alongside it for animated
+  LSP-progress spinners specifically (mini.notify has no spinner primitive
+  of its own).
+- **Diagnostics** — gutter signs are icon glyphs for Warning/Error (Info/Hint
+  stay signless, matching the stock severity filter); inline text comes from
+  `tiny-inline-diagnostic.nvim` instead of Neovim's built-in virtual text.
+- **Everything else ported from LazyVim's `core_extras`** — kept: yanky,
+  dial, inc-rename (upgrades the stock `<Leader>lr` in place), navic,
+  mini-animate, startuptime; dropped: neogen, illuminate, outline,
+  smear-cursor, dot (mini-surround and mini-hipatterns were already native).
+  `goto-preview.nvim` ("peek" a definition/type/implementation/declaration
+  in a float without leaving the cursor) rounds out the `<Leader>l`
+  "+Language" group as uppercase siblings of the existing jump-to actions
+  (`lS`/`lT`/`lI`/`lD`, plus `lq` to close preview floats).
+- **Explorer & pickers** — stock `mini.files` (widened preview pane,
+  `<CR>` opens-and-closes on a file) and `mini.pick`/`mini.extra`
+  (`<C-j>`/`<C-k>` navigation) needed no porting; `mini.icons` already
+  supplies file/directory/LSP-kind icons everywhere it's asked to.
+- **Theming** — `osc-colors.nvim` (reads the terminal's live palette) drives
+  the colorscheme, replacing stock `miniwinter`.
+- **cairn.nvim** (file arena/quick-jump) on `<Leader>c`, **herdr-nvim**
+  (agent-output sidebar) on `<Leader>a`, **kulala.nvim** (REST client) on
+  buffer-local `<Leader>R` in `.http` files, **zk** notes on buffer-local
+  `<Leader>z` in notebook markdown — each with its own `mini.clue` group.
 
-  One correctness subtlety worth remembering if you touch these files:
-  `Config.on_filetype`/`Config.later` fire the *first* matching event once,
-  so a *newly*-registered `FileType` autocmd inside that callback won't
-  retroactively fire for the very buffer that triggered it (`zk.lua`,
-  `markdown.lua`, `easy-dotnet.lua` all call their buffer-setup function once
-  directly, in addition to registering the ongoing autocmd, to cover that
-  buffer too — see the comments in those files).
+### Gotcha worth remembering
 
-  Also, `plugin/50-custom/mini-clue-tweaks.lua`: MiniMax's stock 1-second
-  `window.delay` before the clue popup appears felt sluggish — set to `0`
-  (instant) by mutating `require('mini.clue').config.window.delay` directly
-  after the fact, rather than re-calling `.setup()` with a full
-  clues/triggers replica (confirmed against the source that
-  `H.state_advance()` reads `MiniClue.config` fresh on every trigger, not
-  cached at setup time, so this one-field mutation is sufficient).
-
-  All of the above verified with a real headless `vim.pack` install (network,
-  not just `nix build`) against a scratch `$XDG_CONFIG_HOME`/`$XDG_DATA_HOME`,
-  opening markdown/`.cs` scratch files, with and without `NVIM_LANGS=dotnet` —
-  no Lua errors, correct plugins/keymaps/clues present or absent as expected.
-
-- [x] **Phase 4 — theme polish.** `osc-colors.nvim` gained a
-  `highlights/mini.lua` integration upstream (registered in its
-  `integrations` table alongside `lualine`/`snacks`/..., `mini = true` by
-  default). Wired into MiniMax via `plugin/50-custom/theme.lua` — overrides
-  the stock `miniwinter` colorscheme (`vendor/minimax/plugin/30_mini.lua`,
-  left untouched; this file runs later in the same synchronous `now()` phase
-  and repaints over it, so there's no flash — nothing reaches the screen
-  until all of `plugin/*.lua` finishes sourcing regardless). `use_lazy_specs`
-  explicitly disabled (a no-op without lazy.nvim anyway, but there's nothing
-  for it to ever find in this config). Verified headlessly two ways: a fresh
-  sandbox with no cached OSC-query palette correctly no-ops and leaves
-  `miniwinter` in place (documented behavior — `osc-colors` needs a real
-  terminal round-trip or a prior cache, neither exists in `--headless` with
-  no UI); copying in the *actual* cached palette from `~/.cache/nvim/osc-colors-palette.lua`
-  (same file your LazyVim setup already produced) makes it apply correctly —
-  `vim.g.colors_name == 'osc-colors'` and `MiniStatuslineModeNormal` etc. get
-  real palette-derived colors, not fallback links. First real interactive
-  launch of `nvim-minimax` will populate its own cache
-  (`$XDG_CACHE_HOME/nvim-minimax/osc-colors-palette.lua`, separate namespace
-  from the LazyVim config's cache) via the same live `UIEnter`/`FocusGained`
-  OSC query your LazyVim setup already went through once.
-- [x] **Phase 5 — LSP layer, Mason-free.** One
-  `after/lsp/<server>.lua` + `vim.lsp.enable(name, profile.has(feature))` per
-  entry in `profile.lua`'s existing `feature_order` (python, rust,
-  typescript, java, clang, cmake, docker, sql, json, yaml, nushell, git,
-  dotnet) — server defaults sourced from each LazyVim extra as reference, not
-  a dependency. `profile.lua`'s language-selection logic ports almost as-is;
-  `nix_substitutes`/`tool_source()`/`mason.lua` are dropped entirely (nothing
-  routes through Mason in this config — binaries come from `pkgs/base.nix`
-  or project devshells, same as the NixOS-unsafe tools already do today).
-  Languages needing more than a bare lspconfig entry (rust → rustaceanvim,
-  typescript → vtsls settings, dotnet → existing easy-dotnet/lazydotnet) get
-  their extra plugin added via `vim.pack.add()` per-language as reached.
-
-  As landed (`plugin/50-custom/lsp.lua` + `lua/config/profile.lua`'s
-  `M.base_lsp`/`M.feature_lsp`/`M.feature_treesitter` bundles):
-  - **Enable gating is `profile.has(feature)` AND a PATH executable check**
-    on lspconfig's resolved `cmd[1]` (with a small override table for the
-    servers whose lspconfig `cmd` is a *function* — jsonls/yamlls — mapping
-    to their fallback binary). A missing binary means the server silently
-    never attaches; no errors on FileType, no Mason anywhere. Base servers
-    (`bashls`, `lua_ls`) enable in every profile, feature or not.
-  - Tree-sitter parsers for enabled features install via the same
-    not-already-installed filter `40_plugins.lua` uses, and a `FileType`
-    autocmd starts tree-sitter for them (pcall-guarded — parser builds are
-    asynchronous on first run). MiniMax's stock `40_plugins.lua` list only
-    covers lua/vimdoc/markdown; this layer owns the rest.
-  - `after/lsp/` ports: `ruff.lua` (hover disabled in favor of pyright, the
-    python extra's on_attach), `vtsls.lua` (settings verbatim; `gD`/`gR`
-    source-definition keymaps dropped — they drive `LazyVim.lsp.execute`
-    which needs snacks), `yamlls.lua` (foldingRange capability + settings),
-    `jsonls.lua`. One deviation in json/yaml: LazyVim swaps the servers'
-    built-in schemaStore support for the SchemaStore.nvim *plugin*; MiniMax
-    keeps the built-in (HTTP-backed) support — same catalog, no extra
-    plugin.
-  - Explicitly resolved deviations: **sql** — the LazyVim sql extra has no
-    LSP either (treesitter + sqlfluff only), so `sql` gets parsers, no
-    server; **dotnet** — roslyn stays easy-dotnet's own business, the
-    profile carries the markup half instead (`html`/`cssls`/`somesass_ls`
-    for Razor cohosting + SCSS, plus `c_sharp`/`razor` parsers);
-    **java** — no entry yet (jdtls port deferred); **git** — no LSP on the
-    LazyVim side either, treesitter parsers only.
-  - `some-sass-language-server` is npm-only (not in nixpkgs — verified) —
-    devshell-template territory, not config code.
-  - Verified headlessly in an isolated `XDG_*` scratch env (real first-run
-    `vim.pack` installs + parser builds): base profile enables `lua_ls`/
-    `nushell` on and everything binary-less stays off; a stubbed dotnet+rust
-    devshell (`NVIM_LANGS=dotnet,rust` + fake PATH binaries) enables
-    `rust_analyzer`/`html`/`cssls`/`somesass_ls`, installs the c_sharp/razor
-    parsers, and loads easy-dotnet — 45/45 + 16/16 checks green.
-  - Backing the base profile, `pkgs/base.nix` gained the LSP binaries it
-    needs: bash-language-server, pyright, ruff, vscode-langservers-extracted
-    (json/html/css), yaml-language-server, dockerfile-language-server-nodejs,
-    docker-compose-language-service (all node/static-based, NixOS-safe;
-    nixpkgs availability verified per package).
-
-  Also sweeping up the LazyVim side's stack-agnostic `core_extras` (always
-  on, not gated by any of the 13 language features) alongside the
-  language-specific ones, since they're the same shape of work. Approach for
-  these: port the LazyVim extra close to verbatim rather than redesign —
-  they're small, self-contained, and already well-tuned. First one done:
-  `plugin/50-custom/kulala.lua` (`lazyvim.plugins.extras.util.rest`) —
-  verbatim keymap set, `<Leader>R` group appended to
-  `Config.leader_group_clues`, treesitter parsers for `http`/`graphql` added
-  matching `40_plugins.lua`'s own `ensure_installed` pattern. One deviation:
-  lazy.nvim's per-key `ft = "http"` restriction (some keymaps only existed
-  in `.http` buffers) has no `vim.pack` equivalent, so every key is global
-  now — harmless, kulala's own functions no-op/error gracefully outside an
-  `.http` buffer, and a couple of them (scratchpad, replay) are meant to be
-  reachable from anywhere anyway. Verified live (`.http` scratch file,
-  `NVIM_APPNAME=nvim-minimax`): filetype detection, both a buffer-scoped key
-  (`<Leader>Rs`) and a global one (`<Leader>Rb`), module loads cleanly,
-  parsers install successfully.
-  `core_extras` disposition, decided explicitly rather than porting all of
-  them: **kept** — mini-surround (already native), yanky, dial, inc-rename,
-  navic, mini-animate, mini-hipatterns (already native), startuptime.
-  **Ditched** — neogen, illuminate, outline, smear-cursor, dot.
-
-  All six newly-ported ones (`plugin/50-custom/{yanky,dial,inc-rename,navic,
-  mini-animate,startuptime}.lua`) verified live (real `home-manager switch`,
-  real `vim.pack` install, `NVIM_APPNAME=nvim-minimax`), including the two
-  worth flagging specifically:
-  - `yanky.lua`'s `[y`/`]y` (cycle yank-history forward/backward)
-    intentionally shadows `mini.bracketed`'s own "yank" target (`:h
-    MiniBracketed.yank`, active by default, same keys, different mechanism)
-    — confirmed `]y` resolves to yanky's `<Plug>(YankyCycleForward)`, not
-    mini.bracketed's. Also shadows MiniMax's stock `[p`/`]p` (a strict
-    subset of yanky's indent-aware put) for the same reason.
-  - `inc-rename.lua`'s `<Leader>lr` intentionally overrides MiniMax's stock
-    `vim.lsp.buf.rename()` binding on the same key (a strict upgrade, live
-    preview) — confirmed the live mapping resolves to inc-rename.lua's own
-    function, not the stock one.
-  - `navic.lua`: winbar is set directly per-window (`LspAttach`/
-    `BufWinEnter`/`WinEnter`), not through a statusline plugin's `winbar`
-    section like the LazyVim setup's own `lualine.lua` does it (no lualine
-    here) — confirmed empty (not a permanently-reserved blank line) for
-    windows with no navic-capable attached client.
-  - `startuptime.lua`: no "append one item" API on `mini.starter` — its
-    `config.items` stays `nil` unless set explicitly (falls back to a
-    private default list at render time). Replicated that exact default
-    composition via the same public `MiniStarter.sections.*` generators
-    upstream uses internally, plus one new "Startup time" item — confirmed
-    present in the resolved `MiniStarter.config.items`.
+`vim.pack`'s lockfile (`nvim-pack-lock.json`) needs to be genuinely absent
+from the deployed config, not just present-and-writable: MiniMax's upstream
+repo ships one (a snapshot of the maintainer's installed revisions), so a
+naive vendor mirror turns it into a read-only store symlink sitting exactly
+where `vim.pack` needs to *overwrite* it on every install/update — breaking
+every `vim.pack.add()` call outright. `modules/nvim-minimax.nix` `rm`s it
+from the build output before the overlay lands, so home-manager never
+manages that path and `vim.pack` is free to create a real mutable file there
+on first run (the same trick LazyVim's `lazyvim.json` gets "for free," since
+that file simply never existed in `vendor/lazyvim-starter` to begin with).
+If you ever see `vim.pack.add()` failing to persist lock data after touching
+the vendor mirror, check whether a vendored lockfile snuck back in.
 
 `bash scripts/update-minimax.sh` to refresh `vendor/minimax/` against
 upstream (review the diff manually; nothing auto-merges).
