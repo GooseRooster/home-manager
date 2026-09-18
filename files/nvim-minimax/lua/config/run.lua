@@ -22,9 +22,10 @@
 --     rs  extra (e.g. secrets)       ue  build/compile errors
 --     rT  toggle output console      up  peek failure/stack trace
 --
--- Icons for both groups live in 'lua/config/clue.lua's shared buffer-local
--- icon table (keyed by the same `<Leader>r`/`<Leader>u` strings), applied
--- automatically by `M.register_clues` below since it goes through
+-- Icons for both groups live in 'lua/config/clue.lua's single shared icon
+-- table (keyed by the same `<Leader>r`/`<Leader>u` strings — the same table
+-- global groups use too), applied automatically by `M.register_clues` below
+-- since it goes through
 -- `config.clue.add_buf`.
 local M = {}
 
