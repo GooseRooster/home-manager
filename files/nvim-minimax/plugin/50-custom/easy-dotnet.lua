@@ -23,6 +23,8 @@ Config.later(function()
     'https://github.com/GustavEikaas/easy-dotnet.nvim',
   })
 
+  local dap = require('dap')
+
   -- `preload_roslyn` calls `vim.lsp.start(cap)` without options, which
   -- attaches the client to the *current* buffer unconditionally (buf_attach_client
   -- ignores `filetypes`; only the `vim.lsp.enable` FileType autocmd machinery
@@ -225,6 +227,32 @@ Config.later(function()
 
   vim.api.nvim_create_user_command('Secrets', function() dotnet.secrets() end, {})
 
+  -- easy-dotnet's managed-terminal panel (the debuggee's stdout/stderr,
+  -- `debugger.console = 'integratedTerminal'` above) pops open unconditionally
+  -- on every debug/run launch (`run_command_managed.lua` calls
+  -- `terminal.show()` with no option check — there's no upstream flag to
+  -- suppress it). That fights with the dapui layout in 'dap.lua', which
+  -- reserves the bottom of the screen for the CPU/mem profiler widgets during
+  -- dotnet sessions: patch `show()` so an auto-triggered open immediately
+  -- hides itself again, unless `<Leader>rT` has toggled the panel on. `require`
+  -- caches modules, so patching the field on the table returned here is also
+  -- what `run_command_managed.lua`'s own `require("easy-dotnet.terminal")`
+  -- sees.
+  local terminal = require('easy-dotnet.terminal')
+  local real_show = terminal.show
+  local user_toggled_open = false
+  terminal.show = function(...)
+    real_show(...)
+    if not user_toggled_open then vim.schedule(function() terminal.hide() end) end
+  end
+
+  dap.listeners.before.event_terminated.easy_dotnet_console_reset = function()
+    user_toggled_open = false
+  end
+  dap.listeners.before.event_exited.easy_dotnet_console_reset = function()
+    user_toggled_open = false
+  end
+
   local setup_buf = function(bufnr)
     local map = function(lhs, rhs, desc)
       vim.keymap.set('n', lhs, rhs, { buffer = bufnr, desc = desc })
@@ -243,11 +271,14 @@ Config.later(function()
     map('<Leader>rt', function() dotnet.testrunner() end, 'Test runner')
     map('<Leader>rb', function() vim.cmd('Dotnet build') end, 'Dotnet build')
     map('<Leader>rs', function() dotnet.secrets() end, 'User secrets')
-    map(
-      '<Leader>rT',
-      function() vim.cmd('Dotnet terminal toggle') end,
-      'Dotnet terminal panel'
-    )
+    map('<Leader>rT', function()
+      user_toggled_open = not user_toggled_open
+      if user_toggled_open then
+        real_show()
+      else
+        terminal.hide()
+      end
+    end, 'Toggle dotnet debug console')
 
     require('config.clue').add_buf(
       bufnr,

@@ -1,12 +1,11 @@
 -- Debug adapter UI (nvim-dap + nvim-dap-ui).
 --
 -- Layout is a deliberate single left column (scopes + breakpoints + repl):
--- narrow, always shown, no separate stacks/watches/console panes — and no
--- bottom easy-dotnet profiler row (the CPU/mem widgets are sampled anyway
--- — `easy-dotnet.lua`'s `mem_cpu_usage = true` — so a project that wants
--- them can add a row via its own `.nvim.lua` calling
--- `require('dapui').setup({...})` again, the same override used for the
--- full multi-pane layout e.g. ~/repos/CSPWeb's `.nvim.lua`).
+-- narrow, always shown, no separate stacks/watches/console panes. dotnet
+-- sessions (adapter type `"easy-dotnet"`) additionally get a bottom row with
+-- the CPU/mem profiler widgets (`easy-dotnet.lua`'s `mem_cpu_usage = true`
+-- samples them; see `open_dapui` below for where they're placed) — every
+-- other stack keeps the left-only layout with nothing at the bottom.
 --
 -- Not included: nvim-dap-virtual-text (inline value hints; add back if
 -- wanted); per-language `dap.adapters.*`/`dap.configurations.*` wiring
@@ -135,15 +134,33 @@ Config.later(function()
     position = 'left',
   }
 
-  --- Open dap-ui with the base layout.
-  local function open_dapui()
+  -- dotnet-only bottom row: easy-dotnet registers these two dapui elements
+  -- itself (`netcoredbg/sys_monitor_dap_ui.lua`) whenever `mem_cpu_usage =
+  -- true`, but places them in no layout — do that here, gated on the fixed
+  -- adapter type name easy-dotnet's `auto_register_dap` uses
+  -- (`constants.lua`'s `debug_adapter_name`), so other stacks are unaffected.
+  local dotnet_profiler_layout = {
+    elements = {
+      { id = 'easy-dotnet_cpu', size = 0.5 },
+      { id = 'easy-dotnet_mem', size = 0.5 },
+    },
+    size = 15,
+    position = 'bottom',
+  }
+
+  --- Open dap-ui with the base layout (plus the profiler row for dotnet sessions).
+  local function open_dapui(session)
+    local layouts = { base_layout }
+    if session and session.config and session.config.type == 'easy-dotnet' then
+      table.insert(layouts, dotnet_profiler_layout)
+    end
     ---@diagnostic disable-next-line: missing-fields
-    dapui.setup({ layouts = { base_layout } })
+    dapui.setup({ layouts = layouts })
     dapui.open({ reset = true })
   end
 
-  dap.listeners.before.attach.dapui_config = function() open_dapui() end
-  dap.listeners.before.launch.dapui_config = function() open_dapui() end
+  dap.listeners.before.attach.dapui_config = function(session) open_dapui(session) end
+  dap.listeners.before.launch.dapui_config = function(session) open_dapui(session) end
   dap.listeners.before.event_terminated.dapui_config = function()
     dapui.close()
     -- easy-dotnet's managed-terminal panel (debuggee log output) only
