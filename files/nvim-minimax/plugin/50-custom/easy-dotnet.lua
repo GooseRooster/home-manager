@@ -23,8 +23,6 @@ Config.later(function()
     'https://github.com/GustavEikaas/easy-dotnet.nvim',
   })
 
-  local dap = require('dap')
-
   -- `preload_roslyn` calls `vim.lsp.start(cap)` without options, which
   -- attaches the client to the *current* buffer unconditionally (buf_attach_client
   -- ignores `filetypes`; only the `vim.lsp.enable` FileType autocmd machinery
@@ -142,17 +140,29 @@ Config.later(function()
         build_failed = '󰒡',
       },
       mappings = {
-        run_test_from_buffer = { lhs = '<Leader>r', desc = 'run test from buffer' },
+        -- The "_from_buffer" mappings bind buffer-local on any ordinary
+        -- source buffer the moment easy-dotnet discovers a test in it (see
+        -- `test-runner/buffer.lua`'s `register_buf_keymaps`, driven by
+        -- `auto_start_testrunner` below) — bare `<Leader>r`/`t`/`d`/`e`/`p`
+        -- would shadow this file's own `<Leader>r*` group (setup_buf below)
+        -- as soon as a test is found, since `<Leader>r` alone becomes a
+        -- complete mapping and swallows the rest of any `<Leader>r<x>`
+        -- chord before it can be typed. Kept off `<Leader>r` entirely via a
+        -- dedicated `<Leader>u` ("unit test") prefix instead.
+        run_test_from_buffer = { lhs = '<Leader>ur', desc = 'run test from buffer' },
         run_all_tests_from_buffer = {
-          lhs = '<Leader>t',
+          lhs = '<Leader>uR',
           desc = 'Run all tests in file',
         },
-        get_build_errors = { lhs = '<Leader>e', desc = 'get build errors' },
+        get_build_errors = { lhs = '<Leader>ue', desc = 'get build errors' },
         peek_stack_trace_from_buffer = {
-          lhs = '<Leader>p',
+          lhs = '<Leader>up',
           desc = 'peek stack trace from buffer',
         },
-        debug_test_from_buffer = { lhs = '<Leader>d', desc = 'run test from buffer' },
+        debug_test_from_buffer = { lhs = '<Leader>ud', desc = 'run test from buffer' },
+        -- Below: mappings inside the floating test-runner UI buffer itself
+        -- (a separate special buffer) — these don't collide with anything
+        -- and are left on their original keys.
         debug_test = { lhs = '<Leader>d', desc = 'debug test' },
         go_to_file = { lhs = 'g', desc = 'go to file' },
         run_all = { lhs = '<Leader>R', desc = 'run all tests' },
@@ -231,26 +241,30 @@ Config.later(function()
   -- `debugger.console = 'integratedTerminal'` above) pops open unconditionally
   -- on every debug/run launch (`run_command_managed.lua` calls
   -- `terminal.show()` with no option check — there's no upstream flag to
-  -- suppress it). That fights with the dapui layout in 'dap.lua', which
-  -- reserves the bottom of the screen for the CPU/mem profiler widgets during
-  -- dotnet sessions: patch `show()` so an auto-triggered open immediately
-  -- hides itself again, unless `<Leader>rT` has toggled the panel on. `require`
-  -- caches modules, so patching the field on the table returned here is also
-  -- what `run_command_managed.lua`'s own `require("easy-dotnet.terminal")`
-  -- sees.
+  -- suppress it, and this fires for plain `Dotnet run profile` too, which
+  -- never creates a dap session at all). That fights with the dapui layout
+  -- in 'dap.lua', which reserves the bottom of the screen for the CPU/mem
+  -- profiler widgets during dotnet sessions: patch `show()` so an
+  -- auto-triggered open always hides itself again immediately — the
+  -- managed terminal keeps accumulating output in the background
+  -- regardless of whether its window is shown, so nothing is lost.
+  -- `<Leader>rT` reveals the current buffer on demand. `console_visible` is
+  -- kept in sync by BOTH paths (not just the manual toggle) so it can never
+  -- end up stuck "open" — an earlier version tied the reset to
+  -- `dap.listeners.before.event_terminated`/`event_exited`, which never
+  -- fires for a plain run (no dap session), leaving the flag stuck true and
+  -- the console permanently visible. `require` caches modules, so patching
+  -- the field on the table returned here is also what
+  -- `run_command_managed.lua`'s own `require("easy-dotnet.terminal")` sees.
   local terminal = require('easy-dotnet.terminal')
   local real_show = terminal.show
-  local user_toggled_open = false
+  local console_visible = false
   terminal.show = function(...)
     real_show(...)
-    if not user_toggled_open then vim.schedule(function() terminal.hide() end) end
-  end
-
-  dap.listeners.before.event_terminated.easy_dotnet_console_reset = function()
-    user_toggled_open = false
-  end
-  dap.listeners.before.event_exited.easy_dotnet_console_reset = function()
-    user_toggled_open = false
+    vim.schedule(function()
+      terminal.hide()
+      console_visible = false
+    end)
   end
 
   local setup_buf = function(bufnr)
@@ -272,18 +286,18 @@ Config.later(function()
     map('<Leader>rb', function() vim.cmd('Dotnet build') end, 'Dotnet build')
     map('<Leader>rs', function() dotnet.secrets() end, 'User secrets')
     map('<Leader>rT', function()
-      user_toggled_open = not user_toggled_open
-      if user_toggled_open then
+      console_visible = not console_visible
+      if console_visible then
         real_show()
       else
         terminal.hide()
       end
     end, 'Toggle dotnet debug console')
 
-    require('config.clue').add_buf(
-      bufnr,
-      { { mode = 'n', keys = '<Leader>r', desc = '+dotnet' } }
-    )
+    require('config.clue').add_buf(bufnr, {
+      { mode = 'n', keys = '<Leader>r', desc = '+dotnet' },
+      { mode = 'n', keys = '<Leader>u', desc = '+test (buffer)' },
+    })
   end
 
   local dotnet_filetypes = { 'cs', 'razor', 'fsharp', 'csproj', 'sln', 'slnx' }
