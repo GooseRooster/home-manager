@@ -65,6 +65,11 @@ let
   '';
 in
 {
+  # Always reachable at its own fixed path/`nvim-minimax` alias regardless of
+  # `home.modules.nvimVariant` — modules/nvim-main.nix is what actually
+  # claims ~/.config/nvim for whichever variant is selected.
+  home.modules.nvimPackages.minimax = minimaxConfig;
+
   home.file.".config/nvim-minimax" = {
     source = minimaxConfig;
     recursive = true;

@@ -15,6 +15,7 @@
     ./modules/yazi.nix
     ./modules/nvim.nix
     ./modules/nvim-minimax.nix
+    ./modules/nvim-main.nix
     ./modules/herdr.nix
     ./modules/starship.nix
     ./modules/topgrade.nix

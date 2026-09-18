@@ -35,9 +35,11 @@ in
     shellAliases = {
       chrome = "ungoogled-chromium";
       python = "python3";
-      # Experimental MiniMax config (modules/nvim-minimax.nix), side-by-side
-      # with the primary LazyVim setup — see home-manager README roadmap.
+      # Both nvim variants are always reachable at their own fixed appname,
+      # regardless of which one `home.modules.nvimVariant` currently makes
+      # "main" (plain `nvim`) — see modules/nvim-main.nix.
       nvim-minimax = "NVIM_APPNAME=nvim-minimax nvim";
+      nvim-lazyvim = "NVIM_APPNAME=nvim-lazyvim nvim";
     } // lib.optionalAttrs cfg.podmanAlias.enable {
       docker = "podman";
       lazypodman = "lazydocker";

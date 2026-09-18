@@ -4,8 +4,11 @@
 
 # Neovim: the vendored LazyVim starter (vendor/lazyvim-starter, kept in sync
 # with upstream by CI) merged with the repo's lua overlay (files/nvim/lua) at
-# eval time. ~/.config/nvim is a single read-only store symlink, fully
-# declarative.
+# eval time. Always deployed to the fixed ~/.config/nvim-lazyvim path (a
+# single read-only store symlink, fully declarative) and reachable there via
+# the `nvim-lazyvim` shell alias regardless of `home.modules.nvimVariant` —
+# see modules/nvim-main.nix, which is what actually claims ~/.config/nvim
+# for whichever variant is selected.
 let
   cfg = config.home.modules;
 
@@ -31,7 +34,9 @@ let
   '';
 in
 {
-  home.file.".config/nvim" = {
+  home.modules.nvimPackages.lazyvim = nvimConfig;
+
+  home.file.".config/nvim-lazyvim" = {
     source = nvimConfig;
     recursive = true;
   };
