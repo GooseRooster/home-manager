@@ -11,9 +11,9 @@
 -- 'basic' is the zero-extra-dependency option. Revisit if easy-dotnet ever
 -- gains mini.pick support upstream.
 --
--- The buffer-scoped `<Leader>r` group clue is registered via
--- `require('config.clue').add_buf(...)` (mini.clue's buffer-local mechanism
--- — see 'lua/config/clue.lua').
+-- `<Leader>r`/`<Leader>u` (Run/Unit-test) are shared, stack-agnostic clue
+-- groups — see 'lua/config/run.lua' for the letter convention and how a
+-- future non-dotnet stack would plug into the same two groups.
 Config.later(function()
   if not require('config.profile').has('dotnet') then return end
 
@@ -294,10 +294,7 @@ Config.later(function()
       end
     end, 'Toggle dotnet debug console')
 
-    require('config.clue').add_buf(bufnr, {
-      { mode = 'n', keys = '<Leader>r', desc = '+dotnet' },
-      { mode = 'n', keys = '<Leader>u', desc = '+test (buffer)' },
-    })
+    require('config.run').register_clues(bufnr)
   end
 
   local dotnet_filetypes = { 'cs', 'razor', 'fsharp', 'csproj', 'sln', 'slnx' }

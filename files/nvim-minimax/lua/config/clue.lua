@@ -24,8 +24,8 @@ local M = {}
 -- time anyway.
 local icons = {
   ['<Leader>R'] = '\xEF\x83\xAC', -- U+F0EC exchange (kulala: Rest)
-  ['<Leader>r'] = '\xEF\x85\x84', -- U+F144 play-circle (easy-dotnet: dotnet)
-  ['<Leader>u'] = '\xEF\x83\x83', -- U+F0C3 flask (easy-dotnet: test, buffer)
+  ['<Leader>r'] = '\xEF\x85\x84', -- U+F144 play-circle (Run group — see 'lua/config/run.lua')
+  ['<Leader>u'] = '\xEF\x83\x83', -- U+F0C3 flask (Unit-test group — see 'lua/config/run.lua')
   ['<Leader>z'] = '\xEF\x89\x89', -- U+F249 sticky-note (zk: notes)
   ['<Leader>M'] = '\xEF\x83\xB6', -- U+F0F6 file-text (markdown)
 }
