@@ -1,0 +1,19 @@
+-- Disable MiniMisc's OSC-11 terminal-background sync ('30_mini.lua' calls
+-- `MiniMisc.setup_termbg_sync()` unconditionally). Redundant with
+-- 'plugin/50-custom/theme.lua's osc-colors.nvim, which already round-trips
+-- its own OSC 10/11/4 queries to read the terminal's live palette;
+-- termbg_sync only ever *pushes* Neovim's background back out — and in this
+-- environment its OSC 11 query gets zero response (confirmed by its own
+-- 1-second-timeout warning firing with no "only these:" suffix, meaning no
+-- reply at all, not a garbled one), so it's pure startup noise with no
+-- working functionality behind it to lose.
+--
+-- Must patch before '30_mini.lua' calls it: `now_if_args` runs that whole
+-- block synchronously (not deferred) when nvim starts with a file argument
+-- (e.g. `nvim-minimax foo.cs`), so a '50-custom/*.lua' override — which
+-- loads after 30_mini.lua — would be too late in that case. Numeric prefix
+-- 25, between MiniMax's own 20_/30_, same ordering technique
+-- '45_keymaps_extra.lua' uses relative to vendor files. `mini.misc` is
+-- already requirable here — 'init.lua' both `vim.pack.add()`s 'mini.nvim'
+-- and `require('mini.misc')`s it itself before any `plugin/*.lua` loads.
+require('mini.misc').setup_termbg_sync = function() end
