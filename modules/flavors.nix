@@ -11,6 +11,20 @@ let
 in
 {
   options.home.modules = {
+    # Which desktop session stack this dotfiles config targets. Set directly
+    # in hosts/*.nix (standalone) or mirrored from the NixOS
+    # modules.desktop.session option by the host config (integrated).
+    session = lib.mkOption {
+      type = lib.types.enum [ "gnome" "noctalia" ];
+      default = "gnome";
+      description = ''
+        Desktop session stack: "gnome" (GDM + GNOME Shell) or "noctalia"
+        (ly + Umbriel + Noctalia v5). Gates session-specific integrations:
+        tinty/gnomad are gnome-session-only (Noctalia's builtin templates own
+        app theming in the noctalia session) and ghostty follows the theme
+        rendered by whichever retint mechanism the session uses.
+      '';
+    };
     # Which shell "default shell" consumers hand off to: ghostty's `command`
     # (modules/ghostty.nix), the WSL bash hand-off (modules/wsl-shell-launcher.nix)
     # and nixos-config's termapp wrapper, which reads this flag back via

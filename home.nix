@@ -20,6 +20,7 @@
     ./modules/misc-config.nix
     ./modules/ghostty.nix
     ./modules/tools.nix
+    ./modules/gtk.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
     ./modules/caches.nix
