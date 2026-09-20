@@ -1,5 +1,6 @@
--- Lazygit in a floating terminal, bound to `<Leader>gg` (LazyVim parity —
--- there it's `Snacks.lazygit.open()` on the same key). No plugin needed:
+-- Lazygit in a floating terminal, bound to `<Leader>gg` (matching the
+-- LazyVim convention, where it's `Snacks.lazygit.open()` on the same key).
+-- No plugin needed:
 -- `lazygit` is already on PATH (pkgs/base.nix), so this is just Neovim's
 -- own floating-window + terminal-job APIs, following the same "one reusable
 -- buffer, not a fresh process every time" philosophy as

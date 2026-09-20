@@ -1,7 +1,7 @@
 -- LSP "peek" floats: preview a definition/type-definition/implementation/
 -- declaration in a floating window without leaving the current buffer or
--- cursor position (ported from the LazyVim side's
--- 'files/nvim/lua/plugins/peek.lua', which wraps the same plugin).
+-- cursor position (previously lived on the old LazyVim side as
+-- 'files/nvim/lua/plugins/peek.lua', which wrapped the same plugin).
 --
 -- Global, not filetype-scoped — it works with any attached LSP client — so
 -- this follows 'inc-rename.lua's pattern (`Config.later` + `vim.pack.add` +

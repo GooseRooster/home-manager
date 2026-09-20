@@ -28,9 +28,4 @@
   # NixOS-integrated hosts, ghostty's command + termapp). Flip to "nu" to
   # revert the experiment everywhere at once.
   home.modules.defaultShell = "zsh";
-
-  # Dogfooding MiniMax as the daily driver for now — plain `nvim` opens it.
-  # LazyVim stays one `nvim-lazyvim` away regardless (modules/nvim-main.nix).
-  # Flip back to "lazyvim" (or drop the line, same default) if it doesn't work out.
-  home.modules.nvimVariant = "minimax";
 }

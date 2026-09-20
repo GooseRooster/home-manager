@@ -3,9 +3,9 @@
 -- └──────────────────────────────┘
 --
 -- Additions on top of MiniMax's stock 'plugin/20_keymaps.lua'. Kept in a
--- separate file (rather than editing the vendored copy) so 'vendor/minimax/'
+-- separate file (rather than editing the vendored copy) so 'vendor/nvim/'
 -- stays a pure upstream mirror and easy to diff against
--- (see 'scripts/update-minimax.sh').
+-- (see 'scripts/update-nvim.sh').
 --
 -- Runs after '20_keymaps.lua' (numeric prefix 45 > 20). That ordering isn't
 -- actually load-bearing for `Config.leader_group_clues` appends elsewhere

@@ -24,33 +24,6 @@ in
         termapp) follows it together.
       '';
     };
-    # Which Neovim config becomes "main" — the one plain `nvim`/$EDITOR/
-    # $VISUAL resolve to. modules/nvim.nix (LazyVim) and
-    # modules/nvim-minimax.nix (MiniMax) each always deploy themselves to
-    # their own fixed path/alias (~/.config/nvim-lazyvim, ~/.config/nvim-minimax)
-    # regardless of this setting, so the non-selected variant stays reachable
-    # for comparison without touching this flag back — see modules/nvim-main.nix,
-    # which reads `nvimPackages.${nvimVariant}` to build ~/.config/nvim.
-    nvimVariant = lib.mkOption {
-      type = lib.types.enum [ "lazyvim" "minimax" ];
-      default = "lazyvim";
-      description = ''
-        Which Neovim config is "main": "lazyvim" (modules/nvim.nix) or
-        "minimax" (modules/nvim-minimax.nix). Both are always built and
-        always reachable via their own `nvim-lazyvim`/`nvim-minimax` shell
-        alias regardless of this setting — it only decides which one plain
-        `nvim` opens.
-      '';
-    };
-    # Internal: set by modules/nvim.nix ("lazyvim") and
-    # modules/nvim-minimax.nix ("minimax"), consumed by modules/nvim-main.nix.
-    # Not meant to be set by hosts.
-    nvimPackages = lib.mkOption {
-      type = lib.types.attrsOf lib.types.package;
-      internal = true;
-      default = { };
-      description = "Built nvim config derivations, keyed by variant name.";
-    };
     gaming = {
       enable = mkFlag "Gaming-specific dotfile content (yazi Steam/Emulation hops, tinty Vesktop theme hook).";
     };

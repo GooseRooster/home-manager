@@ -1,7 +1,7 @@
 -- Colorscheme: osc-colors.nvim (GooseRooster/osc-colors.nvim), applied
 -- after MiniMax's own stock colorscheme (`vim.cmd('colorscheme miniwinter')`
--- in 'vendor/minimax/plugin/30_mini.lua', `now()`-applied; left untouched
--- there on purpose so 'vendor/minimax/' stays a pure upstream mirror).
+-- in 'vendor/nvim/plugin/30_mini.lua', `now()`-applied; left untouched
+-- there on purpose so 'vendor/nvim/' stays a pure upstream mirror).
 --
 -- This file runs later in the same synchronous `now()` phase and simply
 -- repaints over it (`osc-colors.apply()` does `:highlight clear` first), so

@@ -3,7 +3,7 @@
 -- remote there).
 --
 -- Two intentional shadows of MiniMax's own stock bindings:
---   - `[p`/`]p`: 'vendor/minimax/plugin/20_keymaps.lua' binds these to a
+--   - `[p`/`]p`: 'vendor/nvim/plugin/20_keymaps.lua' binds these to a
 --     simple linewise put-above/below; yanky's versions (put *indented*
 --     linewise before/after cursor) are a strict superset of the same
 --     conceptual action.

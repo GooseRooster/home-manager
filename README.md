@@ -52,9 +52,8 @@ themselves — one source of truth per host, nothing mirrored between repos
 
 Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl`,
 `defaultShell` (`nu` | `zsh`; drives ghostty's `command`, the WSL bash
-hand-off and nixos-config's `termapp` together — see `modules/flavors.nix`),
-`nvimVariant` (`lazyvim` | `minimax`; picks which Neovim config is "main" —
-see [Neovim: LazyVim + MiniMax](#neovim-lazyvim--minimax)) plus the `bundles`
+hand-off and nixos-config's `termapp` together — see `modules/flavors.nix`)
+plus the `bundles`
 switches (see
 `modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
 owl.jpg) 
@@ -171,19 +170,26 @@ Plugins are fully declarative: pinned to a `rev` + `hash` in
 `modules/yazi.nix` via `programs.yazi.plugins` (fetched from the Nix store,
 no runtime network or git). To update one, bump its `rev`/`hash` — or (`bash scripts/update-yazi-plugins.sh`).
 
-## LazyVim starter updates
+## Neovim
 
-~/.config/nvim is fully declarative: the [LazyVim
-starter](https://github.com/LazyVim/starter) is vendored in
-`vendor/lazyvim-starter/` (a pure upstream mirror) and merged at eval time
-with the repo's lua overlay (`files/nvim/lua`) by `modules/nvim.nix` — the
-overlay wins on conflict, and the starter's inert example plugin is dropped.
-The vendored copy is a read-only store symlink, so `lazy-lock.json` lives in
-the data dir instead (see `files/nvim/lua/config/lazy.lua`).
+~/.config/nvim is fully declarative: the [MiniMax](https://github.com/nvim-mini/MiniMax)
+base config is vendored in `vendor/nvim/` (a pure upstream mirror) and merged
+at eval time with the repo's custom overlay (`files/nvim/`) by
+`modules/nvim.nix` — the overlay wins on conflict. MiniMax is built almost
+entirely on [`mini.nvim`](https://github.com/nvim-mini/mini.nvim) (one
+maintainer, ~35 modules) and Neovim's built-in `vim.pack`, with no Mason and
+no lazy.nvim — a config meant to be read start-to-end, with a smaller
+dependency surface than a "distribution" like LazyVim (traded against a few
+capability gaps: `mini.completion` vs blink.cmp, `mini.pick` vs
+snacks/telescope, no bundled test-runner UI beyond what individual plugins
+bring). The vendored copy is a read-only store symlink, so `vim.pack`'s
+lockfile lives at the managed path as a mutable file instead (see the
+[gotcha](#gotcha-worth-remembering) below).
 
-`bash scripts/update-starter.sh` to update the vendored copy.
+`bash scripts/update-nvim.sh` to refresh `vendor/nvim/` against upstream
+(review the diff manually; nothing auto-merges).
 
-### Environment profile & mason on NixOS
+### Environment profile
 
 Which languages load is decided at runtime by the environment profile
 (`files/nvim/lua/config/profile.lua`): everything defaults to the lean
@@ -192,93 +198,36 @@ a project's `.dev.local.sh` — the personal/gitignored hook, not `.envrc`);
 `NVIM_PROFILE=full` is a deliberate per-machine opt-in for hosts that
 genuinely carry every toolchain.
 
-Mason remains the installer for anything that runs fine from a prebuilt
-download (node/jar/pip/python-venv/static-Go packages — pyright, vtsls,
-hadolint, ...). A small set of **native** tools (`lua-language-server`,
-`clangd`, `rust-analyzer`, `neocmakelsp`, `codelldb`, `stylua`) is instead
-resolved from PATH — home profile or project devshell — because mason's
-prebuilt ELFs cannot run on NixOS. See `nix_substitutes` in `profile.lua`;
-`plugins/lsp.lua`, `plugins/mason.lua` and `plugins/dap.lua` consume it.
+LSP servers are Mason-free: a server enables only when its feature is in the
+profile **and** its binary resolves on PATH. A small set of **native** tools
+(`lua-language-server`, `clangd`, `rust-analyzer`, `neocmakelsp`, `codelldb`,
+`stylua`) therefore comes from PATH — home profile (`pkgs/base.nix`) or
+project devshell — since prebuilt native binaries cannot run on NixOS.
 Consequence for projects: a rust/clang/cmake project must provide its
 tooling via the devshell (`devshell-init rust` / `clang` scaffolds it) —
 opening nvim outside such a shell simply leaves those servers off.
 
-## Neovim: LazyVim + MiniMax
-
-Two complete, daily-usable Neovim configs live side by side:
-
-- **LazyVim** (`modules/nvim.nix`) — the [LazyVim
-  starter](https://github.com/LazyVim/starter), vendored + overlaid, plus
-  Mason for tool installation.
-- **MiniMax** (`modules/nvim-minimax.nix`) — a config built almost entirely on
-  [`mini.nvim`](https://github.com/nvim-mini/mini.nvim) (one maintainer, ~35
-  modules) and Neovim's built-in `vim.pack`, with no Mason. Reached feature
-  parity with the LazyVim side (LSP, DAP/dotnet, test running, REST client,
-  notes, formatting/linting, theming, git, keymap clues) during its own
-  build-out; from here it's an equal option to iterate on, not an
-  experiment being graded against the other.
-
-`home.modules.nvimVariant` (`"lazyvim"` | `"minimax"`, default `"lazyvim"`,
-declared in `modules/flavors.nix`) picks which one is **main** — the one
-plain `nvim`/`$EDITOR`/`$VISUAL` open. Set it per host:
-
-```nix
-home.modules.nvimVariant = "minimax"; # or "lazyvim"
-```
-
-Both configs are *always* built and *always* additionally reachable at their
-own fixed path/alias regardless of this flag, so switching never strands the
-other one:
-
-| Variant | Fixed path | Shell alias / `def` |
-|---------|-----------|----------------------|
-| LazyVim | `~/.config/nvim-lazyvim` | `nvim-lazyvim` |
-| MiniMax | `~/.config/nvim-minimax` | `nvim-minimax` |
-
-`modules/nvim-main.nix` is the piece that actually claims `~/.config/nvim`:
-it reads `config.home.modules.nvimPackages.${nvimVariant}`, an internal
-attrset each of the two config modules populates with its own built
-derivation (`nvimPackages.lazyvim` / `nvimPackages.minimax`). `nvim.nix` and
-`nvim-minimax.nix` themselves stay simple and symmetric — each just builds
-its config and deploys it to its own fixed path; they don't know about the
-toggle at all.
-
-### Why MiniMax exists as an alternative
-
-Smaller dependency surface than LazyVim's dozen+ plugin authors + lazy.nvim +
-Mason, a config meant to be read start-to-end, no auto-updating
-"distribution" layer — traded against a few capability gaps
-(`mini.completion` vs blink.cmp, `mini.pick` vs a fuzzy-picker-as-a-service
-like snacks/telescope, no bundled test-runner UI beyond what individual
-plugins bring). Worth reaching for when you want to *understand* your whole
-editor config, not just configure it.
-
 ### Structure
 
-Vendoring mirrors the LazyVim starter pattern with one structural
-difference: LazyVim is a real runtime plugin dependency
-(`vendor/lazyvim-starter` is just the empty project skeleton; actual
-behavior comes from the separately-fetched `LazyVim/LazyVim` plugin).
-MiniMax has no such split — there is no "MiniMax" plugin to `import`; the
-upstream repo's `configs/nvim-<version>/` directory *is* the entire config,
-meant to be copied once and diverged from. So `vendor/minimax/` +
-`bash scripts/update-minimax.sh` only track upstream's reference config for
+There is no "MiniMax" plugin to `import` — the upstream repo's
+`configs/nvim-<version>/` directory *is* the entire config, meant to be
+copied once and diverged from. So `vendor/nvim/` +
+`bash scripts/update-nvim.sh` only track upstream's reference config for
 review; nothing regenerates automatically, and nothing auto-merges — review
 the diff by hand after running it.
 
-The repo's own overlay (`files/nvim-minimax/`) layers on top of that vendor
-mirror the same way `files/nvim/lua` layers onto `vendor/lazyvim-starter`:
+The repo's own overlay (`files/nvim/`) layers on top of that vendor mirror:
 `lua/config/{profile,clue,run,xmldoc}.lua` (env-driven language profile,
 mini.clue helpers, the stack-agnostic Run/Unit-test group convention, the C#
 XML-doc snippet) plus `plugin/50-custom/*.lua` (one file per integration —
 LSP, DAP, dotnet, kulala/REST, zk notes, markdown, theming, notifications,
 and so on).
 
-### What's in MiniMax today
+### What's in the config today
 
 - **LSP, Mason-free** (`plugin/50-custom/lsp.lua` + `lua/config/profile.lua`)
-  — the same `NVIM_PROFILE`/`NVIM_LANGS` environment-driven language profile
-  as the LazyVim side, minus Mason: a server enables only when
+  — an `NVIM_PROFILE`/`NVIM_LANGS` environment-driven language profile:
+  a server enables only when
   `profile.has(feature)` **and** its binary resolves on PATH (lspconfig's
   `cmd[1]`, with a fallback-binary override table for servers whose `cmd` is
   a function). No PATH binary means the server silently never attaches — no
@@ -325,7 +274,7 @@ and so on).
 - **Diagnostics** — gutter signs are icon glyphs for Warning/Error (Info/Hint
   stay signless, matching the stock severity filter); inline text comes from
   `tiny-inline-diagnostic.nvim` instead of Neovim's built-in virtual text.
-- **Everything else ported from LazyVim's `core_extras`** — kept: yanky,
+- **Ported LazyVim `core_extras` equivalents** — kept: yanky,
   dial, inc-rename (upgrades the stock `<Leader>lr` in place), navic,
   mini-animate, startuptime; dropped: neogen, illuminate, outline,
   smear-cursor, dot (mini-surround and mini-hipatterns were already native).
@@ -351,16 +300,12 @@ from the deployed config, not just present-and-writable: MiniMax's upstream
 repo ships one (a snapshot of the maintainer's installed revisions), so a
 naive vendor mirror turns it into a read-only store symlink sitting exactly
 where `vim.pack` needs to *overwrite* it on every install/update — breaking
-every `vim.pack.add()` call outright. `modules/nvim-minimax.nix` `rm`s it
+every `vim.pack.add()` call outright. `modules/nvim.nix` `rm`s it
 from the build output before the overlay lands, so home-manager never
 manages that path and `vim.pack` is free to create a real mutable file there
-on first run (the same trick LazyVim's `lazyvim.json` gets "for free," since
-that file simply never existed in `vendor/lazyvim-starter` to begin with).
-If you ever see `vim.pack.add()` failing to persist lock data after touching
-the vendor mirror, check whether a vendored lockfile snuck back in.
-
-`bash scripts/update-minimax.sh` to refresh `vendor/minimax/` against
-upstream (review the diff manually; nothing auto-merges).
+on first run. If you ever see `vim.pack.add()` failing to persist lock data
+after touching the vendor mirror, check whether a vendored lockfile snuck
+back in.
 
 ## Devshell templates
 
@@ -410,8 +355,7 @@ something worth propagating back to future scaffolds.
 
 | Tool | Mechanism |
 |------|-----------|
-| LazyVim starter | `vendor/lazyvim-starter/` + eval-time merge |
-| MiniMax (experimental) | `vendor/minimax/` + eval-time copy; `nvim-pack-lock.json` written at runtime |
+| Neovim | `vendor/nvim/` + eval-time merge; `nvim-pack-lock.json` written at runtime |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
 | tinty theme repos | tinty-managed; run `tinty sync` once per machine |

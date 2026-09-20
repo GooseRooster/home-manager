@@ -1,5 +1,5 @@
 -- mini.files tweaks on top of MiniMax's stock setup ('30_mini.lua' sets
--- `windows.preview = true` and bookmarks; 'vendor/minimax/' stays a pure
+-- `windows.preview = true` and bookmarks; 'vendor/nvim/' stays a pure
 -- upstream mirror, so these live in the overlay — same pattern as
 -- 'mini-clue-tweaks.lua' and 'pick.lua': `MiniFiles.config` is re-read
 -- fresh on every `MiniFiles.open()` (`H.get_config()`), so post-setup

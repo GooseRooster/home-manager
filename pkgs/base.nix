@@ -2,8 +2,8 @@
 # (default-on for every target).
 { pkgs }:
 
-# The LSP binaries here back the MiniMax config's base profile
-# (files/nvim-minimax/lua/config/profile.lua: base_lsp + minimal_langs, gated
+# The LSP binaries here back the nvim config's base profile
+# (files/nvim/lua/config/profile.lua: base_lsp + minimal_langs, gated
 # on PATH presence at enable time — a host without them just silently skips
 # attach instead of erroring). All are node/static-based, so they're
 # NixOS-safe unlike Mason's prebuilt native binaries.

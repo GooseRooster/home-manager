@@ -8,18 +8,6 @@ $env.config.edit_mode = 'vi'
 alias chrome = ungoogled-chromium
 alias python = python3
 
-# Both nvim variants (modules/nvim.nix LazyVim, modules/nvim-minimax.nix
-# MiniMax) are always reachable at their own fixed appname, regardless of
-# which one `home.modules.nvimVariant` currently makes "main" (plain `nvim`)
-# — see modules/nvim-main.nix. `def`s (not `alias`es) because nu has no
-# POSIX `VAR=val cmd` prefix syntax.
-def nvim-minimax [...args] {
-  with-env { NVIM_APPNAME: "nvim-minimax" } { ^nvim ...$args }
-}
-def nvim-lazyvim [...args] {
-  with-env { NVIM_APPNAME: "nvim-lazyvim" } { ^nvim ...$args }
-}
-
 
 # ── Functions: misc ───────────────────────────────────────────────────────────
 def get-os-release-field [field: string] {

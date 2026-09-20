@@ -1,5 +1,5 @@
 -- Make mini.clue's popup appear instantly instead of after MiniMax's stock
--- 1-second debounce ('vendor/minimax/plugin/30_mini.lua' calls
+-- 1-second debounce ('vendor/nvim/plugin/30_mini.lua' calls
 -- `miniclue.setup({ clues = ..., triggers = ... })` with no `window`
 -- override, so it uses mini.clue's own default `window.delay = 1000`).
 --

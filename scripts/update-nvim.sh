@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
-# Mirror the upstream MiniMax reference config into vendor/minimax.
+# Mirror the upstream MiniMax reference config into vendor/nvim.
 #
-# Locally runnable:  bash scripts/update-minimax.sh
+# Locally runnable:  bash scripts/update-nvim.sh
 # Needs: git, standard coreutils. No auth (public repo).
 #
-# Unlike vendor/lazyvim-starter (a whole upstream repo, kept in sync because
-# LazyVim itself is a *separate* live plugin dependency fetched by lazy.nvim),
-# MiniMax has no such split: there is no "MiniMax" plugin to `import` — the
-# nvim-mini/MiniMax repo's configs/nvim-<version>/ directory *is* the entire
-# config, meant to be copied once and diverged from. This script only tracks
-# upstream's reference config so you can review changes; it does not
-# regenerate anything automatically (see modules/nvim-minimax.nix for how the
-# copy here gets used).
+# There is no "MiniMax" plugin to `import` — the nvim-mini/MiniMax repo's
+# configs/nvim-<version>/ directory *is* the entire config, meant to be
+# copied once and diverged from. This script only tracks upstream's
+# reference config so you can review changes; it does not regenerate
+# anything automatically (see modules/nvim.nix for how the copy here gets
+# used).
 #
 # VERSION below must match the nvim-<version> directory that corresponds to
 # the Neovim release actually in use (see pkgs/base.nix). Bump it deliberately
@@ -20,7 +18,7 @@ set -euo pipefail
 
 UPSTREAM="https://github.com/nvim-mini/MiniMax"
 VERSION="nvim-0.12"
-DEST="vendor/minimax"
+DEST="vendor/nvim"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -44,7 +42,7 @@ cp -r "$src" "$DEST"
 
 echo "- MiniMax ($VERSION): synced to [\`${new_rev:0:7}\`](https://github.com/nvim-mini/MiniMax/commit/${new_rev})"
 echo
-echo "Review vendor/minimax's diff, then re-apply any files/nvim-minimax overlay"
-echo "changes needed on top (see modules/nvim-minimax.nix)."
+echo "Review vendor/nvim's diff, then re-apply any files/nvim overlay"
+echo "changes needed on top (see modules/nvim.nix)."
 echo
 echo "Build gate: nix build .#homeConfigurations.wsl.activationPackage"

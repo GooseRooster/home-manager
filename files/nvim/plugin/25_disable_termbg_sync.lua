@@ -10,7 +10,7 @@
 --
 -- Must patch before '30_mini.lua' calls it: `now_if_args` runs that whole
 -- block synchronously (not deferred) when nvim starts with a file argument
--- (e.g. `nvim-minimax foo.cs`), so a '50-custom/*.lua' override — which
+-- (e.g. `nvim foo.cs`), so a '50-custom/*.lua' override — which
 -- loads after 30_mini.lua — would be too late in that case. Numeric prefix
 -- 25, between MiniMax's own 20_/30_, same ordering technique
 -- '45_keymaps_extra.lua' uses relative to vendor files. `mini.misc` is
