@@ -65,11 +65,11 @@ fastfetch() {
   # (distrobox sets CONTAINER_ID).
   [[ -n "${CONTAINER_ID:-}" ]] && return 0
 
-  # Skip the greeting in cramped terminals (<80 cols); manual calls with
+  # Skip the greeting in cramped terminals; manual calls with
   # args always render. Unset COLUMNS (pipes, non-tty) falls back to render.
   if (( $# == 0 )); then
     local cols="${COLUMNS:-0}"
-    (( cols > 0 && cols < 80 )) && return 0
+    (( cols > 0 && cols < 95 )) && return 0
   fi
 
   local ff_dir="$HOME/.config/fastfetch"

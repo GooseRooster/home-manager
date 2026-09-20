@@ -83,11 +83,11 @@ def fastfetch [...args: string] {
   # Only want the greeting to fire if we are not within a container
   # (distrobox sets CONTAINER_ID).
   if not ("CONTAINER_ID" in $env) {
-    # Skip the greeting in cramped terminals (<80 cols); manual calls with
+    # Skip the greeting in cramped terminals; manual calls with
     # args always render. Non-tty contexts (term size fails) fall back to render.
     if ($args | is-empty) {
       let cols = (try { term size | get columns } catch { 0 })
-      if $cols != 0 and $cols < 80 { return }
+      if $cols != 0 and $cols < 95 { return }
     }
     let ff_dir    = ($nu.home-dir | path join ".config" "fastfetch")
     let config    = ($ff_dir | path join "config.jsonc")
