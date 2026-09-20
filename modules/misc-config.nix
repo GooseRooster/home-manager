@@ -104,10 +104,8 @@ in
       };
     })
 
-    # Theming (tinty scheme sync + gnomad schemes) — gnome session only.
-    # In the noctalia session Noctalia's builtin templates own app theming
-    # (and tinty isn't installed), so the tinty/gnomad files are dropped.
-    (lib.mkIf (cfg.theming.enable && cfg.session == "gnome") {
+    # Theming (tinty scheme sync + gnomad schemes) — desktop only.
+    (lib.mkIf cfg.theming.enable {
       ".config/gnomad/schemes/dragon-ember.yaml" = {
         source = ../files/gnomad/schemes/dragon-ember.yaml;
         force = true;
@@ -131,23 +129,6 @@ in
       ".config/tinted-theming/tinty/config.toml" = {
         force = true;
         source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
-      };
-    })
-
-    # Theming — noctalia session only: Noctalia custom palettes (custom is
-    # the only palette source stored as files on disk).
-    (lib.mkIf (cfg.theming.enable && cfg.session == "noctalia") {
-      ".config/noctalia/palettes/peat.json" = {
-        force = true;
-        source = ../files/noctalia/palettes/peat.json;
-      };
-      ".config/noctalia/palettes/peat_bog.json" = {
-        force = true;
-        source = ../files/noctalia/palettes/peat_bog.json;
-      };
-      ".config/noctalia/palettes/peat_mist.json" = {
-        force = true;
-        source = ../files/noctalia/palettes/peat_mist.json;
       };
     })
   ];
