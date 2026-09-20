@@ -35,6 +35,8 @@ with pkgs; [
   lazygit
   lua-language-server
   neovim
+  nixd
+  nixfmt-rfc-style
   nushell
   p7zip
   pipx
@@ -43,6 +45,7 @@ with pkgs; [
   ripgrep
   ruff
   starship
+  statix
   tealdeer
   topgrade
   trash-cli

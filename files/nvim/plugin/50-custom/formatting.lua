@@ -27,15 +27,18 @@ Config.later(function()
       lua = { 'stylua' },
       sh = { 'shfmt' },
       bash = { 'shfmt' },
+      nix = { 'nixfmt' },
     },
   })
 
   -- Lint on save and after leaving insert mode. shellcheck only (it speaks
-  -- sh/bash, not zsh — for zsh the bashls-adjacent tooling would differ).
+  -- sh/bash, not zsh — for zsh the bashls-adjacent tooling would differ);
+  -- statix for Nix (static-analysis lints, orthogonal to nixd's LSP range).
   local lint = require('lint')
   lint.linters_by_ft = {
     sh = { 'shellcheck' },
     bash = { 'shellcheck' },
+    nix = { 'statix' },
   }
 
   local lint_buf = function()

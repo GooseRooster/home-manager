@@ -29,20 +29,22 @@ M.feature_order = {
 	"sql",
 	"json",
 	"yaml",
+	"nix",
 	"nushell",
 	"git",
 	"dotnet",
 }
 
 -- Universal languages enabled even in the minimal profile.
-M.minimal_langs = { "python", "git", "json", "yaml", "docker", "nushell" }
+M.minimal_langs = { "python", "git", "json", "yaml", "nix", "nushell", "docker" }
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- LSP/tree-sitter bundles: what each feature actually loads in this config.
 --
 -- Keys are lspconfig server names (NOT binaries — they differ: `neocmake`
 -- runs the `neocmakelsp` binary; `somesass_ls` runs
--- `some-sass-language-server`), consumed by 'plugin/50-custom/lsp.lua'.
+-- `some-sass-language-server`; `nixd` runs the `nixd` binary and delegates
+-- its formatting to the separate `nixfmt` binary, see 'after/lsp/nixd.lua'), consumed by 'plugin/50-custom/lsp.lua'.
 -- No Mason anywhere: a server only attaches when its binary is on PATH
 -- (checked at enable time), so a host without a toolchain silently degrades
 -- instead of erroring — binaries come from 'pkgs/base.nix' or project
@@ -75,6 +77,7 @@ M.feature_lsp = {
 	docker = { "dockerls", "docker_compose_language_service" },
 	json = { "jsonls" },
 	yaml = { "yamlls" },
+	nix = { "nixd" },
 	nushell = { "nushell" },
 	dotnet = { "html", "cssls", "somesass_ls" }, -- markup for Razor cohosting; roslyn via easy-dotnet
 }
@@ -89,6 +92,7 @@ M.feature_treesitter = {
 	sql = { "sql" },
 	json = { "json", "json5" }, -- no jsonc parser in nvim-treesitter (unsupported language); json covers it
 	yaml = { "yaml" },
+	nix = { "nix" },
 	nushell = { "nu" },
 	git = { "gitcommit", "gitignore", "git_rebase", "gitattributes" },
 	dotnet = { "c_sharp", "razor", "html" }, -- html is required by razor's injections.scm for markup regions
