@@ -21,8 +21,8 @@ let
   pluginsRepo = fetchPlugin {
     owner = "yazi-rs";
     repo = "plugins";
-    rev = "4dc7f1b6458c2578f4494f10d468c68c1082214f";
-    hash = "sha256-BSAOkL4H4LVMbTRFv4kzGGRpLgtKkfNTEsDH2EQ219Q=";
+    rev = "f703392df78b5fba5e8f9f1ad0b1cb6d3def9736";
+    hash = "sha256-O1yYAhsf7xMqUrTTSLac06WSxCvUQqedH3DWqGwn/Ok=";
   };
 
   plugins = {
@@ -33,10 +33,10 @@ let
     starship = fetchPlugin { owner = "Rolv-Apneseth"; repo = "starship.yazi"; rev = "ea92cf49380466f07231c952b409831e6afd2156"; hash = "sha256-Jvoc/7YaOOppu8K2lJaVgiuBIyanRHHjEA6ZvnrFtiQ="; };
     mount = "${pluginsRepo}/mount.yazi";
     what-size = fetchPlugin { owner = "pirafrank"; repo = "what-size.yazi"; rev = "1cb456f8c428a393a65708b45b8c56404d52f326"; hash = "sha256-lhanC44L4haM7cgqCOhfxk0Rpi/FueBgIdXDiXuzevc="; };
-    yaziline = fetchPlugin { owner = "llanosrocas"; repo = "yaziline.yazi"; rev = "2c4ffc78c18042d1b3ab91ac8fd55bb661f10437"; hash = "sha256-Z9Zzv+QF3+dBGQFa8oqLiZjGPPPaW3a5q4CIZWBnLSI="; };
-    ouch = fetchPlugin { owner = "ndtoan96"; repo = "ouch.yazi"; rev = "cfe4f507ef7337c8ad4c90eef68ea91fc6694759"; hash = "sha256-t1kUo4+YODeTG9d5Yq/vxElcmRHIebC5TRv+uDGG88c="; };
+    yaziline = fetchPlugin { owner = "llanosrocas"; repo = "yaziline.yazi"; rev = "029b27d55361b4b87d0982237f9730b49b4e7a3a"; hash = "sha256-oYvbhAi1xHn8XKgnwBYrHBqRReX4kJDkmSTs15RS/2U="; };
+    ouch = fetchPlugin { owner = "ndtoan96"; repo = "ouch.yazi"; rev = "596b66697f40fd8b36f1063fed22f64354f74c1f"; hash = "sha256-RW49EJiEyPodkKpUd0Ad0ztr/obODpC6ShWIee8aT3Q="; };
     linemode-plus = fetchPlugin { owner = "barbanevosa"; repo = "linemode-plus.yazi"; rev = "4d0d034c08aaa7c62666456ce4f0d63f1ac4eda5"; hash = "sha256-ekQI1yyZEmX44YjicFz51Eh6csN9OwVXoh8Ituk/jJs="; };
-    mediainfo = fetchPlugin { owner = "boydaihungst"; repo = "mediainfo.yazi"; rev = "d2dd310bfbc3a819acf1c9c9c32f402ab6774d3a"; hash = "sha256-nmhn2lcs5F+MRlmqBPbsU74NNiO0Y0Js4YEjRfD9IPE="; };
+    mediainfo = fetchPlugin { owner = "boydaihungst"; repo = "mediainfo.yazi"; rev = "f1cec0b43a6b5904e1638ad050f044c4eb1383da"; hash = "sha256-p+wfTgQ4Td7Q/AIzsECzijam3NcPXxEPrpnUnT/028E="; };
     sduf = fetchPlugin { owner = "shafayetejaman"; repo = "sduf.yazi"; rev = "f43ba4afd1a1192a4f59c9ac63bf534a9bb26124"; hash = "sha256-Ey9bJSb4Vewv28rZIcdgc2dwcRTt+dvyt6Upl9cIsKc="; };
   };
 in
