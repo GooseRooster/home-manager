@@ -11,8 +11,5 @@
 -- 'pkgs/base.nix').
 vim.o.clipboard = 'unnamedplus'
 
--- `:!`/`system()`/`:term` shell — follows the host's chosen interactive
--- shell (home.modules.defaultShell in modules/flavors.nix; "nu" or "zsh"),
--- resolved by modules/nvim.nix's substituteInPlace. The quoted
--- placeholder is what the substitution replaces — do not edit.
-vim.o.shell = '@shell@'
+-- `:!`/`system()`/`:term` shell.
+vim.o.shell = 'zsh'

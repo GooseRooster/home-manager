@@ -1,8 +1,8 @@
 { ... }:
 
-# Headless WSL dev-host: no GUI dotfiles, but keeps the ssh-agent user service
-# and the podman/docker alias. Targets both NixOS-WSL and foreign WSL distros
-# (Ubuntu, Debian, ...).
+# Headless WSL dev-host: no GUI dotfiles, but keeps the keychain-managed
+# ssh-agent and the podman/docker alias. Targets both NixOS-WSL and foreign
+# WSL distros (Ubuntu, Debian, ...).
 #
 # The uid-1000 user's name varies by distro (nixos / ubuntu / debian / whatever
 # the user picked at install), so username/homeDirectory are read from the
@@ -23,9 +23,4 @@
 
   home.modules.wsl.enable = true;
   home.modules.podmanAlias.enable = true;
-
-  # zsh as the default shell: drives the bash hand-off above (and, on
-  # NixOS-integrated hosts, ghostty's command + termapp). Flip to "nu" to
-  # revert the experiment everywhere at once.
-  home.modules.defaultShell = "zsh";
 }

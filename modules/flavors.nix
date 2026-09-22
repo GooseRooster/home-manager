@@ -11,19 +11,6 @@ let
 in
 {
   options.home.modules = {
-    # Which shell "default shell" consumers hand off to: ghostty's `command`
-    # (modules/ghostty.nix), the WSL bash hand-off (modules/wsl-shell-launcher.nix)
-    # and nixos-config's termapp wrapper, which reads this flag back via
-    # config.home-manager.users.<primary>.home.modules.defaultShell.
-    defaultShell = lib.mkOption {
-      type = lib.types.enum [ "nu" "zsh" ];
-      default = "nu";
-      description = ''
-        Default interactive shell: "nu" (nushell) or "zsh". Set per host in
-        hosts/*.nix; every consumer (ghostty command, WSL bash launcher,
-        termapp) follows it together.
-      '';
-    };
     gaming = {
       enable = mkFlag "Gaming-specific dotfile content (yazi Steam/Emulation hops, tinty Vesktop theme hook).";
     };
@@ -31,7 +18,7 @@ in
       enable = mkFlag "Theming tooling config (tinty scheme sync, gnomad schemes).";
     };
     podmanAlias = {
-      enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in nushell.";
+      enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in the shell.";
     };
     wsl = {
       enable = mkFlag "NixOS-WSL profile: skip GUI dotfiles.";

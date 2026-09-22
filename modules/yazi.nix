@@ -44,10 +44,6 @@ in
   programs.yazi = {
     enable = true;
 
-    # We define our own `y` (cd-on-exit) wrapper in config.nu — don't add
-    # yazi's, or nushell sees `y` twice.
-    enableNushellIntegration = false;
-
     settings = lib.importTOML ../files/yazi/yazi.toml;
     keymap = lib.importTOML ../files/yazi/keymap.toml;
     theme = lib.importTOML ../files/yazi/theme.toml;

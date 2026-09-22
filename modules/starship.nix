@@ -1,13 +1,9 @@
 { lib, pkgs, ... }:
 
-# Starship prompt config 
-# Prompt init stays in nushell's config.nu (try-cmd-init "starship"), so HM's
-# nushell integration stays off to avoid double-init. zsh has no such manual
-# path (see modules/zsh.nix), so its native integration handles init there.
+# Starship prompt config
 {
   programs.starship = {
     enable = true;
-    enableNushellIntegration = false;
     enableZshIntegration = true;
     settings = {
   aws =

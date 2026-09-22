@@ -1,6 +1,5 @@
-# Functional port of files/nushell/config.nu's custom functions, for zsh.
-# Kept in its own file (mirrors nu's config.nu split) so it can be edited
-# without touching modules/zsh.nix. Sourced from programs.zsh.initContent.
+# Custom zsh functions. Kept in its own file so it can be edited without
+# touching modules/zsh.nix. Sourced from programs.zsh.initContent.
 
 # ── Functions: misc ───────────────────────────────────────────────────────────
 get-os-release-field() {

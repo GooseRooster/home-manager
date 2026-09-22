@@ -1,8 +1,6 @@
 { ... }:
 
-# eza — a modern `ls` replacement. Only wired into zsh (see modules/zsh.nix);
-# nushell has no ls/ll/la aliases today and this doesn't add any, so its
-# behavior there is unchanged.
+# eza — a modern `ls` replacement. Wired into zsh (see modules/zsh.nix).
 {
   programs.eza = {
     enable = true;

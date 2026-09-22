@@ -1,21 +1,19 @@
 { config, lib, pkgs, ... }:
 
-# zsh: a POSIX-compliant alternative to nushell (modules/nushell.nix) with
-# matching convenience — same prompt/completions/fuzzy-finder/navigation
-# tools, same custom functions (see files/zsh/functions.zsh), plus the
-# classic zsh plugin trio for a modern editing experience.
+# zsh: prompt/completions/fuzzy-finder/navigation tools, custom functions
+# (see files/zsh/functions.zsh), plus the classic zsh plugin trio for a
+# modern editing experience.
 #
-# Unlike nushell's manual `try-cmd-init`/cached-script pattern (kept there so
-# a leaner host can boot even if a tool binary is missing), this module uses
-# Home Manager's native `enableZshIntegration` flags throughout — simpler,
-# well-tested, and every tool it wires up is already in the base bundle
-# (pkgs/base.nix) so there's no "missing binary" case to guard against here.
+# This module uses Home Manager's native `enableZshIntegration` flags
+# throughout — simpler, well-tested, and every tool it wires up is already
+# in the base bundle (pkgs/base.nix) so there's no "missing binary" case to
+# guard against here.
 let
   cfg = config.home.modules;
 
-  # Per-host override scaffold (~/.config/zsh/extra.zsh): the zsh twin of
-  # nu's env.local.nu (modules/nushell.nix). Materialized ONCE by the
-  # activation below, then never touched again — user-owned thereafter.
+  # Per-host override scaffold (~/.config/zsh/extra.zsh). Materialized ONCE
+  # by the activation below, then never touched again — user-owned
+  # thereafter.
   extraScaffold = ''
     # Per-host zsh overrides: env vars, secrets, aliases.
     #
@@ -30,8 +28,7 @@ in
     enable = true;
 
     # ── Aliases ─────────────────────────────────────────────────────────────
-    # Mirrors files/nushell/config.nu's aliases. eza's own ls/ll/la/lt/lla
-    # aliases are added separately by modules/eza.nix.
+    # eza's own ls/ll/la/lt/lla aliases are added separately by modules/eza.nix.
     shellAliases = {
       chrome = "ungoogled-chromium";
       python = "python3";
@@ -40,15 +37,12 @@ in
       lazypodman = "lazydocker";
     };
 
-    # CARAPACE_BRIDGES mirrors the value nushell sets in its own env.nu
-    # (modules/nushell.nix). Order defines precedence (carapace's own specs
+    # CARAPACE_BRIDGES: order defines precedence (carapace's own specs
     # always win): framework bridges first — they drive the target binary
     # itself (cobra's `__complete`, argcomplete/clap env protocols), so they
     # need no extra installs and beat shell-script completions — then shells
     # by completion quality (zsh > fish > bash). Re-add "inshellisense" at
     # the end if the npm binary is ever installed.
-    # DOCKER_HOST mirrors modules/nushell.nix's podman-alias.nu — same
-    # runtime `$(id -u)` lookup, evaluated at shell-init time.
     sessionVariables = {
       CARAPACE_BRIDGES = "cobra,argcomplete,clap,zsh,fish,bash";
     } // lib.optionalAttrs cfg.podmanAlias.enable {
@@ -77,23 +71,24 @@ in
     # zoxide=851, syntax-highlighting/fast-syntax-highlighting=1200,
     # history-substring-search=1250):
     initContent = lib.mkMerge [
-      # SSH-agent
-      # fallback + the per-host override file. Runs before everything else
-      # so env-vars secrets/overrides land before any plugin reads them.
-      (lib.mkOrder 550 ''
-        # SSH agent: if no socket is set (or points at nothing), fall back to
-        # the well-known user-agent path — services.ssh-agent exports it on
-        # WSL; gcr-ssh-agent sets SSH_AUTH_SOCK via the systemd user env on
-        # the desktop. Same semantics as nu's env.nu fallback.
-        if [[ -z "''${SSH_AUTH_SOCK:-}" || ! -e "''${SSH_AUTH_SOCK:-}" ]]; then
-          : "''${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
-          export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
-        fi
-
-        # Per-host overrides (env vars, secrets) — scaffolded once by
-        # materializeZshExtra below, then user-owned.
-        [[ -f "$HOME/.config/zsh/extra.zsh" ]] && source "$HOME/.config/zsh/extra.zsh"
-      '')
+      # SSH-agent (WSL only) + the per-host override file. Runs before
+      # everything else so env-vars secrets/overrides land before any plugin
+      # reads them.
+      (lib.mkOrder 550 (
+        (lib.optionalString cfg.wsl.enable ''
+          # keychain: persistent ssh-agent across shells, cached passphrase
+          # for the life of the boot. Re-prompts once per `wsl --shutdown`,
+          # not once per terminal. Also imports into the systemd user env so
+          # D-Bus activated services see the same agent.
+          eval "$(keychain --eval --quiet --agents ssh ~/.ssh/cam_work ~/.ssh/gooze_work)"
+          systemctl --user import-environment SSH_AUTH_SOCK SSH_AGENT_PID 2>/dev/null
+        '')
+        + ''
+          # Per-host overrides (env vars, secrets) — scaffolded once by
+          # materializeZshExtra below, then user-owned.
+          [[ -f "$HOME/.config/zsh/extra.zsh" ]] && source "$HOME/.config/zsh/extra.zsh"
+        ''
+      ))
 
       # Custom functions 
       # (get-os-release-field, distro-glyph, fastfetch wrapper, l., mkcd,
@@ -177,48 +172,40 @@ in
 
       '')
 
-      # Greeting: same fastfetch banner nushell shows on every interactive
-      # shell start (see files/zsh/functions.zsh's fastfetch() for the
-      # container/CONTAINER_ID guard). Skipped when spawned by a running
-      # Neovim ($NVIM = its listen address, exported to `:term` and `:!`
-      # children) — a banner there is just noise.
+      # Greeting: fastfetch banner on every interactive shell start (see
+      # files/zsh/functions.zsh's fastfetch() for the container/CONTAINER_ID
+      # guard). Skipped when spawned by a running Neovim ($NVIM = its listen
+      # address, exported to `:term` and `:!` children) — a banner there is
+      # just noise.
       (lib.mkOrder 1900 ''
         [[ -z "''${NVIM:-}" ]] && fastfetch
       '')
     ];
   };
 
-  # carapace — completion engine. enableNushellIntegration stays off:
-  # nushell wires carapace manually (see modules/nushell.nix's env.nu/config.nu),
-  # so leaving the default on here would source a second, redundant init.
+  # carapace — completion engine.
   programs.carapace = {
     enable = true;
     enableZshIntegration = true;
-    enableNushellIntegration = false;
   };
 
-  # zoxide — smarter cd. Same enableNushellIntegration rationale as carapace:
-  # nushell already sources `zoxide init nushell` manually (cached to
-  # ~/.zoxide.nu by modules/nushell.nix's env.nu).
+  # zoxide — smarter cd.
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
-    enableNushellIntegration = false;
   };
 
   # fzf — ^R history / ^T file widgets. HM sources key-bindings.zsh, whose
   # history widget lists the full in-memory history (`fc -lin 1`), including
   # entries not yet flushed to $HISTFILE. The order-1310 rebind above restores
-  # the ^R/^T bindings zvm clobbers. Nushell gets no fzf integration (fzf has
-  # no nu support); nu's ^R falls back to its built-in history menu.
+  # the ^R/^T bindings zvm clobbers.
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
   };
 
-  # extra.zsh: materialize once, never overwrite (mirrors nu's
-  # env.local.nu handling in modules/nushell.nix). NOT xdg.configFile —
-  # that would clobber user edits on every switch.
+  # extra.zsh: materialize once, never overwrite. NOT xdg.configFile — that
+  # would clobber user edits on every switch.
   home.activation.materializeZshExtra = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     run() {
       local target="$HOME/.config/zsh/extra.zsh"

@@ -9,7 +9,7 @@ nixos-config    NixOS system declarations (desktop + NixOS-in-WSL)
 home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
 ```
 
-- This repo owns both *config* and the *binaries* (nushell, neovim, yazi,
+- This repo owns both *config* and the *binaries* (zsh, neovim, yazi,
   tealdeer, fzf, …). Packages are selected per host via
   `home.bundles.*` (see `modules/bundles.nix`):
 
@@ -41,8 +41,8 @@ use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 
 | Target | Use | Flags on |
 |--------|-----|----------|
-| `container` | lean dev container (standalone) | `bundles.base` (default), `defaultShell: zsh` |
-| `wsl` | foreign-WSL dev host (standalone) | `bundles.wsl`, `wsl`, `podmanAlias`, `defaultShell: zsh` |
+| `container` | lean dev container (standalone) | `bundles.base` (default) |
+| `wsl` | foreign-WSL dev host (standalone) | `bundles.wsl`, `wsl`, `podmanAlias` |
 
 The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 `hmModules.default` through `nixos-config`'s
@@ -50,10 +50,7 @@ The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
-Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl`,
-`defaultShell` (`nu` | `zsh`; drives ghostty's `command`, the WSL bash
-hand-off and nixos-config's `termapp` together — see `modules/flavors.nix`)
-plus the `bundles`
+Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl`, plus the `bundles`
 switches (see
 `modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
 owl.jpg) 
@@ -104,7 +101,7 @@ trusted-users = root <your-user>
 EOF
 sudo systemctl restart nix-daemon.service   # skip on distros without systemd
 
-# 2) CLI batteries (nushell, neovim, yazi, lazygit, …) + dotfiles in one go.
+# 2) CLI batteries (zsh, neovim, yazi, lazygit, …) + dotfiles in one go.
 nix run github:nix-community/home-manager/master -- \
   switch --flake github:GooseRooster/home-manager#wsl --impure
 ```
@@ -362,8 +359,8 @@ something worth propagating back to future scaffolds.
 
 ## Local overrides
 
-`~/.config/nushell/env.local.nu` is materialized once by
-`home.activation.materializeEnvLocal` and never overwritten. Put per-host
+`~/.config/zsh/extra.zsh` is materialized once by
+`home.activation.materializeZshExtra` and never overwritten. Put per-host
 secrets/API keys there.
 
 

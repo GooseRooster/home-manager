@@ -6,17 +6,7 @@
 # sync with upstream by scripts/update-nvim.sh) merged with the repo's custom
 # overlay (files/nvim) at eval time, deployed to ~/.config/nvim — the path
 # plain `nvim`/$EDITOR/$VISUAL (modules/misc-config.nix) resolve to.
-#
-# `shellCmd`: 'files/nvim/plugin/15_options_extra.lua' ships an '@shell@'
-# placeholder that is substituted with the host's chosen interactive shell
-# (home.modules.defaultShell) so `:!`/`:term` shell out to the binary the
-# user expects. nu/zsh specifically because those are the only two
-# interactive shells this repo manages (modules/flavors.nix).
 let
-  cfg = config.home.modules;
-
-  shellCmd = if cfg.defaultShell == "zsh" then "zsh" else "nu";
-
   # `vendor/nvim/` is a pure upstream mirror (see scripts/update-nvim.sh);
   # `files/nvim/` is the custom overlay merged on top here — its own
   # directory structure (`lua/config/...`, `plugin/50-custom/...`) already
@@ -55,8 +45,6 @@ let
     chmod -R u+w $out
     rm -f $out/nvim-pack-lock.json
     cp -rf ${../files/nvim}/. $out/
-    substituteInPlace $out/plugin/15_options_extra.lua \
-      --replace-fail '@shell@' '${shellCmd}'
   '';
 in
 {

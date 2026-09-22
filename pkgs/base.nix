@@ -38,7 +38,6 @@ with pkgs;
   neovim
   nixd
   nixfmt
-  nushell
   p7zip
   pipx
   poppler-utils

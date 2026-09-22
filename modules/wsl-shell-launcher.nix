@@ -2,9 +2,8 @@
 
 # WSL only: the distro (Ubuntu/Debian/…) owns ~/.bashrc, so we can't use
 # programs.bash.initExtra without HM taking over the whole file. Append an
-# idempotent block that hands off from bash to the default interactive shell
-# (home.modules.defaultShell — nu or zsh, see modules/flavors.nix) — but via
-# PROMPT_COMMAND, not a top-level spawn.
+# idempotent block that hands off from bash to zsh — but via PROMPT_COMMAND,
+# not a top-level spawn.
 #
 # Why the deferral matters: `nix develop` sources ~/.bashrc BEFORE it
 # activates the derivation env (PATH, IN_NIX_SHELL, shellHook). A naive
@@ -20,10 +19,7 @@
 let
   cfg = config.home.modules;
 
-  # The default shell's launcher command. Currently both flavors are plain
-  # PATH lookups (nu/zsh are both in the HM profile); if one ever needs
-  # flags, expand this into a per-shell string here.
-  launcher = if cfg.defaultShell == "zsh" then "exec zsh" else "exec nu";
+  launcher = "exec zsh";
 in
 {
   home.activation.wslShellLauncher = lib.mkIf cfg.wsl.enable (
@@ -33,8 +29,8 @@ in
         [ -e "$bashrc" ] || return 0
         # Strip any previously materialized block — the generic marker AND
         # the legacy "nu launcher" markers from before the launcher went
-        # shell-generic — so a defaultShell switch replaces the block in
-        # place instead of stacking a second one.
+        # zsh-only — so re-applying replaces the block in place instead of
+        # stacking a second one.
         sed -i \
           -e '/^# >>> home-manager: shell launcher >>>$/,/^# <<< home-manager: shell launcher <<<$/d' \
           -e '/^# >>> home-manager: nu launcher >>>$/,/^# <<< home-manager: nu launcher <<<$/d' \

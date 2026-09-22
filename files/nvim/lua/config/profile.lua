@@ -30,13 +30,12 @@ M.feature_order = {
 	"json",
 	"yaml",
 	"nix",
-	"nushell",
 	"git",
 	"dotnet",
 }
 
 -- Universal languages enabled even in the minimal profile.
-M.minimal_langs = { "python", "git", "json", "yaml", "nix", "nushell", "docker" }
+M.minimal_langs = { "python", "git", "json", "yaml", "nix", "docker" }
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- LSP/tree-sitter bundles: what each feature actually loads in this config.
@@ -78,7 +77,6 @@ M.feature_lsp = {
 	json = { "jsonls" },
 	yaml = { "yamlls" },
 	nix = { "nixd" },
-	nushell = { "nushell" },
 	dotnet = { "html", "cssls", "somesass_ls" }, -- markup for Razor cohosting; roslyn via easy-dotnet
 }
 
@@ -93,7 +91,6 @@ M.feature_treesitter = {
 	json = { "json", "json5" }, -- no jsonc parser in nvim-treesitter (unsupported language); json covers it
 	yaml = { "yaml" },
 	nix = { "nix" },
-	nushell = { "nu" },
 	git = { "gitcommit", "gitignore", "git_rebase", "gitattributes" },
 	dotnet = { "c_sharp", "razor", "html" }, -- html is required by razor's injections.scm for markup regions
 }

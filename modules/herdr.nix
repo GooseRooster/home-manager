@@ -22,7 +22,6 @@
 # re-link idempotency isn't documented upstream, and a switch shouldn't fail
 # because of it.
 let
-  cfg = config.home.modules;
   bundles = config.home.bundles;
 
   herdrEnable = bundles.baseExtra.enable || bundles.wsl.enable;
@@ -58,7 +57,7 @@ in
 
       theme.name = "terminal";
 
-      terminal.default_shell = cfg.defaultShell;
+      terminal.default_shell = "zsh";
 
       keys = {
         # Optional workspace/agent bindings (unset upstream by default).
