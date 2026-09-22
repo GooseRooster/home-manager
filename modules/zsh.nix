@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 # zsh: prompt/completions/fuzzy-finder/navigation tools, custom functions
 # (see files/zsh/functions.zsh), plus the classic zsh plugin trio for a
@@ -32,7 +37,8 @@ in
     shellAliases = {
       chrome = "ungoogled-chromium";
       python = "python3";
-    } // lib.optionalAttrs cfg.podmanAlias.enable {
+    }
+    // lib.optionalAttrs cfg.podmanAlias.enable {
       docker = "podman";
       lazypodman = "lazydocker";
     };
@@ -45,7 +51,8 @@ in
     # the end if the npm binary is ever installed.
     sessionVariables = {
       CARAPACE_BRIDGES = "cobra,argcomplete,clap,zsh,fish,bash";
-    } // lib.optionalAttrs cfg.podmanAlias.enable {
+    }
+    // lib.optionalAttrs cfg.podmanAlias.enable {
       DOCKER_HOST = "unix:///run/user/$(id -u)/podman/podman.sock";
     };
 
@@ -80,7 +87,7 @@ in
           # for the life of the boot. Re-prompts once per `wsl --shutdown`,
           # not once per terminal. Also imports into the systemd user env so
           # D-Bus activated services see the same agent.
-          eval "$(keychain --eval --quiet --agents ssh ~/.ssh/cam_work ~/.ssh/gooze_work)"
+          eval "$(keychain --eval --quiet ssh ~/.ssh/cam_work ~/.ssh/gooze_work)"
           systemctl --user import-environment SSH_AUTH_SOCK SSH_AGENT_PID 2>/dev/null
         '')
         + ''
@@ -90,7 +97,7 @@ in
         ''
       ))
 
-      # Custom functions 
+      # Custom functions
       # (get-os-release-field, distro-glyph, fastfetch wrapper, l., mkcd,
       # home, notebook, backup, copy, the dotnet completion shim). After
       # compinit (needed by the dotnet compdef), before the plugins below.
@@ -159,16 +166,15 @@ in
         source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
       '')
 
-
       # Source deja, replaces autosuggestions
-      (lib.mkOrder 1500 '' 
+      (lib.mkOrder 1500 ''
 
-            export DEJA_CYCLE_KEY='^[[Z'
-            if [[ -r "$HOME/.local/share/deja/init.zsh" ]]; then
-              source "$HOME/.local/share/deja/init.zsh"
-            else
-              eval "$(deja init zsh)"
-            fi
+        export DEJA_CYCLE_KEY='^[[Z'
+        if [[ -r "$HOME/.local/share/deja/init.zsh" ]]; then
+          source "$HOME/.local/share/deja/init.zsh"
+        else
+          eval "$(deja init zsh)"
+        fi
 
       '')
 
