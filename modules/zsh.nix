@@ -81,13 +81,10 @@ in
       # SSH-agent (WSL only) + the per-host override file. Runs before
       # everything else so env-vars secrets/overrides land before any plugin
       # reads them.
+      # keychain: either attach to a running agent or start a new one.
       (lib.mkOrder 550 (
         (lib.optionalString cfg.wsl.enable ''
-          # keychain: persistent ssh-agent across shells, cached passphrase
-          # for the life of the boot. Re-prompts once per `wsl --shutdown`,
-          # not once per terminal. Also imports into the systemd user env so
-          # D-Bus activated services see the same agent.
-          eval "$(keychain --eval --quiet ssh ~/.ssh/cam_work ~/.ssh/gooze_work)"
+          eval "$(keychain --eval --quiet)"
           systemctl --user import-environment SSH_AUTH_SOCK SSH_AGENT_PID 2>/dev/null
         '')
         + ''
