@@ -18,6 +18,12 @@ mkcd() {
   mkdir -p -- "$1" && cd -- "$1"
 }
 
+pfetch() {
+  PF_INFO="ascii title os host kernel uptime pkgs memory cpu shell palette" \
+    USER="ホスト  ${USER}" \
+    command pfetch "$@"
+}
+
 # Home, clear, greeting
 home() {
   cd ~ && clear

@@ -26,7 +26,7 @@
         type = lib.types.bool;
         default = false;
         description = ''
-          Visual/misc CLI tools + GUI extras (fonts, VS Code, fastfetch, …).
+          Visual/misc CLI tools + GUI extras (fonts, VS Code, …).
           Desktop hosts only — not for dev containers or WSL.
         '';
       };
@@ -37,7 +37,7 @@
         default = false;
         description = ''
           WSL dev-host extras (dev container CLI, Claude Code, opencode,
-          fastfetch, openfortivpn). No language toolchains, no GUI apps.
+          openfortivpn). No language toolchains, no GUI apps.
         '';
       };
     };
