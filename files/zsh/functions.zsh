@@ -19,8 +19,7 @@ mkcd() {
 }
 
 pfetch() {
-  SHELL="zsh" \
-  PF_INFO="ascii title os host kernel uptime pkgs cpu memory shell" \
+  PF_INFO="ascii title os host kernel uptime pkgs cpu memory" \
     USER="ホスト  ${USER}" \
     command pfetch "$@"
 }
