@@ -24,6 +24,7 @@ with pkgs;
   mediainfo
   python3
   pyright
+  pfetch-rs
   rustup
   ffmpeg-full
   fish
