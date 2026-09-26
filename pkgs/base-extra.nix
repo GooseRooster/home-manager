@@ -3,10 +3,10 @@
 # (nixpkgs.config.allowUnfree in home.nix / nixos-config's nix.nix).
 { pkgs }:
 
-with pkgs; [
+with pkgs;
+[
   cava
   chafa
-  fastfetch
   zk
   lazydocker
   ramalama

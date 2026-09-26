@@ -4,11 +4,11 @@
 # (nixpkgs.config.allowUnfree in home.nix).
 { pkgs }:
 
-with pkgs; [
+with pkgs;
+[
   devcontainer
   claude-code
   opencode
-  fastfetch
   zk
   lazydocker
   openfortivpn

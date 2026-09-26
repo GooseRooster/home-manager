@@ -95,9 +95,6 @@ in
       ))
 
       # Custom functions
-      # (get-os-release-field, distro-glyph, fastfetch wrapper, l., mkcd,
-      # home, notebook, backup, copy, the dotnet completion shim). After
-      # compinit (needed by the dotnet compdef), before the plugins below.
       (lib.mkOrder 600 (builtins.readFile ../files/zsh/functions.zsh))
 
       # fzf-tab — fzf-powered Tab menu (Aloxaf/fzf-tab, packaged in nixpkgs as
@@ -175,13 +172,9 @@ in
 
       '')
 
-      # Greeting: fastfetch banner on every interactive shell start (see
-      # files/zsh/functions.zsh's fastfetch() for the container/CONTAINER_ID
-      # guard). Skipped when spawned by a running Neovim ($NVIM = its listen
-      # address, exported to `:term` and `:!` children) — a banner there is
-      # just noise.
+      # greeting on interactive sessions
       (lib.mkOrder 1900 ''
-        [[ -z "''${NVIM:-}" ]] && fastfetch
+        [[ $- == *i* ]] && pfetch
       '')
     ];
   };
