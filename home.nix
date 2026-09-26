@@ -16,9 +16,12 @@
     ./modules/herdr.nix
     ./modules/starship.nix
     ./modules/topgrade.nix
-    ./modules/misc-config.nix
+    ./modules/theming.nix
     ./modules/ghostty.nix
-    ./modules/tools.nix
+    ./modules/mpv.nix
+    ./modules/btop.nix
+    ./modules/lazygit.nix
+    ./modules/lazydocker.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
     ./modules/caches.nix

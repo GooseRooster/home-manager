@@ -5,7 +5,7 @@
 # Neovim: the MiniMax (nvim-mini/MiniMax) base config (vendor/nvim, kept in
 # sync with upstream by scripts/update-nvim.sh) merged with the repo's custom
 # overlay (files/nvim) at eval time, deployed to ~/.config/nvim — the path
-# plain `nvim`/$EDITOR/$VISUAL (modules/misc-config.nix) resolve to.
+# plain `nvim`/$EDITOR/$VISUAL (set below) resolve to.
 let
   # `vendor/nvim/` is a pure upstream mirror (see scripts/update-nvim.sh);
   # `files/nvim/` is the custom overlay merged on top here — its own
@@ -48,6 +48,16 @@ let
   '';
 in
 {
+  # Shell-agnostic session env: home.sessionVariables feeds the systemd user
+  # environment, so GUI apps and termapp-launched shells get these even without
+  # an interactive shell bootstrap. NVIM_PROFILE is read by nvim's profile.lua
+  # (files/nvim/lua/config/profile.lua).
+  home.sessionVariables = {
+    EDITOR = "${pkgs.neovim}/bin/nvim";
+    VISUAL = "${pkgs.neovim}/bin/nvim";
+    NVIM_PROFILE = "minimal";
+  };
+
   home.file.".config/nvim" = {
     source = nvimConfig;
     recursive = true;

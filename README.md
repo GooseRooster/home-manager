@@ -50,10 +50,10 @@ The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
-Flags: `gaming`, `theming`, `session`, `podmanAlias`, `wsl`, plus the `bundles`
+Flags: `gaming`, `theming`, `podmanAlias`, `wsl`, plus the `bundles`
 switches (see
 `modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
-owl.jpg) 
+owl.jpg)
 
 ## Applying
 

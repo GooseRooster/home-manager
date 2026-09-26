@@ -3,9 +3,6 @@
 let
   cfg = config.home.modules;
 
-  # GUI/desktop-only configs are skipped on WSL.
-  desktopOnly = !cfg.wsl.enable;
-
   # Tinty scheme-sync items.
   tintyItems = [
     {
@@ -67,69 +64,35 @@ let
       }
   ];
 in
-{
-  # Shell-agnostic session env. home.sessionVariables feeds the systemd user
-  # environment, so GUI apps and termapp-launched shells get these even
-  # without an interactive shell bootstrap NVIM_PROFILE is read by nvim's
-  # profile.lua (files/nvim/lua/config/profile.lua).
-  home.sessionVariables = {
-    EDITOR = "${pkgs.neovim}/bin/nvim";
-    VISUAL = "${pkgs.neovim}/bin/nvim";
-    NVIM_PROFILE = "minimal";
+lib.mkIf cfg.theming.enable {
+  home.file = {
+    ".config/gnomad/schemes/dragon-ember.yaml" = {
+      source = ../files/gnomad/schemes/dragon-ember.yaml;
+      force = true;
+    };
+    ".config/gnomad/schemes/gloaming.yaml" = {
+      source = ../files/gnomad/schemes/gloaming.yaml;
+      force = true;
+    };
+    ".config/gnomad/schemes/kiln.yaml" = {
+      source = ../files/gnomad/schemes/kiln.yaml;
+      force = true;
+    };
+    ".config/gnomad/schemes/marshlight.yaml" = {
+      source = ../files/gnomad/schemes/marshlight.yaml;
+      force = true;
+    };
+    ".config/gnomad/schemes/peat.yaml" = {
+      source = ../files/gnomad/schemes/peat.yaml;
+      force = true;
+    };
+    ".config/tinted-theming/tinty/config.toml" = {
+      force = true;
+      source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
+    };
+    ".config/owl.jpg" = {
+      source = ../files/owl.jpg;
+      force = true;
+    };
   };
-
-  # herdr's config lives in modules/herdr.nix (programs.herdr).
-
-  home.file = lib.mkMerge [
-    # GUI/desktop-only (skipped in containers/WSL). mpv.conf is declarative
-    # here, the file is picked up by external/flatpak mpv runs).
-    (lib.mkIf desktopOnly {
-      ".config/mpv/mpv.conf" = {
-        force = true;
-        text = lib.generators.toKeyValue { } {
-          vo = "gpu-next";
-          gpu-api = "vulkan";
-          hwdec = "vaapi";
-          hwdec-codecs = "all";
-          deband = "yes";
-          dither-depth = "auto";
-          panscan = "0.8";
-          pipewire-buffer = "50";
-          target-peak = "1000";
-        };
-      };
-      ".config/owl.jpg" = {
-        source = ../files/owl.jpg;
-        force = true;
-      };
-    })
-
-    # Theming (tinty scheme sync + gnomad schemes) — desktop only.
-    (lib.mkIf cfg.theming.enable {
-      ".config/gnomad/schemes/dragon-ember.yaml" = {
-        source = ../files/gnomad/schemes/dragon-ember.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/gloaming.yaml" = {
-        source = ../files/gnomad/schemes/gloaming.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/kiln.yaml" = {
-        source = ../files/gnomad/schemes/kiln.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/marshlight.yaml" = {
-        source = ../files/gnomad/schemes/marshlight.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/peat.yaml" = {
-        source = ../files/gnomad/schemes/peat.yaml;
-        force = true;
-      };
-      ".config/tinted-theming/tinty/config.toml" = {
-        force = true;
-        source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
-      };
-    })
-  ];
 }

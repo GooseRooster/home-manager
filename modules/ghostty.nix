@@ -29,7 +29,7 @@ in
     } // lib.optionalAttrs cfg.theming.enable {
       # tinty retints ghostty live: its hook copies the rendered theme to
       # ~/.config/ghostty/themes/tinted-theming and SIGUSR2s ghostty (see
-      # modules/misc-config.nix).
+      # modules/theming.nix).
       theme = "tinted-theming";
     };
   };
