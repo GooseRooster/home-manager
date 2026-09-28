@@ -14,6 +14,7 @@ with pkgs;
   opencode
   devcontainer
   vscode
+  resterm
 
   nerd-fonts."fira-code"
   nerd-fonts."jetbrains-mono"

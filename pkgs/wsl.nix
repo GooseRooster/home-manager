@@ -12,4 +12,5 @@ with pkgs;
   zk
   lazydocker
   openfortivpn
+  resterm
 ]
