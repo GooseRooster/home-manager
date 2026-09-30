@@ -1,7 +1,38 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.home.modules;
+
+  # Scratch terminal: a single ghostty instance with a stable app_id, parked in
+  # the scratchpad and toggled (respawned on demand) by the script below. The
+  # class must be a valid GTK application id (dotted), or ghostty ignores it.
+  scratchTermClass = "com.gooze.scratchterm";
+  scratchTerm = pkgs.writeShellApplication {
+    name = "scratch-term";
+    runtimeInputs = [ pkgs.sway ];
+    text = ''
+      class=${scratchTermClass}
+      needle="\"app_id\": \"$class\""
+
+      exists() {
+        swaymsg -t get_tree | grep -qF "$needle"
+      }
+
+      if ! exists; then
+        # Spawn through sway so the session environment is inherited; the
+        # for_window rule in the config parks it in the scratchpad.
+        swaymsg exec "${pkgs.ghostty}/bin/ghostty --class=$class --gtk-single-instance=false"
+        for _ in $(seq 1 50); do
+          if exists; then break; fi
+          sleep 0.1
+        done
+        # Let the for_window move-to-scratchpad land before toggling.
+        sleep 0.1
+      fi
+
+      swaymsg "[app_id=$class] scratchpad show"
+    '';
+  };
 in
 {
   options.home.modules.sway = {
@@ -42,11 +73,6 @@ in
       # Removable-media automount (Sway has none built in; udisks2 is enabled
       # by the NixOS sway module). A tray icon lets you eject.
       exec udiskie --automount --notify
-      # Scratch terminal: a centred 50%x50% floating ghostty, toggled with
-      # Mod+;. Launched eagerly and parked in the scratchpad by the for_window
-      # rule below. --class gives it a stable app_id; --gtk-single-instance
-      # =false keeps it from merging into the regular ghostty instance.
-      exec ghostty --class=scratch-term --gtk-single-instance=false
 
       ### Input
       focus_follows_mouse yes
@@ -75,8 +101,9 @@ in
       font pango:Iosevka Nerd Font Mono 11
 
       # Scratch terminal: float it, size to 50% of the output, centre it, and
-      # park it in the scratchpad (toggled by Mod+; below).
-      for_window [app_id="scratch-term"] floating enable, resize set 50 ppt 50 ppt, move position center, move scratchpad
+      # park it in the scratchpad. `scratch-term` (Mod+; below) spawns it on
+      # demand and toggles it.
+      for_window [app_id="${scratchTermClass}"] floating enable, resize set 50 ppt 50 ppt, move position center, move scratchpad
 
       ### Keybindings
       # Basics
@@ -85,8 +112,8 @@ in
       bindsym $mod+e exec $term yazi
       bindsym $mod+Shift+c reload
       bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit Sway?' -B 'Yes, exit' swaymsg exit
-      # Toggle the scratch terminal (show/hide the parked ghostty).
-      bindsym $mod+semicolon scratchpad show
+      # Toggle (or respawn) the scratch terminal.
+      bindsym $mod+semicolon exec ${scratchTerm}/bin/scratch-term
 
       # Noctalia IPC (docs.noctalia.dev)
       bindsym $mod+space exec $ipc panel-toggle launcher
@@ -184,5 +211,8 @@ in
       ### itself is written (and stays writable) by Noctalia.
       include ~/.config/sway/noctalia
     '';
+
+    # On PATH so it can also be invoked manually.
+    home.packages = [ scratchTerm ];
   };
 }
