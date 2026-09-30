@@ -23,6 +23,7 @@
     ./modules/lazygit.nix
     ./modules/lazydocker.nix
     ./modules/gtk.nix
+    ./modules/fonts.nix
     ./modules/sway.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
