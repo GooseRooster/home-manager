@@ -42,6 +42,11 @@ in
       # Removable-media automount (Sway has none built in; udisks2 is enabled
       # by the NixOS sway module). A tray icon lets you eject.
       exec udiskie --automount --notify
+      # Scratch terminal: a centred 50%x50% floating ghostty, toggled with
+      # Mod+;. Launched eagerly and parked in the scratchpad by the for_window
+      # rule below. --class gives it a stable app_id; --gtk-single-instance
+      # =false keeps it from merging into the regular ghostty instance.
+      exec ghostty --class=scratch-term --gtk-single-instance=false
 
       ### Input
       focus_follows_mouse yes
@@ -69,6 +74,10 @@ in
       gaps outer 5
       font pango:Iosevka Nerd Font Mono 11
 
+      # Scratch terminal: float it, size to 50% of the output, centre it, and
+      # park it in the scratchpad (toggled by Mod+; below).
+      for_window [app_id="scratch-term"] floating enable, resize set 50 ppt 50 ppt, move position center, move scratchpad
+
       ### Keybindings
       # Basics
       bindsym $mod+Return exec $term
@@ -76,6 +85,8 @@ in
       bindsym $mod+e exec $term yazi
       bindsym $mod+Shift+c reload
       bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit Sway?' -B 'Yes, exit' swaymsg exit
+      # Toggle the scratch terminal (show/hide the parked ghostty).
+      bindsym $mod+semicolon scratchpad show
 
       # Noctalia IPC (docs.noctalia.dev)
       bindsym $mod+space exec $ipc panel-toggle launcher
