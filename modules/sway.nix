@@ -145,8 +145,8 @@ in
       bindsym $mod+Shift+l move container to workspace next_on_output
 
       # 3-finger swipe up/down -> next/prev workspace (GNOME-ish).
-      bindgesture swipe:3:down workspace next_on_output
-      bindgesture swipe:3:up workspace prev_on_output
+      bindgesture swipe:3:up workspace next_on_output
+      bindgesture swipe:3:down workspace prev_on_output
 
       # Resize mode
       mode "resize" {
