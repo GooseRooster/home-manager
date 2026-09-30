@@ -28,6 +28,15 @@ in
       size = 11;
     };
 
+    # Hatter icon theme (installed by nixos-config). `package` stays null so HM
+    # only writes gtk-icon-theme-name into settings.ini; the theme files are
+    # provided system-wide. Noctalia's icon resolver reads this (and the
+    # gsettings key below) for shell/app icons.
+    iconTheme = {
+      name = "Hatter-Slate";
+      package = null;
+    };
+
     # gtk-theme-name in settings.ini: read unconditionally by every GTK app at
     # startup (no GSettings bridge required on Wayland). This is what makes
     # GTK3 apps (Firefox widgets, GNOME Boxes, ...) follow the Noctalia
@@ -47,5 +56,6 @@ in
     font-name = "Iosevka Nerd Font Mono 11";
     document-font-name = "Iosevka Nerd Font Mono 11";
     monospace-font-name = "Iosevka Nerd Font Mono 11";
+    icon-theme = "Hatter-Slate";
   };
 }

@@ -46,6 +46,16 @@ in
       ### Input
       focus_follows_mouse yes
 
+      # Touchpad with GNOME-like defaults: tap to click (1 finger left,
+      # 2 fingers right, 3 fingers middle via the lrm button map), natural
+      # (reverse) scrolling, and disable-while-typing.
+      input "type:touchpad" {
+        tap enabled
+        tap_button_map lrm
+        natural_scroll enabled
+        dwt enabled
+      }
+
       ### Output (host-specific; laptop leaves this empty for auto-detect)
       ${cfg.sway.extraConfig}
       ### Appearance
@@ -133,6 +143,10 @@ in
       bindsym $mod+Alt+j workspace next_on_output
       bindsym $mod+Shift+h move container to workspace prev_on_output
       bindsym $mod+Shift+l move container to workspace next_on_output
+
+      # 3-finger swipe up/down -> next/prev workspace (GNOME-ish).
+      bindgesture swipe:3:down workspace next_on_output
+      bindgesture swipe:3:up workspace prev_on_output
 
       # Resize mode
       mode "resize" {
