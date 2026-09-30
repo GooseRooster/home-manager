@@ -65,34 +65,60 @@ let
   ];
 in
 lib.mkIf cfg.theming.enable {
-  home.file = {
-    ".config/gnomad/schemes/dragon-ember.yaml" = {
-      source = ../files/gnomad/schemes/dragon-ember.yaml;
-      force = true;
-    };
-    ".config/gnomad/schemes/gloaming.yaml" = {
-      source = ../files/gnomad/schemes/gloaming.yaml;
-      force = true;
-    };
-    ".config/gnomad/schemes/kiln.yaml" = {
-      source = ../files/gnomad/schemes/kiln.yaml;
-      force = true;
-    };
-    ".config/gnomad/schemes/marshlight.yaml" = {
-      source = ../files/gnomad/schemes/marshlight.yaml;
-      force = true;
-    };
-    ".config/gnomad/schemes/peat.yaml" = {
-      source = ../files/gnomad/schemes/peat.yaml;
-      force = true;
-    };
-    ".config/tinted-theming/tinty/config.toml" = {
-      force = true;
-      source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
-    };
-    ".config/owl.jpg" = {
-      source = ../files/owl.jpg;
-      force = true;
-    };
-  };
+  home.file = lib.mkMerge [
+    # GNOME-session theming: tinty scheme sync + gnomad schemes. In the
+    # noctalia session Noctalia's builtin templates own app theming (and tinty
+    # isn't installed), so these files are dropped.
+    (lib.mkIf (cfg.session == "gnome") {
+      ".config/gnomad/schemes/dragon-ember.yaml" = {
+        source = ../files/gnomad/schemes/dragon-ember.yaml;
+        force = true;
+      };
+      ".config/gnomad/schemes/gloaming.yaml" = {
+        source = ../files/gnomad/schemes/gloaming.yaml;
+        force = true;
+      };
+      ".config/gnomad/schemes/kiln.yaml" = {
+        source = ../files/gnomad/schemes/kiln.yaml;
+        force = true;
+      };
+      ".config/gnomad/schemes/marshlight.yaml" = {
+        source = ../files/gnomad/schemes/marshlight.yaml;
+        force = true;
+      };
+      ".config/gnomad/schemes/peat.yaml" = {
+        source = ../files/gnomad/schemes/peat.yaml;
+        force = true;
+      };
+      ".config/tinted-theming/tinty/config.toml" = {
+        force = true;
+        source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
+      };
+    })
+
+    # Noctalia-session theming: Noctalia custom palettes (custom is the only
+    # palette source stored as files on disk).
+    (lib.mkIf (cfg.session == "noctalia") {
+      ".config/noctalia/palettes/peat.json" = {
+        force = true;
+        source = ../files/noctalia/palettes/peat.json;
+      };
+      ".config/noctalia/palettes/peat_bog.json" = {
+        force = true;
+        source = ../files/noctalia/palettes/peat_bog.json;
+      };
+      ".config/noctalia/palettes/peat_mist.json" = {
+        force = true;
+        source = ../files/noctalia/palettes/peat_mist.json;
+      };
+    })
+
+    # Shared.
+    {
+      ".config/owl.jpg" = {
+        source = ../files/owl.jpg;
+        force = true;
+      };
+    }
+  ];
 }

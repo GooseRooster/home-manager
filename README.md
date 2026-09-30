@@ -53,7 +53,11 @@ themselves — one source of truth per host, nothing mirrored between repos
 Flags: `gaming`, `theming`, `podmanAlias`, `wsl`, plus the `bundles`
 switches (see
 `modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
-owl.jpg)
+owl.jpg). `session` (`gnome` | `noctalia`, default `gnome`; see
+[Targets / flavors](#targets--flavors)) selects the desktop session stack:
+Noctalia (ly + Sway + Noctalia v5) owns app theming, so tinty/gnomad are
+gnome-only while Noctalia palettes and the Sway/GTK/ghostty templates are
+noctalia-only.
 
 ## Applying
 
