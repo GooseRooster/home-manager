@@ -44,8 +44,7 @@ in
       exec udiskie --automount --notify
 
       ### Input
-      # Umbriel had input.focus.follows_mouse = false.
-      focus_follows_mouse no
+      focus_follows_mouse yes
 
       ### Output (host-specific; laptop leaves this empty for auto-detect)
       ${cfg.sway.extraConfig}
@@ -69,7 +68,7 @@ in
       bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit Sway?' -B 'Yes, exit' swaymsg exit
 
       # Noctalia IPC (docs.noctalia.dev)
-      bindsym $mod+d exec $ipc panel-toggle launcher
+      bindsym $mod+space exec $ipc panel-toggle launcher
       bindsym $mod+s exec $ipc panel-toggle control-center
       bindsym $mod+comma exec $ipc settings-toggle
       bindsym $mod+Shift+i exec $ipc settings-toggle
@@ -94,7 +93,7 @@ in
       bindsym $mod+Ctrl+k move up
       bindsym $mod+Ctrl+l move right
 
-      # Column width (Umbriel window-modify-width) -> standard resize
+      # Column width  -> standard resize
       bindsym $mod+equal resize grow width 5%
       bindsym $mod+plus resize grow width 5%
       bindsym $mod+minus resize shrink width 5%
