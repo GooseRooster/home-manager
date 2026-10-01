@@ -34,31 +34,13 @@ Config.later(function()
   vim.fn.setfperm(shim, 'rwxr-xr-x')
   vim.env.PATH = shim_dir .. ':' .. vim.env.PATH
 
-  -- easydotnet launches roslyn-language-server by its real path in the tool
-  -- store (PATH and the ~/.dotnet/tools symlink are bypassed), and that
-  -- launcher in turn spawns Microsoft.CodeAnalysis.LanguageServer. Both are
-  -- apphosts whose interpreter is the system glibc, which can't load the
-  -- newer Nix libcoreclr that DOTNET_ROOT points at. Swap each ELF for a
-  -- wrapper that runs its dll through `dotnet`; the original is kept as
-  -- `.apphost`. Idempotent; re-applied after `dotnet tool update` installs a
-  -- new version.
-  local roslyn_dir = vim.fn.expand('~/.dotnet/tools/.store/roslyn-language-server')
-    .. '/*/*/*/tools/*/*/'
-  for _, name in ipairs({ 'roslyn-language-server', 'Microsoft.CodeAnalysis.LanguageServer' }) do
-    for _, bin in ipairs(vim.fn.glob(roslyn_dir .. name, false, true)) do
-      local f = io.open(bin, 'rb')
-      local magic = f and f:read(4)
-      if f then f:close() end
-      if magic == '\127ELF' then
-        vim.uv.fs_rename(bin, bin .. '.apphost')
-        vim.fn.writefile({
-          '#!/bin/sh',
-          'exec dotnet "$(dirname "$(readlink -f "$0")")/' .. name .. '.dll" "$@"',
-        }, bin)
-        vim.fn.setfperm(bin, 'rwxr-xr-x')
-      end
-    end
-  end
+  -- Roslyn and the debugger come from the project's Nix devshell
+  -- (EASY_DOTNET_ROSLYN_DLL_PATH, `netcoredbg` on PATH): they are built
+  -- against the same runtime as DOTNET_ROOT, whereas the dotnet-tool apphosts
+  -- and bundled debuggers use the host's glibc loader and fail with
+  -- "GLIBC_x not found" when nixpkgs' glibc is newer. Outside such a shell
+  -- both fall back to easy-dotnet's own bundled binaries.
+  local nix_netcoredbg = vim.fn.exepath('netcoredbg')
 
   vim.pack.add({
     'https://github.com/nvim-lua/plenary.nvim',
@@ -140,7 +122,7 @@ Config.later(function()
       -- Path to custom coreclr DAP adapter
       -- When set, this fully overrides `engine`; easy-dotnet-server uses this binary as-is.
       -- When nil, easy-dotnet-server falls back to its bundled debugger selected by `engine`.
-      bin_path = nil,
+      bin_path = nix_netcoredbg ~= '' and nix_netcoredbg or nil,
       -- Bundled debugger used when bin_path is nil:
       --   "netcoredbg" (default) — Samsung netcoredbg
       --   "dncdbg"               — viewizard/dncdbg (richer fork of netcoredbg)

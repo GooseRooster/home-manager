@@ -7,6 +7,11 @@
   #     C# Dev Kit, incl. Razor/Blazor cohosting. Built against the nixpkgs
   #     dotnet runtime, so no dynamically-linked dotnet-tool headaches. Point
   #     your editor's LSP client at `Microsoft.CodeAnalysis.LanguageServer`.
+  #   * netcoredbg — the DAP debugger, also built against the nixpkgs runtime.
+  #     The prebuilt debuggers bundled with editor plugins carry a generic
+  #     Linux loader and can't load this runtime's libcoreclr when the host
+  #     glibc is older than nixpkgs' (GLIBC_x not found). Point your DAP
+  #     client at `netcoredbg` from PATH.
   #   * dart-sass, exposing `sass` on PATH. Drop it from the packages list if
   #     your project has no SCSS.
   #   * .config/dotnet-tools.json restored on shell entry — pin project-shared
@@ -44,6 +49,7 @@
           packages = with pkgs; [
             dotnetCorePackages.sdk_10_0
             roslyn-ls
+            netcoredbg
             dart-sass
           ];
 
@@ -51,6 +57,12 @@
           # this, tools that shell out (e.g. NSwag.ConsoleCore) sometimes miss
           # it.
           DOTNET_ROOT = "${pkgs.dotnetCorePackages.sdk_10_0}/share/dotnet";
+
+          # Lets easy-dotnet.nvim run the nixpkgs roslyn-ls through `dotnet`
+          # instead of the apphost bundled with the dotnet tool, which has the
+          # same generic-loader problem as the debuggers above. Harmless for
+          # other editors.
+          EASY_DOTNET_ROSLYN_DLL_PATH = "${pkgs.roslyn-ls}/lib/roslyn-ls/Microsoft.CodeAnalysis.LanguageServer.dll";
 
           # Skip telemetry + first-run banner spam on shell entry.
           DOTNET_CLI_TELEMETRY_OPTOUT = "1";

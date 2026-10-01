@@ -6,6 +6,12 @@ via `devshell-init dotnet` (see `~/repos/home-manager` for the scaffolder).
 ## What ships
 
 - **`.NET SDK 10`** via nixpkgs `dotnetCorePackages.sdk_10_0`.
+- **`roslyn-ls`** and **`netcoredbg`** from nixpkgs, built against the same
+  runtime as the SDK. `EASY_DOTNET_ROSLYN_DLL_PATH` points easy-dotnet.nvim at
+  the Roslyn dll, and `netcoredbg` is on PATH for DAP clients. Prebuilt
+  equivalents (dotnet-tool apphosts, plugin-bundled debuggers) use the host's
+  loader and fail with `GLIBC_x not found` once nixpkgs' glibc outpaces the
+  host's.
 - **`dart-sass`** exposing `sass` on PATH for SCSS builds. Drop from
   `packages` if unused.
 - **`.config/dotnet-tools.json`** — pinned local tool manifest, empty by
