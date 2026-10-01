@@ -17,6 +17,23 @@
 Config.later(function()
   if not require('config.profile').has('dotnet') then return end
 
+  -- The `dotnet-easydotnet` apphost bakes in a glibc interpreter path at
+  -- install time, so it breaks (GLIBC_x not found) whenever nixpkgs moves
+  -- glibc. Every plugin call site resolves it via PATH, so shadow it with a
+  -- shim that runs the tool's dll through whichever `dotnet` is on PATH
+  -- (the dll is net8.0 with rollForward=LatestMajor, so it runs on newer
+  -- runtimes). Picks the newest installed tool version.
+  local shim_dir = vim.fn.stdpath('state') .. '/easy-dotnet-shim'
+  local shim = shim_dir .. '/dotnet-easydotnet'
+  vim.fn.mkdir(shim_dir, 'p')
+  vim.fn.writefile({
+    '#!/bin/sh',
+    'dll=$(ls "$HOME"/.dotnet/tools/.store/easydotnet/*/easydotnet/*/tools/*/any/EasyDotnet.IDE.dll | sort -V | tail -n1)',
+    'exec dotnet "$dll" "$@"',
+  }, shim)
+  vim.fn.setfperm(shim, 'rwxr-xr-x')
+  vim.env.PATH = shim_dir .. ':' .. vim.env.PATH
+
   vim.pack.add({
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/mfussenegger/nvim-dap',
