@@ -34,6 +34,32 @@ Config.later(function()
   vim.fn.setfperm(shim, 'rwxr-xr-x')
   vim.env.PATH = shim_dir .. ':' .. vim.env.PATH
 
+  -- easydotnet launches roslyn-language-server by its real path in the tool
+  -- store (PATH and the ~/.dotnet/tools symlink are bypassed), and that
+  -- launcher in turn spawns Microsoft.CodeAnalysis.LanguageServer. Both are
+  -- apphosts whose interpreter is the system glibc, which can't load the
+  -- newer Nix libcoreclr that DOTNET_ROOT points at. Swap each ELF for a
+  -- wrapper that runs its dll through `dotnet`; the original is kept as
+  -- `.apphost`. Idempotent; re-applied after `dotnet tool update` installs a
+  -- new version.
+  local roslyn_dir = vim.fn.expand('~/.dotnet/tools/.store/roslyn-language-server')
+    .. '/*/*/*/tools/*/*/'
+  for _, name in ipairs({ 'roslyn-language-server', 'Microsoft.CodeAnalysis.LanguageServer' }) do
+    for _, bin in ipairs(vim.fn.glob(roslyn_dir .. name, false, true)) do
+      local f = io.open(bin, 'rb')
+      local magic = f and f:read(4)
+      if f then f:close() end
+      if magic == '\127ELF' then
+        vim.uv.fs_rename(bin, bin .. '.apphost')
+        vim.fn.writefile({
+          '#!/bin/sh',
+          'exec dotnet "$(dirname "$(readlink -f "$0")")/' .. name .. '.dll" "$@"',
+        }, bin)
+        vim.fn.setfperm(bin, 'rwxr-xr-x')
+      end
+    end
+  end
+
   vim.pack.add({
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/mfussenegger/nvim-dap',
