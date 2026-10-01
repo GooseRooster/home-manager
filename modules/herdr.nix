@@ -52,6 +52,17 @@ in
   programs.herdr = {
     enable = herdrEnable;
 
+    # TEMP: backport of NixOS/nixpkgs#568618 (fixes #568606, ld.bfd "overlapping
+    # FDEs" link failure). Merged to master 2026-09-30 but not yet in
+    # nixos-unstable (pin b4fd65b). Drop once the flake pin contains ec04c0e.
+    package = pkgs.herdr.overrideAttrs (old: {
+      postPatch = (old.postPatch or "") + lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+        substituteInPlace vendor/libghostty-vt/src/build/GhosttyLibVt.zig \
+          --replace-fail 'lib.bundle_compiler_rt = true;' 'lib.bundle_compiler_rt = false;' \
+          --replace-fail 'lib.bundle_ubsan_rt = true;' 'lib.bundle_ubsan_rt = false;'
+      '';
+    });
+
     settings = {
       onboarding = false;
 
