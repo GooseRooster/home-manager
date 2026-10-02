@@ -94,7 +94,6 @@ in
       };
 
       experimental = {
-        kitty_graphics = true;
         pane_history = false;
       };
     };
