@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.home.modules;
@@ -176,15 +181,15 @@ in
       bindsym $mod+Shift+9 move container to workspace number 9
       bindsym $mod+Shift+0 move container to workspace number 10
 
-      # Prev/next workspace (Umbriel Mod+Alt+K/J) and move across workspaces
+      # Prev/next workspace and move across workspaces
       bindsym $mod+Alt+k workspace prev_on_output
       bindsym $mod+Alt+j workspace next_on_output
       bindsym $mod+Shift+h move container to workspace prev_on_output
       bindsym $mod+Shift+l move container to workspace next_on_output
 
       # 3-finger swipe up/down -> next/prev workspace (GNOME-ish).
-      bindgesture swipe:3:down workspace next_on_output
-      bindgesture swipe:3:up workspace prev_on_output
+      bindgesture swipe:3:up workspace next_on_output
+      bindgesture swipe:3:down workspace prev_on_output
 
       # Resize mode
       mode "resize" {
