@@ -17,7 +17,7 @@
     ./modules/starship.nix
     ./modules/topgrade.nix
     ./modules/theming.nix
-    ./modules/ghostty.nix
+    ./modules/foot.nix
     ./modules/mpv.nix
     ./modules/btop.nix
     ./modules/lazygit.nix

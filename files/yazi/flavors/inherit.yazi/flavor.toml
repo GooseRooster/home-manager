@@ -1,7 +1,7 @@
 # vim:fileencoding=utf-8:foldmethod=marker
 # "inherit" flavor — pulls every color straight from the terminal's 16-slot ANSI
-# palette, so swapping a Tinty/base16 scheme retints Yazi live (no restart), the
-# same way it retints any other program that just emits SGI escape codes.
+# palette, so swapping the Noctalia/base16 scheme retints Yazi live (no restart),
+# the same way it retints any other program that just emits SGI escape codes.
 #
 # Color roles are spread across the full palette (à la btop's tty mode) instead
 # of concentrating on magenta, so each base16 slot (base08-base0F) actually reads

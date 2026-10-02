@@ -56,7 +56,7 @@ in
     inherit plugins;
 
     # Local "inherit" flavor — pulls every color from the terminal palette so
-    # tinty scheme swaps retint yazi live. Declared declaratively; not fetched.
+    # Noctalia scheme swaps retint yazi live. Declared declaratively; not fetched.
     flavors = {
       "inherit" = ../files/yazi/flavors/inherit.yazi;
     };

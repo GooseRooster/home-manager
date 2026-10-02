@@ -3,9 +3,9 @@
 let
   cfg = config.home.modules;
 
-  # Scratch terminal: a single ghostty instance with a stable app_id, parked in
+  # Scratch terminal: a single foot instance with a stable app_id, parked in
   # the scratchpad and toggled (respawned on demand) by the script below. The
-  # class must be a valid GTK application id (dotted), or ghostty ignores it.
+  # app_id must be a valid Wayland application id (dotted).
   scratchTermClass = "com.gooze.scratchterm";
   scratchTerm = pkgs.writeShellApplication {
     name = "scratch-term";
@@ -21,7 +21,7 @@ let
       if ! exists; then
         # Spawn through sway so the session environment is inherited; the
         # for_window rule in the config parks it in the scratchpad.
-        swaymsg exec "${pkgs.ghostty}/bin/ghostty --class=$class --gtk-single-instance=false"
+        swaymsg exec "${pkgs.foot}/bin/foot --app-id=$class"
         for _ in $(seq 1 50); do
           if exists; then break; fi
           sleep 0.1
@@ -41,7 +41,7 @@ in
       default = "";
       description = ''
         Extra Sway configuration appended verbatim (host-specific output /
-        input blocks). Only rendered in the noctalia session.
+        input blocks).
       '';
     };
   };
@@ -53,7 +53,7 @@ in
   # (window colours + $variables) and its apply.sh appends an include to this
   # file — the include is pre-seeded below so that append becomes a no-op on
   # the read-only HM symlink.
-  config = lib.mkIf (cfg.session == "noctalia") {
+  config = lib.mkIf cfg.desktop.enable {
     xdg.configFile."sway/config".text = ''
       ### Variables
       set $mod Mod4

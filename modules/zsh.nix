@@ -110,10 +110,10 @@ in
       '')
 
       # fast-syntax-highlighting's "base16" theme uses only ANSI slots 0-15
-      # (see its themes/base16.ini), so highlighting follows whatever base16
-      # scheme the terminal currently has loaded (ghostty + tinty), the same
-      # as every other terminal-color-aware tool here — no extra tinty
-      # wiring needed. Applied manually (rather than via the module's own
+      # (see its themes/base16.ini), so highlighting follows the palette the
+      # terminal currently has loaded (foot + Noctalia), the same as every
+      # other terminal-color-aware tool here — no extra wiring needed.
+      # Applied manually (rather than via the module's own
       # `fastSyntaxHighlighting.theme` option) so stderr can be silenced:
       # applying this specific theme trips a harmless upstream quirk in
       # fast-theme's ini-parsing (a stray "No such theme `none'" warning —

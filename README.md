@@ -28,11 +28,11 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
   `nix develop` environments — never installed here directly. The devshell
   templates provide the seed configs for those.
 
-One exception to "HM owns the binary": `programs.ghostty` keeps
-`package = null` — not for a collision reason, but because the system-wide
-ghostty package (nixos-config's `modules/desktop/terminal.nix`) owns the
-user units, and `null` also disables HM's onChange `+validate-config` hook
-(which would need a real binary to exec at activation).
+One exception to "HM owns the binary": `foot` is installed system-wide by
+`nixos-config` (`modules/desktop/terminal.nix`), and this repo only writes
+`foot.ini` directly (via `pkgs.formats.ini`) rather than using
+`programs.foot` — which, unlike `programs.ghostty`, has no `package = null`
+escape hatch and would install the terminal into every target's profile.
 
 ## Targets / flavors
 
@@ -50,14 +50,11 @@ The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
-Flags: `gaming`, `theming`, `podmanAlias`, `wsl`, plus the `bundles`
-switches (see
-`modules/bundles.nix`). `wsl` skips GUI-only dotfiles (ghostty, mpv, tinty,
-owl.jpg). `session` (`gnome` | `noctalia`, default `gnome`; see
-[Targets / flavors](#targets--flavors)) selects the desktop session stack:
-Noctalia (ly + Sway + Noctalia v5) owns app theming, so tinty/gnomad are
-gnome-only while Noctalia palettes and the Sway/GTK/ghostty templates are
-noctalia-only.
+Flags: `desktop`, `gaming`, `theming`, `podmanAlias`, `wsl`, plus the
+`bundles` switches (see `modules/bundles.nix`). `desktop` enables the full
+Sway/Noctalia session configs (Sway, GTK theming, terminal) on desktop hosts;
+dev containers and WSL leave it off. Noctalia owns app theming through its
+builtin templates, so the `theming` flag only ships the custom palettes.
 
 ## Applying
 
@@ -162,8 +159,8 @@ Then per host (e.g. in `hosts/home/default.nix`):
 `hmModules.default` is the shared base (no username/homeDirectory, no flags) —
 NixOS's HM integration infers the user from `home-manager.users.<name>`, so each
 host sets only the flags it needs. Per-host flags live in the **nixos-config**
-host file, next to the system-side toggles they mirror (e.g. `home.modules.session`
-mirrors `modules.desktop.session`).
+host file, next to the system-side toggles they mirror (e.g. desktop hosts set
+`home.modules.desktop.enable = true`).
 
 ## Yazi plugin updates
 
@@ -359,7 +356,6 @@ something worth propagating back to future scaffolds.
 | Neovim | `vendor/nvim/` + eval-time merge; `nvim-pack-lock.json` written at runtime |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
-| tinty theme repos | tinty-managed; run `tinty sync` once per machine |
 
 ## Local overrides
 

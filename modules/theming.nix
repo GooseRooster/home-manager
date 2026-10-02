@@ -1,124 +1,28 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 
 let
   cfg = config.home.modules;
-
-  # Tinty scheme-sync items.
-  tintyItems = [
-    {
-      path = "https://github.com/tinted-theming/tinted-shell";
-      name = "tinted-shell";
-      themes-dir = "scripts";
-      hook = ". %f";
-    }
-    {
-      # Claude Code
-      name = "tinted-claude-code";
-      path = "https://github.com/tinted-theming/tinted-claude-code";
-      themes-dir = "scripts";
-      theme-file-extension = ".js";
-      supported-systems = [ "base16" "base24" "tinted8" ];
-      hook = "mkdir -p \"$HOME/.claude/themes\" && node \"$TINTY_THEME_FILE_PATH\" > \"$HOME/.claude/themes/tinty.json\"";
-    }
-    {
-      # Ghostty — with `theme` set to "tinted-theming" (see modules/ghostty.nix),
-      # this is where Ghostty looks for the theme file.
-      path = "https://github.com/tinted-theming/tinted-terminal";
-      name = "tinted-terminal";
-      themes-dir = "themes/ghostty";
-      hook = ''
-        mkdir -p ~/.config/ghostty/themes
-        command cp -f "$TINTY_THEME_FILE_PATH" ~/.config/ghostty/themes/tinted-theming
-        killall -SIGUSR2 ghostty 2>/dev/null || true
-      '';
-      supported-systems = [ "base16" "base24" ];
-    }
-    {
-      path = "https://github.com/tinted-theming/tinted-zen";
-      name = "tinted-zen";
-      themes-dir = "output";
-      hook = ''
-        profile_dir="$HOME/.config/zen/$(awk -F= "/^\[Profile/{path=\"\"} /^Path=/{path=\$2} /^Default=1/{print path; exit}" "$HOME/.config/zen/profiles.ini")"
-        mkdir -p "''${profile_dir}/chrome"
-        cp -f "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
-      '';
-      supported-systems = ["base16" "base24" "tinted8"];
-    }
-  ] ++ lib.optionals cfg.gaming.enable [
-      {
-        # Vesktop (Discord)
-        path = "https://github.com/deathbeam/base16-discord.git";
-        name = "base16-discord";
-        themes-dir = "themes";
-        theme-file-extension = ".theme.css";
-        supported-systems = [ "base16" ];
-        hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
-      }
-      {
-       # Steam Millenium
-        path = "https://github.com/GooseRooster/tinted-material-millennium";
-        name = "tinted-material-millennium";
-        themes-dir = "output";
-        hook = "cp \"$TINTY_THEME_FILE_PATH\" ~/.steam/steam/steamui/skins/Material-Theme/css/main/colors/matugen.css";
-        supported-systems = ["base16"];
-      }
-  ];
 in
 lib.mkIf cfg.theming.enable {
-  home.file = lib.mkMerge [
-    # GNOME-session theming: tinty scheme sync + gnomad schemes. In the
-    # noctalia session Noctalia's builtin templates own app theming (and tinty
-    # isn't installed), so these files are dropped.
-    (lib.mkIf (cfg.session == "gnome") {
-      ".config/gnomad/schemes/dragon-ember.yaml" = {
-        source = ../files/gnomad/schemes/dragon-ember.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/gloaming.yaml" = {
-        source = ../files/gnomad/schemes/gloaming.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/kiln.yaml" = {
-        source = ../files/gnomad/schemes/kiln.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/marshlight.yaml" = {
-        source = ../files/gnomad/schemes/marshlight.yaml;
-        force = true;
-      };
-      ".config/gnomad/schemes/peat.yaml" = {
-        source = ../files/gnomad/schemes/peat.yaml;
-        force = true;
-      };
-      ".config/tinted-theming/tinty/config.toml" = {
-        force = true;
-        source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
-      };
-    })
-
-    # Noctalia-session theming: Noctalia custom palettes (custom is the only
-    # palette source stored as files on disk).
-    (lib.mkIf (cfg.session == "noctalia") {
-      ".config/noctalia/palettes/peat.json" = {
-        force = true;
-        source = ../files/noctalia/palettes/peat.json;
-      };
-      ".config/noctalia/palettes/peat_bog.json" = {
-        force = true;
-        source = ../files/noctalia/palettes/peat_bog.json;
-      };
-      ".config/noctalia/palettes/peat_mist.json" = {
-        force = true;
-        source = ../files/noctalia/palettes/peat_mist.json;
-      };
-    })
-
-    # Shared.
-    {
-      ".config/owl.jpg" = {
-        source = ../files/owl.jpg;
-        force = true;
-      };
-    }
-  ];
+  # Noctalia owns app theming through its builtin templates; this module only
+  # ships the custom palettes (custom is the only palette source stored as
+  # files on disk) plus the shared wallpaper image.
+  home.file = {
+    ".config/noctalia/palettes/peat.json" = {
+      force = true;
+      source = ../files/noctalia/palettes/peat.json;
+    };
+    ".config/noctalia/palettes/peat_bog.json" = {
+      force = true;
+      source = ../files/noctalia/palettes/peat_bog.json;
+    };
+    ".config/noctalia/palettes/peat_mist.json" = {
+      force = true;
+      source = ../files/noctalia/palettes/peat_mist.json;
+    };
+    ".config/owl.jpg" = {
+      source = ../files/owl.jpg;
+      force = true;
+    };
+  };
 }

@@ -30,13 +30,11 @@ in
       # modules/gtk.nix; ghostty's own default would be JetBrains Mono).
       font-family = "Iosevka Nerd Font Mono";
     } // lib.optionalAttrs cfg.theming.enable {
-      # The `theme` line points at whichever retint mechanism the session
-      # uses: tinty writes ~/.config/ghostty/themes/tinted-theming (gnome
-      # session), while Noctalia's builtin ghostty template writes
+      # Noctalia's builtin ghostty template writes
       # ~/.config/ghostty/themes/noctalia (and its apply.sh no-ops on configs
       # already set to `theme = noctalia`, which matters because HM's config
       # is a read-only symlink).
-      theme = if cfg.session == "noctalia" then "noctalia" else "tinted-theming";
+      theme = "noctalia";
     };
   };
 }
