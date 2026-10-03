@@ -1,0 +1,105 @@
+# Recolor the wallpapers in ~/Pictures/Wallpapers with the active Noctalia
+# palette and hand the results to the wallpaper slideshow.
+#
+# Flow: read the active palette through the Noctalia IPC, build a gowall
+# theme from it, batch-convert the top-level images into
+# ~/Pictures/Wallpapers/<scheme>_wallpapers, repoint [wallpaper].directory
+# in settings.toml and reload Noctalia.
+#
+# Only "custom" palette sources are supported: builtin and
+# wallpaper-generated palettes are not stored as files on disk.
+
+set -euo pipefail
+
+wallpapers_dir="$HOME/Pictures/Wallpapers"
+palettes_dir="$HOME/.config/noctalia/palettes"
+settings_file="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/settings.toml"
+
+die() {
+  echo "gowall_convert_wallpapers: $*" >&2
+  exit 1
+}
+
+[[ -d $wallpapers_dir ]] || die "wallpaper directory not found: $wallpapers_dir"
+[[ -f $settings_file ]] || die "Noctalia settings not found: $settings_file"
+
+# Active palette via the IPC ("<source> <name>", e.g. "custom peat_mist")
+scheme="$(noctalia msg color-scheme-get)" || die "could not reach the Noctalia IPC (is the shell running?)"
+scheme_source="${scheme%% *}"
+scheme_name="${scheme#* }"
+
+[[ $scheme_source == "custom" ]] || die "unsupported palette source '$scheme_source' (only custom palettes exist on disk)"
+[[ -n $scheme_name && $scheme_name != "$scheme_source" ]] || die "could not parse scheme name from: $scheme"
+
+palette_file="$palettes_dir/$scheme_name.json"
+[[ -f $palette_file ]] || die "palette file not found: $palette_file"
+
+# Palette variant matching the current theme mode; palettes without a
+# light variant always use the dark one.
+mode="$(noctalia msg theme-mode-get)" || die "could not read the Noctalia theme mode"
+variant="dark"
+if [[ $mode == "light" ]] && [[ $(jq 'has("light")' "$palette_file") == "true" ]]; then
+  variant="light"
+fi
+
+# Gowall runtime theme: every hex color of the variant, deduped.
+theme_dir="$(mktemp -d)"
+trap 'rm -rf "$theme_dir"' EXIT
+theme_file="$theme_dir/theme.json"
+
+jq --arg name "$scheme_name" --arg variant "$variant" '
+  .[$variant]
+  | [ .. | strings | select(test("^#[0-9a-fA-F]{3,8}$")) ]
+  | unique
+  | { name: $name, colors: . }
+' "$palette_file" > "$theme_file"
+
+jq -e '.colors | length > 0' "$theme_file" > /dev/null \
+  || die "no colors found in the '$variant' variant of $palette_file"
+
+# Fresh output directory (drop any previous conversion wholesale)
+out_dir="$wallpapers_dir/${scheme_name}_wallpapers"
+rm -rf "$out_dir"
+mkdir -p "$out_dir"
+
+# Top-level images only (gowall's --dir is always recursive, so the file
+# list is built here instead); --batch runs them through a concurrent
+# worker pool in a single gowall invocation.
+shopt -s nullglob nocaseglob
+images=(
+  "$wallpapers_dir"/*.png
+  "$wallpapers_dir"/*.jpg
+  "$wallpapers_dir"/*.jpeg
+  "$wallpapers_dir"/*.webp
+  "$wallpapers_dir"/*.avif
+)
+shopt -u nullglob nocaseglob
+
+(( ${#images[@]} > 0 )) || die "no images found in $wallpapers_dir"
+for image in "${images[@]}"; do
+  [[ $image != *,* ]] || die "comma in file name breaks --batch: $image"
+done
+
+printf -v batch '%s,' "${images[@]}"
+batch="${batch%,}"
+
+echo "Converting ${#images[@]} image(s) with palette '$scheme_name' ($variant)..."
+gowall convert --batch "$batch" -t "$theme_file" --output "$out_dir" --preview false --yes
+
+# No IPC for the slideshow directory: rewrite [wallpaper].directory in
+# settings.toml and make the running shell pick it up.
+count="$(grep -c '^directory = "' "$settings_file" || true)"
+[[ $count -eq 1 ]] || die "expected exactly one 'directory =' line in $settings_file, found $count"
+sed -i "s|^directory = .*|directory = \"${out_dir}\"|" "$settings_file"
+
+noctalia msg config-reload
+
+# Switch immediately so the recolored set shows up without waiting for the
+# automation interval (wallpaper-random resolves the (new) browse folder)
+noctalia msg wallpaper-random
+
+noctalia msg notification-show "Wallpapers converted" \
+  "${#images[@]} image(s) recolored with '$scheme_name'; slideshow -> $out_dir"
+
+echo "Converted ${#images[@]} image(s) -> $out_dir"
+echo "Slideshow directory updated in $settings_file"

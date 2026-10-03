@@ -1,0 +1,33 @@
+# Batch theming refresh hooks.
+#
+# Called by Noctalia's "palette changed" hook (and usable from a shell) to
+# push a new palette out to everything that caches it. Each hook is
+# independent: failures are reported but don't stop the rest.
+
+set -uo pipefail
+
+failures=0
+
+run() {
+  local name="$1"
+  shift
+  echo "theme_regen: $name"
+  if ! "$@"; then
+    echo "theme_regen: '$name' failed" >&2
+    failures=$((failures + 1))
+  fi
+}
+
+# Sway re-reads ~/.config/sway/config (colors are rendered into it).
+run "sway reload" swaymsg reload
+
+# Recolor ~/Pictures/Wallpapers with the active palette and repoint the
+# wallpaper slideshow at the converted set.
+run "convert wallpapers" gowall_convert_wallpapers
+
+if (( failures > 0 )); then
+  echo "theme_regen: finished with $failures failed hook(s)" >&2
+  exit 1
+fi
+
+echo "theme_regen: all hooks completed"

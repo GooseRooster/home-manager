@@ -19,14 +19,74 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
   | `baseExtra` | visual/GUI extras — fonts, VS Code (`pkgs/base-extra.nix`) | off |
   | `wsl` | WSL dev-host extras (`pkgs/wsl.nix`) | off |
 
-  The `programs.<tool>` HM modules and the bundle lists share one nixpkgs
-  instance, so overlapping entries (e.g. yazi) dedupe to identical store paths.
-  Also owns reusable **Nix devShell templates** (see
-  [Devshell templates](#devshell-templates)) for scaffolding project-local dev
-  environments.
-- **Dev toolchains** (dotnet, java, rust, node, …) belong in project-local
-  `nix develop` environments — never installed here directly. The devshell
-  templates provide the seed configs for those.
+- **User-facing Flatpaks** live here too (`modules/flatpak.nix`), installed
+  per-user with `flatpak --user` via nix-flatpak's home-manager module, gated
+  on `home.bundles.flatpak.*`:
+
+  | Bundle | Contents |
+  |--------|----------|
+  | `flatpak.base` | media/graphics/misc GUI apps (`pkgs/flatpak-base.nix`) |
+  | `flatpak.multimedia` | Stremio (`pkgs/flatpak-multimedia.nix`) |
+  | `flatpak.gaming` | Proton management, emulators (`pkgs/flatpak-gaming.nix`) |
+
+  The system keeps only the "normie" baseline (GNOME core, mpv, Bazaar, …) in
+  `nixos-config/modules/flatpak/system.nix` — see the separation note below.
+
+- **Noctalia shell settings** are declarative here (`modules/noctalia.nix`,
+  flag `home.modules.noctalia.enable`): the top bar, widgets, shell behaviour,
+  idle, session actions and app-theming templates are written to
+  `~/.config/noctalia/config.toml`. The palette **choice** is deliberately not
+  declared — Noctalia persists it to its app-managed
+  `~/.local/state/noctalia/settings.toml`, which merges last and wins, so
+  themes stay a live GUI toggle.
+- **Theming tooling** (`gowall_convert_wallpapers`, `theme_regen`) lives here
+  (`modules/theming-tools.nix`, flag `home.modules.theming.enable`); it talks
+  to the Noctalia IPC and is a user concern, not a system one.
+
+### System vs. user split
+
+The guiding rule: the **system** (nixos-config) carries what is needed to
+boot, log in, drive hardware and provide the session; the **user**
+(this repo) carries opinionated preferences and user-facing apps, so they
+follow the person across machines/OSes. Concretely:
+
+- baseline/OS-integrated Flatpaks → system; everything else → user (above)
+- Noctalia settings, palette files, Sway keybinds, GTK/fonts, CLI batteries,
+  theming tooling → user
+- compositor, display manager, portals, pipewire, drivers, keyring, polkit,
+  podman, TuneD, secure-boot, kernel → system
+
+### Noctalia configuration layering
+
+Noctalia merges three layers, later wins:
+
+1. built-in defaults
+2. `~/.config/noctalia/*.toml` — **declarative**, owned by
+   `modules/noctalia.nix` (an HM-managed read-only symlink)
+3. `~/.local/state/noctalia/settings.toml` — **app-managed**, written by the
+   Settings GUI
+
+Because layer 3 wins, the curated layer 2 deliberately omits `[theme]` (palette
+choice), `[wallpaper]` paths and the lock-screen widget layout — those stay
+GUI-owned/runtime. **Anything the GUI wrote to `settings.toml` before this
+change still shadows the declarative config until it is cleared.** One-time
+cleanup: back up and trim `~/.local/state/noctalia/settings.toml`, keeping only
+`[theme]`, `[wallpaper]`, `[lockscreen_widgets]` and `config_version` (see
+`files/noctalia/settings.toml.trimmed`), then run `noctalia config validate`.
+
+Host-specific shell tweaks can be layered through
+`home.modules.noctalia.extraSettings` (merged with `lib.recursiveUpdate`). GPU
+monitoring is intentionally not modelled: add a GPU `sysmon` widget in the
+Settings UI on hosts that want it.
+
+### Other conventions
+
+The `programs.<tool>` HM modules and the bundle lists share one nixpkgs
+instance, so overlapping entries (e.g. yazi) dedupe to identical store paths.
+Also owns reusable **Nix devShell templates** (see
+[Devshell templates](#devshell-templates)) for scaffolding project-local dev
+environments. **Dev toolchains** (dotnet, java, rust, node, …) belong in
+project-local `nix develop` environments — never installed here directly.
 
 One exception to "HM owns the binary": `foot` is installed system-wide by
 `nixos-config` (`modules/desktop/terminal.nix`), and this repo only writes
@@ -50,11 +110,13 @@ The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
-Flags: `desktop`, `gaming`, `theming`, `podmanAlias`, `wsl`, plus the
-`bundles` switches (see `modules/bundles.nix`). `desktop` enables the full
+Flags: `desktop`, `gaming`, `theming`, `noctalia`, `podmanAlias`, `wsl`, plus
+the `bundles` switches (see `modules/bundles.nix`). `desktop` enables the full
 Sway/Noctalia session configs (Sway, GTK theming, terminal) on desktop hosts;
 dev containers and WSL leave it off. Noctalia owns app theming through its
-builtin templates, so the `theming` flag only ships the custom palettes.
+builtin templates, so the `theming` flag ships the custom palettes plus the
+`gowall`/`theme_regen` tooling, and `noctalia` turns on the declarative shell
+settings.
 
 ## Applying
 
@@ -145,6 +207,8 @@ Then per host (e.g. in `hosts/home/default.nix`):
 ```nix
 { inputs, ... }: {
   imports = [ inputs.home-manager.nixosModules.home-manager ];
+  # The flatpak module reads nix-flatpak's HM module as a plain function arg.
+  home-manager.extraSpecialArgs = { inherit (inputs) nix-flatpak; };
   home-manager.users.gooze = {
     imports = [ inputs.dotfiles.hmModules.default ];
     # Set the flags to mirror the system-side toggles (bundles.base is
@@ -152,6 +216,11 @@ Then per host (e.g. in `hosts/home/default.nix`):
     home.bundles.baseExtra.enable = true;
     home.modules.gaming.enable = true;
     home.modules.theming.enable = true;
+    home.modules.noctalia.enable = true;
+    # Per-user Flatpaks (the system keeps only the baseline set).
+    home.bundles.flatpak.base.enable = true;
+    home.bundles.flatpak.multimedia.enable = true;
+    home.bundles.flatpak.gaming.enable = true;
   };
 }
 ```
@@ -356,6 +425,7 @@ something worth propagating back to future scaffolds.
 | Neovim | `vendor/nvim/` + eval-time merge; `nvim-pack-lock.json` written at runtime |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
+| Noctalia theme | app-managed `~/.local/state/noctalia/settings.toml` (GUI wins over the declarative `config.toml`; see below) |
 
 ## Local overrides
 

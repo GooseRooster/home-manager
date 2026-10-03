@@ -7,6 +7,9 @@
   imports = [
     ./modules/flavors.nix
     ./modules/bundles.nix
+    ./modules/flatpak.nix
+    ./modules/noctalia.nix
+    ./modules/theming-tools.nix
     ./modules/zsh.nix
     ./modules/wsl-shell-launcher.nix
     ./modules/eza.nix

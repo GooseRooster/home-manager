@@ -22,6 +22,9 @@ in
     theming = {
       enable = mkFlag "Theming tooling config (Noctalia palettes).";
     };
+    noctalia = {
+      enable = mkFlag "Noctalia shell declarative settings + desktop session utilities.";
+    };
     podmanAlias = {
       enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in the shell.";
     };
