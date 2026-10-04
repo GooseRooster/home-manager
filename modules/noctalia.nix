@@ -131,6 +131,7 @@ let
       app_icon_colorize = true;
       corner_radius_scale = 1.5;
       font_family = "Iosevka NFM";
+      polkit_agent = true;
       telemetry_enabled = true;
 
       animation.speed = 2.2;
