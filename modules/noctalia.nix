@@ -44,13 +44,37 @@ let
       margin_ends = 0;
       radius = 0;
       scale = 1.1;
-      start = [ "wallpaper" "workspaces" "cpu_usage" "cpu_temp" "ram_usage" "disk_usage" ];
-      center = [ "weather" "clock" "audio_visualizer" ];
-      end = [ "tray" "notifications" "clipboard" "group:g1" "volume" "brightness" "battery" "control-center" "session" ];
+      start = [
+        "wallpaper"
+        "workspaces"
+        "cpu_usage"
+        "cpu_temp"
+        "ram_usage"
+        "disk_usage"
+      ];
+      center = [
+        "weather"
+        "clock"
+        "audio_visualizer"
+      ];
+      end = [
+        "tray"
+        "notifications"
+        "clipboard"
+        "group:g1"
+        "volume"
+        "brightness"
+        "battery"
+        "control-center"
+        "session"
+      ];
       capsule_group = [
         {
           id = "g1";
-          members = [ "network" "bluetooth" ];
+          members = [
+            "network"
+            "bluetooth"
+          ];
           accordion = false;
           accordion_direction = "end";
           border = "outline";
@@ -69,17 +93,36 @@ let
 
     # Idle: lock at 10 min, screen off at 11, lock+suspend at 15.
     idle = {
-      behavior_order = [ "lock" "screen-off" "lock-and-suspend" ];
-      behavior.lock = { action = "lock"; enabled = true; timeout = 600.0; };
-      behavior."screen-off" = { action = "screen_off"; enabled = true; timeout = 660.0; };
-      behavior."lock-and-suspend" = { action = "lock_and_suspend"; enabled = true; timeout = 900.0; };
+      behavior_order = [
+        "lock"
+        "screen-off"
+        "lock-and-suspend"
+      ];
+      behavior.lock = {
+        action = "lock";
+        enabled = true;
+        timeout = 600.0;
+      };
+      behavior."screen-off" = {
+        action = "screen_off";
+        enabled = true;
+        timeout = 660.0;
+      };
+      behavior."lock-and-suspend" = {
+        action = "lock_and_suspend";
+        enabled = true;
+        timeout = 900.0;
+      };
     };
 
     location.auto_locate = true;
 
     # Lock screen: no background blur/tint (wallpaper shows through cleanly).
     # Widget layout itself is left to the GUI (per-output placement).
-    lockscreen = { blur_intensity = 0.0; tint_intensity = 0.0; };
+    lockscreen = {
+      blur_intensity = 0.0;
+      tint_intensity = 0.0;
+    };
 
     nightlight.enabled = true;
 
@@ -118,11 +161,42 @@ let
       };
 
       session.actions = [
-        { action = "lock"; enabled = true; shortcut = "1"; countdown_seconds = 0.0; variant = "default"; }
-        { action = "logout"; command = "swaymsg exit"; enabled = true; shortcut = "2"; countdown_seconds = 60.0; variant = "default"; }
-        { action = "lock_and_suspend"; enabled = true; shortcut = "3"; countdown_seconds = 0.0; variant = "default"; }
-        { action = "reboot"; enabled = true; shortcut = "4"; countdown_seconds = 60.0; variant = "default"; }
-        { action = "shutdown"; enabled = true; shortcut = "5"; countdown_seconds = 60.0; variant = "destructive"; }
+        {
+          action = "lock";
+          enabled = true;
+          shortcut = "1";
+          countdown_seconds = 0.0;
+          variant = "default";
+        }
+        {
+          action = "logout";
+          command = "swaymsg exit";
+          enabled = true;
+          shortcut = "2";
+          countdown_seconds = 60.0;
+          variant = "default";
+        }
+        {
+          action = "lock_and_suspend";
+          enabled = true;
+          shortcut = "3";
+          countdown_seconds = 0.0;
+          variant = "default";
+        }
+        {
+          action = "reboot";
+          enabled = true;
+          shortcut = "4";
+          countdown_seconds = 60.0;
+          variant = "default";
+        }
+        {
+          action = "shutdown";
+          enabled = true;
+          shortcut = "5";
+          countdown_seconds = 60.0;
+          variant = "destructive";
+        }
       ];
     };
 
@@ -130,8 +204,14 @@ let
     # the community zen-browser template). The palette CHOICE is not set here.
     theme.templates = {
       enable_builtin_templates = true;
-      builtin_ids = [ "foot" "gtk3" "gtk4" "ghostty" "sway" ];
-      community_ids = [ "zen-browser" ];
+      builtin_ids = [
+        "foot"
+        "gtk3"
+        "gtk4"
+        "ghostty"
+        "sway"
+      ];
+      community_ids = [ "zen-browser fuzzel discord" ];
 
       # Adwaita-for-Steam: rendered palette -> custom CSS consumed by
       # pkgs/adwaita-for-steam (output_path is deliberately NOT HM-managed —
@@ -143,16 +223,30 @@ let
     };
 
     # Bar widget definitions.
-    widget.cpu_usage = { type = "sysmon"; };
-    widget.cpu_temp = { type = "sysmon"; stat = "cpu_temp"; };
-    widget.ram_usage = { type = "sysmon"; stat = "ram_pct"; };
-    widget.disk_usage = { type = "sysmon"; stat = "disk_used_pct"; };
+    widget.cpu_usage = {
+      type = "sysmon";
+    };
+    widget.cpu_temp = {
+      type = "sysmon";
+      stat = "cpu_temp";
+    };
+    widget.ram_usage = {
+      type = "sysmon";
+      stat = "ram_pct";
+    };
+    widget.disk_usage = {
+      type = "sysmon";
+      stat = "disk_used_pct";
+    };
     widget.clock.format = "{:%A %d %B %H:%M}";
     widget.weather.show_condition = false;
     widget.workspaces.occupied_color = "tertiary";
     widget.audio_visualizer = {
       show_when_idle = true;
-      actions = { left = "panel-open control-center media"; right = "media toggle"; };
+      actions = {
+        left = "panel-open control-center media";
+        right = "media toggle";
+      };
     };
   };
 in
