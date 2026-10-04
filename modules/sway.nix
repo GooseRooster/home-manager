@@ -93,6 +93,110 @@ let
       esac
     '';
   };
+
+  # Video capture via the GPU Screen Recorder flatpak, driven entirely from
+  # sway (no gsr-ui). `gsr-rec [--mic] <screen|region|stop>`:
+  #   screen/region -> start a detached recording to ~/Videos/Video_<ts>.mp4
+  #   --mic         -> add the microphone (merged with desktop audio)
+  #   stop          -> SIGINT the running gpu-screen-recorder (stop + save)
+  # Settings mirror the gsr-ui config: mp4, auto codec (SDR tone-map),
+  # very_high quality, 60 fps, full color range, cursor on, desktop audio
+  # by default. State (output path) lives in $XDG_RUNTIME_DIR so start/stop
+  # stay coherent; the running process is found by name, not by pid, since
+  # flatpak/bwrap doesn't forward signals cleanly.
+  gsrRec = pkgs.writeShellApplication {
+    name = "gsr-rec";
+    runtimeInputs = with pkgs; [
+      slurp
+      libnotify
+      coreutils
+      procps
+      util-linux
+      flatpak
+    ];
+    text = ''
+      state="''${XDG_RUNTIME_DIR:-/tmp}/gsr-rec.state"
+
+      is_recording() {
+        pgrep -f 'gpu-screen-recorder -w' >/dev/null 2>&1
+      }
+
+      mic=0
+      if [ "''${1:-}" = "--mic" ]; then
+        mic=1
+        shift
+      fi
+      mode="''${1:-}"
+
+      if [ "$mode" = stop ]; then
+        if ! is_recording; then
+          rm -f "$state"
+          notify-send -a "Recorder" -u low "No recording in progress"
+          exit 0
+        fi
+
+        pkill -INT -f 'gpu-screen-recorder -w'
+
+        # Wait for GSR to finalize the file before reporting the path.
+        for _ in $(seq 1 100); do
+          is_recording || break
+          sleep 0.1
+        done
+
+        file=""
+        [ -f "$state" ] && file="$(cat "$state")"
+        rm -f "$state"
+
+        if [ -n "$file" ]; then
+          notify-send -a "Recorder" -i "com.dec05eba.gpu_screen_recorder" \
+            "Recording saved" "$(basename "$file")"
+        else
+          notify-send -a "Recorder" "Recording stopped"
+        fi
+        exit 0
+      fi
+
+      if is_recording; then
+        notify-send -a "Recorder" -u low "Already recording" \
+          "Stop the current recording first"
+        exit 0
+      fi
+
+      case "$mode" in
+        screen)
+          src=(-w screen)
+          ;;
+        region)
+          region="$(slurp -f '%wx%h+%x+%y')" || exit 0
+          [ -n "$region" ] || exit 0
+          src=(-w "$region")
+          ;;
+        *)
+          echo "usage: gsr-rec [--mic] <screen|region|stop>" >&2
+          exit 2
+          ;;
+      esac
+
+      if [ "$mic" = 1 ]; then
+        audio=(-a "default_output|default_input")
+      else
+        audio=(-a default_output)
+      fi
+
+      dir="$HOME/Videos"
+      mkdir -p "$dir"
+      file="$dir/Video_$(date +%Y-%m-%d_%H-%M-%S).mp4"
+      printf '%s' "$file" > "$state"
+
+      # setsid detaches it from sway's exec shell so the recording survives.
+      setsid flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder \
+        "''${src[@]}" -c mp4 -f 60 -q very_high -cr full -cursor yes \
+        "''${audio[@]}" -o "$file" </dev/null >/dev/null 2>&1 &
+
+      notify-send -a "Recorder" -i "com.dec05eba.gpu_screen_recorder" \
+        "Recording started" "$(basename "$file")"
+    '';
+  };
 in
 {
   options.home.modules.sway = {
@@ -185,6 +289,12 @@ in
       bindsym $mod+Print exec ${gsrShot}/bin/gsr-shot full clip
       bindsym $mod+Shift+Print exec ${gsrShot}/bin/gsr-shot region edit
       bindsym $mod+Ctrl+Print exec ${gsrShot}/bin/gsr-shot full edit
+      # Video recording via GPU Screen Recorder; Shift adds the mic.
+      bindsym $mod+Alt+1 exec ${gsrRec}/bin/gsr-rec screen
+      bindsym $mod+Alt+2 exec ${gsrRec}/bin/gsr-rec region
+      bindsym $mod+Alt+Shift+1 exec ${gsrRec}/bin/gsr-rec --mic screen
+      bindsym $mod+Alt+Shift+2 exec ${gsrRec}/bin/gsr-rec --mic region
+      bindsym $mod+Alt+q exec ${gsrRec}/bin/gsr-rec stop
       bindsym $mod+v exec $ipc panel-toggle clipboard
       bindsym $mod+w exec $ipc panel-toggle wallpaper
       bindsym $mod+x exec $ipc bar-toggle
@@ -276,6 +386,6 @@ in
     '';
 
     # On PATH so it can also be invoked manually.
-    home.packages = [ scratchTerm gsrShot ];
+    home.packages = [ scratchTerm gsrShot gsrRec ];
   };
 }
