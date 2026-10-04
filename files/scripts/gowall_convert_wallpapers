@@ -30,6 +30,8 @@ scheme_name="${scheme#* }"
 
 [[ $scheme_source == "custom" ]] || die "unsupported palette source '$scheme_source' (only custom palettes exist on disk)"
 [[ -n $scheme_name && $scheme_name != "$scheme_source" ]] || die "could not parse scheme name from: $scheme"
+# Bounds the path we build/rm and the value we write into TOML below.
+[[ $scheme_name =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected scheme name: $scheme_name"
 
 palette_file="$palettes_dir/$scheme_name.json"
 [[ -f $palette_file ]] || die "palette file not found: $palette_file"
@@ -44,7 +46,9 @@ fi
 
 # Gowall runtime theme: every hex color of the variant, deduped.
 theme_dir="$(mktemp -d)"
-trap 'rm -rf "$theme_dir"' EXIT
+tmp=""
+cleanup() { rm -rf "$theme_dir" ${tmp:+"$tmp"}; }
+trap cleanup EXIT
 theme_file="$theme_dir/theme.json"
 
 jq --arg name "$scheme_name" --arg variant "$variant" '
@@ -86,11 +90,52 @@ batch="${batch%,}"
 echo "Converting ${#images[@]} image(s) with palette '$scheme_name' ($variant)..."
 gowall convert --batch "$batch" -t "$theme_file" --output "$out_dir" --preview false --yes
 
-# No IPC for the slideshow directory: rewrite [wallpaper].directory in
-# settings.toml and make the running shell pick it up.
-count="$(grep -c '^directory = "' "$settings_file" || true)"
-[[ $count -eq 1 ]] || die "expected exactly one 'directory =' line in $settings_file, found $count"
-sed -i "s|^directory = .*|directory = \"${out_dir}\"|" "$settings_file"
+# No IPC for the slideshow browse directory: rewrite the `directory` key of the
+# [wallpaper] table in settings.toml and make the running shell pick it up.
+# config.toml seeds a default directory, but settings.toml wins, so the value
+# the script wants lives there. The edit is section-aware on purpose: other
+# tables ([shell.screenshot], [wallpaper.monitor.<name>], ...) also carry a
+# `directory` key, and the key may be missing entirely.
+tmp="$(mktemp "${settings_file}.XXXXXX")"
+awk -v newdir="$out_dir" '
+  function strip(line) { sub(/^[[:space:]]+/, "", line); return line }
+
+  strip($0) == "[wallpaper]" {
+    saw = 1
+    in_table = 1
+    print
+    next
+  }
+
+  in_table {
+    s = strip($0)
+    if (s ~ /^\[/) {
+      if (!found) print "directory = \"" newdir "\""
+      in_table = 0
+      print
+      next
+    }
+    if (s ~ /^directory[[:space:]]*=/) {
+      print "directory = \"" newdir "\""
+      found = 1
+      next
+    }
+    print
+    next
+  }
+
+  { print }
+
+  END {
+    if (in_table && !found) print "directory = \"" newdir "\""
+    if (!saw) {
+      print ""
+      print "[wallpaper]"
+      print "directory = \"" newdir "\""
+    }
+  }
+' "$settings_file" > "$tmp"
+mv -f "$tmp" "$settings_file"
 
 noctalia msg config-reload
 

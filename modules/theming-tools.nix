@@ -24,6 +24,7 @@ let
   gowallConvertWallpapers = pkgs.writeShellApplication {
     name = "gowall_convert_wallpapers";
     runtimeInputs = with pkgs; [
+      gawk
       gowall
       jq
       noctaliaPkg

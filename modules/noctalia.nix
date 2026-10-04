@@ -16,9 +16,10 @@
 #
 # Because layer 3 wins, we deliberately do NOT declare [theme] here: the
 # palette choice (custom_palette/source/mode) is a live GUI preference that
-# Noctalia persists to settings.toml. Nor do we declare [wallpaper] paths or
-# the lockscreen widget layout — both are per-host / per-monitor runtime state
-# the GUI owns. Anything the GUI has already written to settings.toml still
+# Noctalia persists to settings.toml. The lockscreen widget layout is likewise
+# per-host / per-monitor runtime state the GUI owns. For [wallpaper] we only
+# seed the default browse `directory`; any GUI/script choice in settings.toml
+# still shadows it. Anything the GUI has already written to settings.toml still
 # shadows the values below until it is cleared (one-time cleanup).
 #
 # Host-specific display bits (e.g. the bar list) can be extended through
@@ -221,6 +222,12 @@ let
         output_path = "$XDG_CONFIG_HOME/AdwSteamGtk/custom.css";
       };
     };
+
+    # Seed the default wallpaper browse directory. settings.toml (written by
+    # the GUI / gowall_convert_wallpapers) still wins once it sets one, but
+    # having the key here means the merged config always resolves a directory
+    # even before the script ever writes to settings.toml.
+    wallpaper.directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
 
     # Bar widget definitions.
     widget.cpu_usage = {

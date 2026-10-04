@@ -67,11 +67,13 @@ Noctalia merges three layers, later wins:
    Settings GUI
 
 Because layer 3 wins, the curated layer 2 deliberately omits `[theme]` (palette
-choice), `[wallpaper]` paths and the lock-screen widget layout — those stay
-GUI-owned/runtime. **Anything the GUI wrote to `settings.toml` before this
-change still shadows the declarative config until it is cleared.** One-time
-cleanup: back up and trim `~/.local/state/noctalia/settings.toml`, keeping only
-`[theme]`, `[wallpaper]`, `[lockscreen_widgets]` and `config_version` (see
+choice) and the lock-screen widget layout — those stay GUI-owned/runtime. For
+`[wallpaper]` it only seeds the default browse `directory`, so a directory
+always resolves; a GUI/script choice in `settings.toml` still wins. **Anything
+the GUI wrote to `settings.toml` before this change still shadows the
+declarative config until it is cleared.** One-time cleanup: back up and trim
+`~/.local/state/noctalia/settings.toml`, keeping only `[theme]`, `[wallpaper]`,
+`[lockscreen_widgets]` and `config_version` (see
 `files/noctalia/settings.toml.trimmed`), then run `noctalia config validate`.
 
 Host-specific shell tweaks can be layered through
