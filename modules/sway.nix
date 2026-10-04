@@ -64,9 +64,10 @@ let
 
       case "$mode" in
         region)
-          region="$(slurp)" || exit 0
+          # slurp's default format is "X,Y WxH"; GSR wants "WxH+X+Y".
+          region="$(slurp -f '%wx%h+%x+%y')" || exit 0
           [ -n "$region" ] || exit 0
-          src=(-w region -region "$region")
+          src=(-w "$region")
           ;;
         full)
           src=(-w screen)

@@ -7,6 +7,51 @@
 
 let
   cfg = config.home.modules;
+
+  # Image formats GNOME Loupe declares in its .desktop MimeType.
+  imageTypes = [
+    "image/apng"
+    "image/avif"
+    "image/bmp"
+    "image/gif"
+    "image/heic"
+    "image/jp2"
+    "image/jpeg"
+    "image/jxl"
+    "image/png"
+    "image/qoi"
+    "image/svg+xml"
+    "image/svg+xml-compressed"
+    "image/tiff"
+    "image/vnd.microsoft.icon"
+    "image/webp"
+    "image/x-dds"
+    "image/x-exr"
+    "image/x-portable-anymap"
+    "image/x-portable-bitmap"
+    "image/x-portable-graymap"
+    "image/x-portable-pixmap"
+    "image/x-qoi"
+    "image/x-tga"
+    "image/x-win-bitmap"
+    "image/x-xbitmap"
+    "image/x-xpixmap"
+  ];
+
+  # Browser handler MIME types and the previous runtime defaults; declared so
+  # taking ownership of ~/.config/mimeapps.list doesn't drop them.
+  browserDefaults = {
+    "x-scheme-handler/http" = "zen-twilight.desktop";
+    "x-scheme-handler/https" = "zen-twilight.desktop";
+    "x-scheme-handler/chrome" = "firefox.desktop";
+    "text/html" = "zen-twilight.desktop";
+    "application/x-extension-htm" = "firefox.desktop";
+    "application/x-extension-html" = "firefox.desktop";
+    "application/x-extension-shtml" = "firefox.desktop";
+    "application/xhtml+xml" = "zen-twilight.desktop";
+    "application/x-extension-xhtml" = "firefox.desktop";
+    "application/x-extension-xht" = "firefox.desktop";
+  };
 in
 
 # GTK look & feel: fonts + theme name. Two mechanisms, both covered:
@@ -55,5 +100,19 @@ in
     document-font-name = "Iosevka Nerd Font Mono 11";
     monospace-font-name = "Iosevka Nerd Font Mono 11";
     icon-theme = "Hatter-Slate";
+  };
+
+  # Default applications (the XDG standard is ~/.config/mimeapps.list,
+  # [Default Applications]). Images open in GNOME Loupe (system Flatpak)
+  # instead of Gradia, which otherwise wins via the Flatpak mimeinfo.cache.
+  xdg.mimeApps = lib.mkIf cfg.desktop.enable {
+    enable = true;
+
+    defaultApplications = browserDefaults // lib.genAttrs imageTypes (_: "org.gnome.Loupe.desktop");
+
+    associations.added = lib.genAttrs (builtins.attrNames browserDefaults) (_: [
+      "firefox.desktop"
+      "zen-twilight.desktop"
+    ]);
   };
 }
