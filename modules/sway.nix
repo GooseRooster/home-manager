@@ -39,164 +39,6 @@ let
     '';
   };
 
-  # Screenshots via the GPU Screen Recorder flatpak. GSR captures/tone-maps HDR
-  # correctly, unlike the grim-based Noctalia path (which comes out linear).
-  # Two axes: region|full and clip|edit. Region uses slurp (GSR's -region takes
-  # slurp's WxH+X+Y directly); clip copies PNG to the clipboard + notifies;
-  # edit hands the PNG to the Gradia flatpak. Files land in
-  # ~/Pictures/Screenshots (same dir the gsr-ui config uses).
-  gsrShot = pkgs.writeShellApplication {
-    name = "gsr-shot";
-    runtimeInputs = with pkgs; [
-      slurp
-      wl-clipboard
-      libnotify
-      coreutils
-      flatpak
-    ];
-    text = ''
-      mode="''${1:-region}"    # region | full
-      action="''${2:-clip}"    # clip | edit
-
-      dir="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-      mkdir -p "$dir"
-      file="$dir/Screenshot_$(date +%Y-%m-%d_%H-%M-%S).png"
-
-      case "$mode" in
-        region)
-          # slurp's default format is "X,Y WxH"; GSR wants "WxH+X+Y".
-          region="$(slurp -f '%wx%h+%x+%y')" || exit 0
-          [ -n "$region" ] || exit 0
-          src=(-w "$region")
-          ;;
-        full)
-          src=(-w screen)
-          ;;
-        *)
-          echo "usage: gsr-shot [region|full] [clip|edit]" >&2
-          exit 2
-          ;;
-      esac
-
-      flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder \
-        "''${src[@]}" -o "$file"
-
-      case "$action" in
-        clip)
-          wl-copy --type image/png < "$file"
-          notify-send -a "Screenshot" -i "$file" \
-            "Screenshot copied to clipboard" "$(basename "$file")"
-          ;;
-        edit)
-          flatpak run be.alexandervanhee.gradia "$file"
-          ;;
-      esac
-    '';
-  };
-
-  # Video capture via the GPU Screen Recorder flatpak, driven entirely from
-  # sway (no gsr-ui). `gsr-rec [--mic] <screen|region|stop>`:
-  #   screen/region -> start a detached recording to ~/Videos/Video_<ts>.mp4
-  #   --mic         -> add the microphone (merged with desktop audio)
-  #   stop          -> SIGINT the running gpu-screen-recorder (stop + save)
-  # Settings mirror the gsr-ui config: mp4, auto codec (SDR tone-map),
-  # very_high quality, 60 fps, full color range, cursor on, desktop audio
-  # by default. State (output path) lives in $XDG_RUNTIME_DIR so start/stop
-  # stay coherent; the running process is found by name, not by pid, since
-  # flatpak/bwrap doesn't forward signals cleanly.
-  gsrRec = pkgs.writeShellApplication {
-    name = "gsr-rec";
-    runtimeInputs = with pkgs; [
-      slurp
-      libnotify
-      coreutils
-      procps
-      util-linux
-      flatpak
-    ];
-    text = ''
-      state="''${XDG_RUNTIME_DIR:-/tmp}/gsr-rec.state"
-
-      is_recording() {
-        pgrep -f 'gpu-screen-recorder -w' >/dev/null 2>&1
-      }
-
-      mic=0
-      if [ "''${1:-}" = "--mic" ]; then
-        mic=1
-        shift
-      fi
-      mode="''${1:-}"
-
-      if [ "$mode" = stop ]; then
-        if ! is_recording; then
-          rm -f "$state"
-          notify-send -a "Recorder" -u low "No recording in progress"
-          exit 0
-        fi
-
-        pkill -INT -f 'gpu-screen-recorder -w'
-
-        # Wait for GSR to finalize the file before reporting the path.
-        for _ in $(seq 1 100); do
-          is_recording || break
-          sleep 0.1
-        done
-
-        file=""
-        [ -f "$state" ] && file="$(cat "$state")"
-        rm -f "$state"
-
-        if [ -n "$file" ]; then
-          notify-send -a "Recorder" -i "com.dec05eba.gpu_screen_recorder" \
-            "Recording saved" "$(basename "$file")"
-        else
-          notify-send -a "Recorder" "Recording stopped"
-        fi
-        exit 0
-      fi
-
-      if is_recording; then
-        notify-send -a "Recorder" -u low "Already recording" \
-          "Stop the current recording first"
-        exit 0
-      fi
-
-      case "$mode" in
-        screen)
-          src=(-w screen)
-          ;;
-        region)
-          region="$(slurp -f '%wx%h+%x+%y')" || exit 0
-          [ -n "$region" ] || exit 0
-          src=(-w "$region")
-          ;;
-        *)
-          echo "usage: gsr-rec [--mic] <screen|region|stop>" >&2
-          exit 2
-          ;;
-      esac
-
-      if [ "$mic" = 1 ]; then
-        audio=(-a "default_output|default_input")
-      else
-        audio=(-a default_output)
-      fi
-
-      dir="$HOME/Videos"
-      mkdir -p "$dir"
-      file="$dir/Video_$(date +%Y-%m-%d_%H-%M-%S).mp4"
-      printf '%s' "$file" > "$state"
-
-      # setsid detaches it from sway's exec shell so the recording survives.
-      setsid flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder \
-        "''${src[@]}" -c mp4 -f 60 -q very_high -cr full -cursor yes \
-        "''${audio[@]}" -o "$file" </dev/null >/dev/null 2>&1 &
-
-      notify-send -a "Recorder" -i "com.dec05eba.gpu_screen_recorder" \
-        "Recording started" "$(basename "$file")"
-    '';
-  };
 in
 {
   options.home.modules.sway = {
@@ -284,17 +126,18 @@ in
       bindsym $mod+s exec $ipc panel-toggle control-center
       bindsym $mod+comma exec $ipc settings-toggle
       bindsym $mod+Shift+i exec $ipc settings-toggle
-      # Screenshots via GPU Screen Recorder (HDR-correct; see gsrShot above).
-      bindsym Print exec ${gsrShot}/bin/gsr-shot region clip
-      bindsym $mod+Print exec ${gsrShot}/bin/gsr-shot full clip
-      bindsym $mod+Shift+Print exec ${gsrShot}/bin/gsr-shot region edit
-      bindsym $mod+Ctrl+Print exec ${gsrShot}/bin/gsr-shot full edit
+      # Screenshots via GPU Screen Recorder (HDR-correct). gsr-shot/gsr-rec are
+      # installed system-wide by nixos-config (modules/desktop/gsr.nix).
+      bindsym Print exec gsr-shot region clip
+      bindsym $mod+Print exec gsr-shot full clip
+      bindsym $mod+Shift+Print exec gsr-shot region edit
+      bindsym $mod+Ctrl+Print exec gsr-shot full edit
       # Video recording via GPU Screen Recorder; Shift adds the mic.
-      bindsym $mod+Alt+1 exec ${gsrRec}/bin/gsr-rec screen
-      bindsym $mod+Alt+2 exec ${gsrRec}/bin/gsr-rec region
-      bindsym $mod+Alt+Shift+1 exec ${gsrRec}/bin/gsr-rec --mic screen
-      bindsym $mod+Alt+Shift+2 exec ${gsrRec}/bin/gsr-rec --mic region
-      bindsym $mod+Alt+q exec ${gsrRec}/bin/gsr-rec stop
+      bindsym $mod+Alt+1 exec gsr-rec screen
+      bindsym $mod+Alt+2 exec gsr-rec region
+      bindsym $mod+Alt+Shift+1 exec gsr-rec --mic screen
+      bindsym $mod+Alt+Shift+2 exec gsr-rec --mic region
+      bindsym $mod+Alt+q exec gsr-rec stop
       bindsym $mod+v exec $ipc panel-toggle clipboard
       bindsym $mod+w exec $ipc panel-toggle wallpaper
       bindsym $mod+x exec $ipc bar-toggle
@@ -302,17 +145,25 @@ in
       bindsym Ctrl+Alt+l exec $ipc session lock
       bindsym $mod+Tab exec $ipc window-switcher
 
-      # Focus (vim directions)
+      # Focus (vim directions + arrow-key doubles)
       bindsym $mod+h focus left
       bindsym $mod+j focus down
       bindsym $mod+k focus up
       bindsym $mod+l focus right
+      bindsym $mod+Left focus left
+      bindsym $mod+Down focus down
+      bindsym $mod+Up focus up
+      bindsym $mod+Right focus right
 
       # Move the focused window
       bindsym $mod+Ctrl+h move left
       bindsym $mod+Ctrl+j move down
       bindsym $mod+Ctrl+k move up
       bindsym $mod+Ctrl+l move right
+      bindsym $mod+Ctrl+Left move left
+      bindsym $mod+Ctrl+Down move down
+      bindsym $mod+Ctrl+Up move up
+      bindsym $mod+Ctrl+Right move right
 
       # Column width  -> standard resize
       bindsym $mod+equal resize grow width 5%
@@ -349,11 +200,15 @@ in
       bindsym $mod+Shift+9 move container to workspace number 9
       bindsym $mod+Shift+0 move container to workspace number 10
 
-      # Prev/next workspace and move across workspaces
+      # Prev/next workspace and move across workspaces (+ arrow-key doubles)
       bindsym $mod+Alt+k workspace prev_on_output
       bindsym $mod+Alt+j workspace next_on_output
+      bindsym $mod+Alt+Up workspace prev_on_output
+      bindsym $mod+Alt+Down workspace next_on_output
       bindsym $mod+Shift+h move container to workspace prev_on_output
       bindsym $mod+Shift+l move container to workspace next_on_output
+      bindsym $mod+Shift+Left move container to workspace prev_on_output
+      bindsym $mod+Shift+Right move container to workspace next_on_output
 
       # 3-finger swipe up/down -> next/prev workspace (GNOME-ish).
       bindgesture swipe:3:up workspace next_on_output
@@ -365,18 +220,27 @@ in
         bindsym j resize grow height 5%
         bindsym k resize shrink height 5%
         bindsym l resize grow width 5%
+        bindsym Left resize shrink width 5%
+        bindsym Down resize grow height 5%
+        bindsym Up resize shrink height 5%
+        bindsym Right resize grow width 5%
         bindsym Return mode "default"
         bindsym Escape mode "default"
       }
       bindsym $mod+r mode "resize"
 
-      # Media keys (Noctalia IPC; work when locked where relevant)
+      # Media keys (Noctalia IPC for volume/brightness; playerctl/wpctl otherwise)
       bindsym --locked XF86AudioRaiseVolume exec $ipc volume-up
       bindsym --locked XF86AudioLowerVolume exec $ipc volume-down
       bindsym --locked XF86AudioMute exec $ipc volume-mute
       bindsym --locked XF86MonBrightnessUp exec $ipc brightness-up
       bindsym --locked XF86MonBrightnessDown exec $ipc brightness-down
-      bindsym $mod+Down exec playerctl play-pause
+      bindsym --locked XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+      bindsym --locked XF86AudioPlay exec playerctl play-pause
+      bindsym --locked XF86AudioPause exec playerctl play-pause
+      bindsym --locked XF86AudioNext exec playerctl next
+      bindsym --locked XF86AudioPrev exec playerctl previous
+      bindsym --locked XF86AudioStop exec playerctl stop
       bindsym $mod+XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
 
       ### Noctalia palette (rendered by the builtin sway template). The
@@ -386,6 +250,6 @@ in
     '';
 
     # On PATH so it can also be invoked manually.
-    home.packages = [ scratchTerm gsrShot gsrRec ];
+    home.packages = [ scratchTerm ];
   };
 }
