@@ -385,17 +385,7 @@ in
       include ~/.config/sway/noctalia
     '';
 
-    # Screen sharing picker for xdg-desktop-portal-wlr. Browsers request
-    # monitor+window (kAnyScreenContent = 1|2), which makes xdpw skip its
-    # slurp-only fallback and require a dmenu-style chooser; with none
-    # installed the share just fails. fuzzel lists monitors and windows.
-    xdg.configFile."xdg-desktop-portal-wlr/config".text = ''
-      [screencast]
-      chooser_type=dmenu
-      chooser_cmd=fuzzel -d -l 10 -p 'Select a source to share:'
-    '';
-
     # On PATH so it can also be invoked manually.
-    home.packages = [ scratchTerm gsrShot gsrRec pkgs.fuzzel ];
+    home.packages = [ scratchTerm gsrShot gsrRec ];
   };
 }
