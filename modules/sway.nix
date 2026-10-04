@@ -38,6 +38,60 @@ let
       swaymsg "[app_id=$class] scratchpad show"
     '';
   };
+
+  # Screenshots via the GPU Screen Recorder flatpak. GSR captures/tone-maps HDR
+  # correctly, unlike the grim-based Noctalia path (which comes out linear).
+  # Two axes: region|full and clip|edit. Region uses slurp (GSR's -region takes
+  # slurp's WxH+X+Y directly); clip copies PNG to the clipboard + notifies;
+  # edit hands the PNG to the Gradia flatpak. Files land in
+  # ~/Pictures/Screenshots (same dir the gsr-ui config uses).
+  gsrShot = pkgs.writeShellApplication {
+    name = "gsr-shot";
+    runtimeInputs = with pkgs; [
+      slurp
+      wl-clipboard
+      libnotify
+      coreutils
+      flatpak
+    ];
+    text = ''
+      mode="''${1:-region}"    # region | full
+      action="''${2:-clip}"    # clip | edit
+
+      dir="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+      mkdir -p "$dir"
+      file="$dir/Screenshot_$(date +%Y-%m-%d_%H-%M-%S).png"
+
+      case "$mode" in
+        region)
+          region="$(slurp)" || exit 0
+          [ -n "$region" ] || exit 0
+          src=(-w region -region "$region")
+          ;;
+        full)
+          src=(-w screen)
+          ;;
+        *)
+          echo "usage: gsr-shot [region|full] [clip|edit]" >&2
+          exit 2
+          ;;
+      esac
+
+      flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder \
+        "''${src[@]}" -o "$file"
+
+      case "$action" in
+        clip)
+          wl-copy --type image/png < "$file"
+          notify-send -a "Screenshot" -i "$file" \
+            "Screenshot copied to clipboard" "$(basename "$file")"
+          ;;
+        edit)
+          flatpak run be.alexandervanhee.gradia "$file"
+          ;;
+      esac
+    '';
+  };
 in
 {
   options.home.modules.sway = {
@@ -125,8 +179,11 @@ in
       bindsym $mod+s exec $ipc panel-toggle control-center
       bindsym $mod+comma exec $ipc settings-toggle
       bindsym $mod+Shift+i exec $ipc settings-toggle
-      bindsym Print exec $ipc screenshot-region
-      bindsym $mod+Print exec $ipc screenshot-fullscreen
+      # Screenshots via GPU Screen Recorder (HDR-correct; see gsrShot above).
+      bindsym Print exec ${gsrShot}/bin/gsr-shot region clip
+      bindsym $mod+Print exec ${gsrShot}/bin/gsr-shot full clip
+      bindsym $mod+Shift+Print exec ${gsrShot}/bin/gsr-shot region edit
+      bindsym $mod+Ctrl+Print exec ${gsrShot}/bin/gsr-shot full edit
       bindsym $mod+v exec $ipc panel-toggle clipboard
       bindsym $mod+w exec $ipc panel-toggle wallpaper
       bindsym $mod+x exec $ipc bar-toggle
@@ -218,6 +275,6 @@ in
     '';
 
     # On PATH so it can also be invoked manually.
-    home.packages = [ scratchTerm ];
+    home.packages = [ scratchTerm gsrShot ];
   };
 }

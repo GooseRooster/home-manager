@@ -21,4 +21,10 @@ with pkgs;
   nerd-fonts."sauce-code-pro"
   nerd-fonts."symbols-only"
   nerd-fonts."ubuntu"
+
+  # gsr-ui (GPU Screen Recorder's new overlay) reads its font from
+  # org.gnome.desktop.interface font-name; inside the Flatpak sandbox that
+  # resolves to the schema default "Adwaita Sans", which the Freedesktop
+  # runtime doesn't ship. Installing it here makes it visible via /run/host/fonts.
+  adwaita-fonts
 ]
