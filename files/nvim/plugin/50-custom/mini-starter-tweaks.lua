@@ -30,9 +30,20 @@ Config.now(function()
   local starter = require('mini.starter')
   starter.setup({
     items = {
+      -- Sessions scoped to the cwd, with the cwd prefix hidden from the label
+      -- (see 'lua/config/sessions.lua'). `starter.sections.sessions` has no
+      -- filter, hence the hand-built items.
       function()
-        if _G.MiniSessions == nil then return {} end
-        return starter.sections.sessions(5, true)()
+        local items = {}
+        for i, s in ipairs(require('config.sessions').list()) do
+          if i > 5 then break end
+          table.insert(items, {
+            name = s.label,
+            action = function() MiniSessions.read(s.name) end,
+            section = 'Sessions',
+          })
+        end
+        return items
       end,
       -- Second arg (`current_dir`) scopes `v:oldfiles` to the cwd and its
       -- subdirectories — see 'MiniStarter.sections.recent_files'.

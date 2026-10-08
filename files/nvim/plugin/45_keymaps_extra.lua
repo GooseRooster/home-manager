@@ -47,6 +47,23 @@ vim.keymap.set('n', 'q', function()
   end
 end, { desc = 'Close window (or buffer when last)' })
 
+-- cwd-scoped sessions (see 'lua/config/sessions.lua'). Overrides MiniMax's
+-- stock `<Leader>sn`/`<Leader>sr`: new sessions get the cwd encoded into
+-- their on-disk name, and "read" only offers this directory's sessions
+-- (labels without the prefix). Delete/restart/write keep the stock
+-- behaviour and still see every session.
+vim.keymap.set('n', '<Leader>sn', function() require('config.sessions').new() end, { desc = 'New (cwd)' })
+vim.keymap.set('n', '<Leader>sr', function()
+  local items = require('config.sessions').list()
+  if #items == 0 then return vim.notify('No sessions for this directory', vim.log.levels.INFO) end
+  vim.ui.select(items, {
+    prompt = 'Read session',
+    format_item = function(s) return s.label end,
+  }, function(s)
+    if s then MiniSessions.read(s.name) end
+  end)
+end, { desc = 'Read (cwd)' })
+
 -- Window navigation — all Alt. Intentionally shadows MiniMax's *stock*
 -- `<A-hjkl>` normal-mode bindings: 'mini.move' (set up in a `later()` at
 -- '30_mini.lua:622') uses them to move lines/selection. Registered in a

@@ -10,7 +10,8 @@
 --      per-feature server the environment opted into (NVIM_LANGS /
 --      NVIM_PROFILE / minimal_langs — see 'lua/config/profile.lua').
 --   3. A server only enables if lspconfig's resolved `cmd[1]` is on PATH:
---      missing binaries mean the server simply never attaches (silent), so
+--      missing binaries mean the server simply never attaches (silent for
+--      per-feature servers; base servers emit a WARN notification), so
 --      a host without a toolchain doesn't error on every FileType —
 --      binaries come from 'pkgs/base.nix' or project devshells. No Mason
 --      anywhere in this config (deliberate — see profile.lua's header).
@@ -36,7 +37,11 @@ local cmd_bin_overrides = {
 	yamlls = "yaml-language-server",
 }
 
-local function enable_server(name)
+-- `warn_missing`: used for `base_lsp` (universal servers), where a missing
+-- binary is almost certainly an environment problem (e.g. a restricted
+-- devshell/direnv PATH dropping ~/.nix-profile/bin) rather than "this host
+-- just doesn't do that language" — so say so instead of failing silently.
+local function enable_server(name, warn_missing)
 	-- Resolving `vim.lsp.config[name]` performs the lspconfig merge; a nil
 	-- result means the name isn't defined anywhere (typo'd or plugin absent)
 	-- — skip silently, same stance as every other "binary/tool absent" case
@@ -56,6 +61,12 @@ local function enable_server(name)
 		bin = cmd_bin_overrides[name]
 	end
 	if bin ~= nil and vim.fn.executable(bin) ~= 1 then
+		if warn_missing then
+			vim.notify(
+				("LSP '%s' not started: '%s' is not on PATH"):format(name, bin),
+				vim.log.levels.WARN
+			)
+		end
 		return false
 	end
 
@@ -98,7 +109,7 @@ end
 Config.later(function()
 	-- ── Base (every profile) ───────────────────────────────────────────────
 	for _, name in ipairs(profile.base_lsp) do
-		enable_server(name)
+		enable_server(name, true)
 	end
 
 	-- ── Per-feature bundles ────────────────────────────────────────────────
