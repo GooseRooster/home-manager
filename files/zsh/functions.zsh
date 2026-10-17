@@ -4,6 +4,10 @@
 
 # ── Functions: navigation ─────────────────────────────────────────────────────
 # Dotfile listing (zsh's dotglob-matching pattern never matches "." or "..").
+# Fedora's /etc/profile.d/colorls.sh ships `alias l.='ls -d .* --color=auto'`,
+# sourced into login shells before this file; without the unalias, defining the
+# function below aborts parse with "defining function based on alias `ls'".
+unalias l. 2>/dev/null
 l.() {
   eza -la .*(N)
 }

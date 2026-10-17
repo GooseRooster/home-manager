@@ -22,7 +22,14 @@ in
     systemd.enable = false;
 
     settings = {
-      # No `command`: ghostty falls back to $SHELL (zsh on silver-hour).
+      # Launch the flake's (Nix) zsh instead of ghostty's default lookup
+      # ($SHELL -> passwd -> Fedora's /usr/bin/zsh RPM). The HM-built zsh
+      # plugins/modules — notably fzf-tab's native fzftab.so — are linked
+      # against the Nix glibc and fail to load into the system zsh
+      # (`undefined symbol: __pointer_chk_guard, version GLIBC_PRIVATE`).
+      # `direct:` skips ghostty's `/bin/sh -c` wrapper; `-l` keeps the
+      # login-shell behaviour the old $SHELL fallback had.
+      command = "direct:${config.programs.zsh.package}/bin/zsh -l";
       confirm-close-surface = false;
       adjust-cell-height = "15%";
       font-size = 14;
