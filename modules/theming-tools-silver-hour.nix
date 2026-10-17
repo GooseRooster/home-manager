@@ -1,0 +1,123 @@
+{
+  config,
+  lib,
+  pkgs,
+  gnomad ? null,
+  ...
+}:
+
+# silver-hour theming tooling (GNOME/tinty flow). This is the counterpart to
+# modules/theming-tools.nix (which is the Noctalia/gowall flow): the two are
+# mutually exclusive and selected by home.modules.silverHour.
+#
+# Restores the tinty + gnomad setup that predated the Noctalia migration
+# (removed in c86c580): gnomad comes from its own flake (flake.nix input), the
+# custom gnomad schemes live under files/gnomad/schemes, and tinty syncs the
+# tinted-theming item set. `theme = "tinted-theming"` in modules/ghostty.nix
+# makes the tinted-terminal ghostty hook effective.
+let
+  cfg = config.home.modules;
+
+  schemesDir = ../files/gnomad/schemes;
+  schemes = lib.filterAttrs (_: type: type == "regular") (builtins.readDir schemesDir);
+
+  # Tinty scheme-sync items. The Steam Millennium hook was dropped with the
+  # silver-hour move (the image's Steam skin is applied by its own systemd
+  # service); the Vesktop hook stays, gaming-gated.
+  tintyItems = [
+    {
+      path = "https://github.com/tinted-theming/tinted-shell";
+      name = "tinted-shell";
+      themes-dir = "scripts";
+      hook = ". %f";
+    }
+    {
+      # Claude Code
+      name = "tinted-claude-code";
+      path = "https://github.com/tinted-theming/tinted-claude-code";
+      themes-dir = "scripts";
+      theme-file-extension = ".js";
+      supported-systems = [ "base16" "base24" "tinted8" ];
+      hook = "mkdir -p \"$HOME/.claude/themes\" && node \"$TINTY_THEME_FILE_PATH\" > \"$HOME/.claude/themes/tinty.json\"";
+    }
+    {
+      # Ghostty — with `theme` set to "tinted-theming" (see modules/ghostty.nix),
+      # this is where Ghostty looks for the theme file.
+      path = "https://github.com/tinted-theming/tinted-terminal";
+      name = "tinted-terminal";
+      themes-dir = "themes/ghostty";
+      hook = ''
+        mkdir -p ~/.config/ghostty/themes
+        command cp -f "$TINTY_THEME_FILE_PATH" ~/.config/ghostty/themes/tinted-theming
+        killall -SIGUSR2 ghostty 2>/dev/null || true
+      '';
+      supported-systems = [ "base16" "base24" ];
+    }
+    {
+      path = "https://github.com/tinted-theming/tinted-zen";
+      name = "tinted-zen";
+      themes-dir = "output";
+      hook = ''
+        profile_dir="$HOME/.config/zen/$(awk -F= "/^\[Profile/{path=\"\"} /^Path=/{path=\$2} /^Default=1/{print path; exit}" "$HOME/.config/zen/profiles.ini")"
+        mkdir -p "''${profile_dir}/chrome"
+        cp -f "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
+      '';
+      supported-systems = [ "base16" "base24" "tinted8" ];
+    }
+  ] ++ lib.optionals cfg.gaming.enable [
+    {
+      # Vesktop (Discord)
+      path = "https://github.com/deathbeam/base16-discord.git";
+      name = "base16-discord";
+      themes-dir = "themes";
+      theme-file-extension = ".theme.css";
+      supported-systems = [ "base16" ];
+      hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
+    }
+  ];
+in
+lib.mkIf cfg.silverHour.enable {
+  assertions = [
+    {
+      assertion = gnomad != null;
+      message = "home.modules.silverHour requires the gnomad flake input (see flake.nix extraSpecialArgs).";
+    }
+  ];
+
+  # gnomad's package wraps git/gowall/tinty/glib into its PATH; tinty is also
+  # installed directly so the user can drive scheme sync by hand.
+  home.packages = [
+    gnomad.packages.${pkgs.stdenv.hostPlatform.system}.gnomad
+    pkgs.tinty
+  ];
+
+  home.file = lib.mapAttrs' (name: _: {
+    name = ".config/gnomad/schemes/${name}";
+    value = {
+      force = true;
+      source = schemesDir + "/${name}";
+    };
+  }) schemes // {
+    ".config/tinted-theming/tinty/config.toml" = {
+      force = true;
+      source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
+    };
+  };
+
+  # Pre-create the hook output dirs, then run the initial `tinty sync` so
+  # gnomad / `tinty apply` work immediately. Idempotent: sync only runs when the
+  # data dir is absent. Runs after writeBoundary so the config above exists.
+  home.activation.tintySetup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run() {
+      local dirs="$HOME/.config/ghostty/themes $HOME/.claude/themes"
+      ${lib.optionalString cfg.gaming.enable ''dirs="$dirs $HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings"''}
+      mkdir -p $dirs
+
+      if [ ! -d "$HOME/.local/share/tinted-theming/tinty" ]; then
+        PATH="${pkgs.git}/bin:$PATH" ${pkgs.tinty}/bin/tinty sync \
+          || echo "WARN: 'tinty sync' failed (offline?), skipping." >&2
+      fi
+    }
+    run
+  '';
+}

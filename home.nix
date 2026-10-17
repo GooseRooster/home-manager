@@ -10,6 +10,7 @@
     ./modules/flatpak.nix
     ./modules/noctalia.nix
     ./modules/theming-tools.nix
+    ./modules/theming-tools-silver-hour.nix
     ./modules/zsh.nix
     ./modules/wsl-shell-launcher.nix
     ./modules/eza.nix
@@ -21,6 +22,7 @@
     ./modules/topgrade.nix
     ./modules/theming.nix
     ./modules/foot.nix
+    ./modules/ghostty.nix
     ./modules/mpv.nix
     ./modules/btop.nix
     ./modules/lazygit.nix

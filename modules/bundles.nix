@@ -46,10 +46,17 @@
   config.home.packages =
     let
       cfg = config.home.bundles;
+
+      # The silver-hour image installs its fonts (and VS Code) system-wide, so
+      # the baseExtra list has a trimmed variant; home.modules.silverHour
+      # selects it without adding a second bundle switch.
+      baseExtra = if config.home.modules.silverHour.enable
+        then ../pkgs/base-extra-silver-hour.nix
+        else ../pkgs/base-extra.nix;
     in
     lib.mkMerge [
       (lib.mkIf cfg.base.enable (import ../pkgs/base.nix { inherit pkgs; }))
-      (lib.mkIf cfg.baseExtra.enable (import ../pkgs/base-extra.nix { inherit pkgs; }))
+      (lib.mkIf cfg.baseExtra.enable (import baseExtra { inherit pkgs; }))
       (lib.mkIf cfg.wsl.enable (import ../pkgs/wsl.nix { inherit pkgs; }))
     ];
 }

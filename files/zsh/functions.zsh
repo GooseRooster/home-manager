@@ -50,6 +50,25 @@ copy() {
   fi
 }
 
+# ── Functions: home-manager ───────────────────────────────────────────────────
+# Standalone Home Manager against the *remote* dotfiles flake. The host is a
+# flake output (homeConfigurations.<host>), defaulting to the workstation
+# silver-hour target; extra args are passed through (e.g. `hms silver-hour -n`).
+# --impure is always used: hosts/*.nix read $USER/$HOME at eval time.
+_HM_FLAKE="github:GooseRooster/home-manager"
+
+# Switch (build + activate) the remote flake.
+hms() {
+  local host="${1:-silver-hour}"
+  home-manager switch --flake "${_HM_FLAKE}#${host}" --impure "${@[2,-1]}"
+}
+
+# Build only (no activation) — preview a change.
+hmb() {
+  local host="${1:-silver-hour}"
+  home-manager build --flake "${_HM_FLAKE}#${host}" --impure "${@[2,-1]}"
+}
+
 # ── Custom completions ────────────────────────────────────────────────────────
 # dotnet — delegate to dotnet's own completion library (carapace has no
 # built-in dotnet completer; its bridges are cobra/argcomplete/clap only).

@@ -22,19 +22,18 @@ in
     systemd.enable = false;
 
     settings = {
-      command = "${pkgs.zsh}/bin/zsh";
+      # No `command`: ghostty falls back to $SHELL (zsh on silver-hour).
       confirm-close-surface = false;
       adjust-cell-height = "15%";
       font-size = 14;
-      # Session-wide default font (GTK/libadwaita apps get theirs from
-      # modules/gtk.nix; ghostty's own default would be JetBrains Mono).
-      font-family = "Iosevka Nerd Font Mono";
-    } // lib.optionalAttrs cfg.theming.enable {
-      # Noctalia's builtin ghostty template writes
-      # ~/.config/ghostty/themes/noctalia (and its apply.sh no-ops on configs
-      # already set to `theme = noctalia`, which matters because HM's config
-      # is a read-only symlink).
-      theme = "noctalia";
+      # No `font-family`: the image installs Nerd Fonts system-wide and the
+      # desktop's font choice owns this; ghostty's own default would be
+      # JetBrains Mono.
+      #
+      # Theme: the tinted-theming theme file is written by the tinty
+      # tinted-terminal hook (modules/theming-tools-silver-hour.nix) to
+      # ~/.config/ghostty/themes/tinted-theming.
+      theme = "tinted-theming";
     };
   };
 }

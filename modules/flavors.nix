@@ -31,5 +31,8 @@ in
     wsl = {
       enable = mkFlag "NixOS-WSL profile: skip GUI dotfiles.";
     };
+    silverHour = {
+      enable = mkFlag "silver-hour image profile (GNOME, system fonts, gnomad/tinty theming).";
+    };
   };
 }

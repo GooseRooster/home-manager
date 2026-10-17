@@ -62,7 +62,10 @@ in
 # GTK theme is deliberately NOT set here: the noctalia session's template
 # flow (adw-gtk3 + gtk.css overlay, see nixos-config modules/desktop/noctalia.nix)
 # owns gtk-theme via its apply hook, and HM shouldn't fight it.
-{
+#
+# silver-hour skips all of this: the image ships its own GNOME session, fonts
+# and dconf defaults, so the flag disables every GTK/dconf/mimeapps change.
+lib.mkIf (!cfg.silverHour.enable) {
   gtk = {
     enable = true;
     # Note: name and size are separate — the module composes "name size" for
