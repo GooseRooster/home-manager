@@ -61,16 +61,18 @@ copy() {
 # --impure is always used: hosts/*.nix read $USER/$HOME at eval time.
 _HM_FLAKE="github:GooseRooster/home-manager"
 
-# Switch (build + activate) the remote flake.
+# Switch (build + activate) the remote flake. --refresh forces Nix to re-resolve
+# the GitHub branch ref instead of reusing the cached tarball, so a freshly
+# pushed commit is picked up.
 hms() {
   local host="${1:-silver-hour}"
-  home-manager switch --flake "${_HM_FLAKE}#${host}" --impure "${@[2,-1]}"
+  home-manager switch --flake "${_HM_FLAKE}#${host}" --impure --refresh "${@[2,-1]}"
 }
 
 # Build only (no activation) — preview a change.
 hmb() {
   local host="${1:-silver-hour}"
-  home-manager build --flake "${_HM_FLAKE}#${host}" --impure "${@[2,-1]}"
+  home-manager build --flake "${_HM_FLAKE}#${host}" --impure --refresh "${@[2,-1]}"
 }
 
 # ── Custom completions ────────────────────────────────────────────────────────
