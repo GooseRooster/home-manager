@@ -59,7 +59,7 @@ let
       name = "tinted-zen";
       themes-dir = "output";
       hook = ''
-        profile_dir="$HOME/.config/zen/$(awk -F= "/^\[Profile/{path=\"\"} /^Path=/{path=\$2} /^Default=1/{print path; exit}" "$HOME/.config/zen/profiles.ini")"
+        profile_dir="$HOME/.zen/$(awk -F= "/^\[Install/{i=1} i && /^Default=/{print \$2; exit}" "$HOME/.zen/profiles.ini")"
         mkdir -p "''${profile_dir}/chrome"
         cp -f "$TINTY_THEME_FILE_PATH" "''${profile_dir}/chrome/userChrome.css"
       '';
