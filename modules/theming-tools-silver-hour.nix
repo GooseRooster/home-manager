@@ -30,6 +30,7 @@ let
       name = "tinted-shell";
       themes-dir = "scripts";
       hook = ". %f";
+      supported-systems = [ "base16" "tinted8" ];
     }
     {
       # Claude Code
@@ -51,7 +52,7 @@ let
         command cp -f "$TINTY_THEME_FILE_PATH" ~/.config/ghostty/themes/tinted-theming
         killall -SIGUSR2 ghostty 2>/dev/null || true
       '';
-      supported-systems = [ "base16" "base24" ];
+      supported-systems = [ "base16" "base24" "tinted8" ];
     }
     {
       path = "https://github.com/tinted-theming/tinted-zen";
@@ -75,6 +76,36 @@ let
       hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
     }
   ];
+
+  # ChromaLeon -> tinty bridge. ChromaLeon only persists a single accent colour
+  # (plus a per-wallpaper cache), so we re-derive the palette from the current
+  # wallpaper and map it onto a tinted8 scheme. See files/scripts/chromaleon_*.
+  chromaleonTinty = pkgs.writeShellApplication {
+    name = "chromaleon_tinty";
+    runtimeInputs = with pkgs; [
+      coreutils
+      dconf
+      imagemagick
+      python3
+      tinty
+      util-linux
+    ];
+    text = ''
+      export CHROMALEON_PALETTE="${../files/scripts/chromaleon_palette.py}"
+    '' + builtins.readFile ../files/scripts/chromaleon_tinty;
+  };
+
+  # Long-running dconf watcher: keeps the scheme variant in step with the
+  # desktop light/dark toggle even when ChromaLeon does not rewrite its CSS.
+  chromaleonTintyWatch = pkgs.writeShellApplication {
+    name = "chromaleon_tinty_watch";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.dconf
+      chromaleonTinty
+    ];
+    text = builtins.readFile ../files/scripts/chromaleon_tinty_watch;
+  };
 in
 lib.mkIf cfg.silverHour.enable {
   assertions = [
@@ -120,4 +151,50 @@ lib.mkIf cfg.silverHour.enable {
     }
     run
   '';
+
+  # ChromaLeon integration (silver-hour only). The path unit fires whenever
+  # ChromaLeon rewrites its generated Shell stylesheets (wallpaper change,
+  # accent pick, tint settings); the login oneshot applies the scheme at session
+  # start (--force so an unchanged scheme still re-runs the tinty hooks); the
+  # variant service watches GNOME's color-scheme key for live light/dark flips.
+  systemd.user.paths.tinty-chromaleon = {
+    Unit.Description = "Watch ChromaLeon stylesheets for accent changes";
+
+    Path = {
+      PathModified = [
+        "%h/.cache/chromaleon/chromaleon-shell.css"
+        "%h/.cache/chromaleon/chromaleon-shell-dark.css"
+      ];
+      Unit = "tinty-chromaleon.service";
+    };
+
+    Install.WantedBy = [ "default.target" ];
+  };
+
+  systemd.user.services.tinty-chromaleon = {
+    Unit.Description = "Generate and apply the ChromaLeon tinted8 scheme";
+
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${chromaleonTinty}/bin/chromaleon_tinty --force";
+    };
+
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.services.tinty-chromaleon-variant = {
+    Unit = {
+      Description = "Re-apply the ChromaLeon tinted8 scheme on light/dark changes";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      ExecStart = "${chromaleonTintyWatch}/bin/chromaleon_tinty_watch";
+      Restart = "always";
+      RestartSec = 2;
+    };
+
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
 }

@@ -1,0 +1,90 @@
+#!/usr/bin/env sh
+# Generate a tinted8 scheme from ChromaLeon's current colours and apply it
+# through tinty. Runs as a systemd user oneshot (path unit on ChromaLeon's
+# generated stylesheets, and once at graphical session start).
+#
+# CHROMALEON_PALETTE is injected by the home-manager module (writeShellApplication
+# text) and points at the store copy of chromaleon_palette.py.
+
+force=0
+if [ "${1:-}" = "--force" ]; then
+  force=1
+fi
+
+# Give ChromaLeon a moment to finish its three-file write burst.
+sleep 1
+
+home="${HOME:?HOME is not set}"
+data_dir="${XDG_DATA_HOME:-$home/.local/share}/tinted-theming/tinty"
+scheme_dir="$data_dir/custom-schemes/tinted8"
+scheme_file="$scheme_dir/chromaleon.yaml"
+
+read_key() {
+  dconf read "$1" 2>/dev/null | tr -d "'" || true
+}
+
+accent="$(read_key /org/gnome/shell/extensions/chromaleon/accent-color)"
+accent="${accent:-#785ef0}"
+color_scheme="$(read_key /org/gnome/desktop/interface/color-scheme)"
+prefer_light="$(read_key /org/gnome/shell/extensions/chromaleon/prefer-light)"
+
+# Mirror ChromaLeon's _shouldUseLightShell: an explicit prefer-dark always wins,
+# otherwise prefer-light (extension) or prefer-light (system) selects light.
+if [ "$color_scheme" = "prefer-dark" ]; then
+  variant="dark"
+elif [ "$prefer_light" = "true" ] || [ "$color_scheme" = "prefer-light" ]; then
+  variant="light"
+else
+  variant="dark"
+fi
+
+# Wallpaper selection mirrors ChromaLeon's _getWallpaperUri.
+if [ "$color_scheme" = "prefer-dark" ]; then
+  wallpaper_uri="$(read_key /org/gnome/desktop/background/picture-uri-dark)"
+else
+  wallpaper_uri="$(read_key /org/gnome/desktop/background/picture-uri)"
+fi
+
+wallpaper=""
+case "$wallpaper_uri" in
+  file://*)
+    wallpaper="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "${wallpaper_uri#file://}")"
+    ;;
+esac
+
+# Serialise path-unit and variant-watcher invocations.
+lock="${XDG_RUNTIME_DIR:-/tmp}/chromaleon-tinty.lock"
+exec 9>"$lock"
+flock 9
+
+mkdir -p "$scheme_dir"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+generated=0
+if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
+  if magick "$wallpaper" -alpha off -resize 64x64! -depth 8 rgb:- 2>/dev/null \
+    | python3 "$CHROMALEON_PALETTE" --accent "$accent" --variant "$variant" >"$tmp"; then
+    generated=1
+  fi
+fi
+
+if [ "$generated" -eq 0 ]; then
+  # Dynamic/XML wallpaper or extraction failure: derive from the accent alone.
+  python3 "$CHROMALEON_PALETTE" --accent "$accent" --variant "$variant" </dev/null >"$tmp"
+fi
+
+if [ ! -s "$tmp" ]; then
+  echo "chromaleon_tinty: palette generation produced no output" >&2
+  exit 1
+fi
+
+if [ "$force" -eq 0 ] && [ -f "$scheme_file" ] && cmp -s "$tmp" "$scheme_file"; then
+  # Scheme unchanged (e.g. a non-colour ChromaLeon stylesheet rewrite).
+  exit 0
+fi
+
+mv "$tmp" "$scheme_file"
+tmp=""
+
+tinty apply tinted8-chromaleon

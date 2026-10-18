@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Long-running companion to chromaleon_tinty: re-apply the tinted8 scheme
+# whenever GNOME's color-scheme key changes, so the scheme variant follows the
+# desktop light/dark toggle even when ChromaLeon does not rewrite its CSS.
+#
+# chromaleon_tinty is placed on PATH by the home-manager module (writeShellApplication
+# runtimeInputs).
+
+# stdbuf -oL keeps dconf's output line-buffered through the pipe.
+stdbuf -oL dconf watch /org/gnome/desktop/interface/color-scheme | while IFS= read -r _line; do
+  chromaleon_tinty || true
+done
