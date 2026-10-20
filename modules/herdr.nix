@@ -59,6 +59,8 @@ in
 
       terminal.default_shell = "zsh";
 
+      ui.window_title = "herdr: {hostname}: {workspace}";
+
       keys = {
         # Optional workspace/agent bindings (unset upstream by default).
         previous_workspace = "prefix+shift+k";
