@@ -42,6 +42,15 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
 - **Theming tooling** (`gowall_convert_wallpapers`, `theme_regen`) lives here
   (`modules/theming-tools.nix`, flag `home.modules.theming.enable`); it talks
   to the Noctalia IPC and is a user concern, not a system one.
+- **GNOME Shell extensions** live here too (`modules/gnome-extensions.nix`,
+  flag `home.bundles.gnomeExtensions.enable`): the user-level extensions
+  (`~/.local/share/gnome-shell/extensions`) are pinned builds from
+  extensions.gnome.org, with their settings in dconf. The image's own
+  extensions stay in `/usr/share/gnome-shell/extensions`.
+- **GNOME desktop settings** (`modules/gnome-settings.nix`, flag
+  `home.modules.gnomeSettings.enable`): the Multitasking panel, the alert
+  sound, the default applications and the keyboard shortcuts — the parts of
+  GNOME that are a personal preference rather than image policy.
 
 ### System vs. user split
 
@@ -112,13 +121,15 @@ The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
 themselves — one source of truth per host, nothing mirrored between repos
 (see [NixOS integration](#nixos-integration-recommended)).
 
-Flags: `desktop`, `gaming`, `theming`, `noctalia`, `podmanAlias`, `wsl`, plus
-the `bundles` switches (see `modules/bundles.nix`). `desktop` enables the full
-Sway/Noctalia session configs (Sway, GTK theming, terminal) on desktop hosts;
-dev containers and WSL leave it off. Noctalia owns app theming through its
-builtin templates, so the `theming` flag ships the custom palettes plus the
-`gowall`/`theme_regen` tooling, and `noctalia` turns on the declarative shell
-settings.
+Flags: `desktop`, `gaming`, `theming`, `noctalia`, `podmanAlias`, `wsl`,
+`gnomeSettings`, plus the `bundles` switches (see `modules/bundles.nix`).
+`desktop` enables the full Sway/Noctalia session configs (Sway, GTK theming,
+terminal) on desktop hosts; dev containers and WSL leave it off. Noctalia
+owns app theming through its builtin templates, so the `theming` flag ships
+the custom palettes plus the `gowall`/`theme_regen` tooling, and `noctalia`
+turns on the declarative shell settings. The silver-hour image targets
+additionally turn on `gnomeSettings` and `bundles.gnomeExtensions` (see
+[GNOME extensions & desktop settings](#gnome-extensions--desktop-settings)).
 
 ## Applying
 
@@ -232,6 +243,88 @@ NixOS's HM integration infers the user from `home-manager.users.<name>`, so each
 host sets only the flags it needs. Per-host flags live in the **nixos-config**
 host file, next to the system-side toggles they mirror (e.g. desktop hosts set
 `home.modules.desktop.enable = true`).
+
+## GNOME extensions & desktop settings
+
+Two modules cover the GNOME side of the user profile, both enabled on the
+silver-hour targets (`hosts/silver-hour.nix`):
+
+| Module | Flag | Owns |
+|--------|------|------|
+| `modules/gnome-extensions.nix` | `home.bundles.gnomeExtensions.enable` | the user-level GNOME Shell extensions + their settings |
+| `modules/gnome-settings.nix` | `home.modules.gnomeSettings.enable` | multitasking, alert sound, default apps, keyboard shortcuts |
+
+### Extensions
+
+The extensions are pinned builds from extensions.gnome.org, listed in
+`pkgs/gnome-extensions.nix`:
+
+```
+id         extension uuid (also the directory name GNOME expects)
+name       human-readable name
+schema     dconf path of the extension's GSettings schema
+version    version as reported by the build's metadata.json
+versionTag EGO's internal version id (shell-version specific)
+sha256     flat SHA-256 of the published zip
+```
+
+Each build is fetched with `fetchurl`, unpacked and — where the extension
+has a GSettings schema — compiled with `glib-compile-schemas`. The zips only
+ship the `*.gschema.xml`, but GNOME needs a compiled `gschemas.compiled`
+next to it (`ExtensionBase.getSettings()` builds a
+`Gio.SettingsSchemaSource` from `<extension>/schemas`), so the compilation
+happens in the derivation instead of in a post-install step.
+
+The result is symlinked into `~/.local/share/gnome-shell/extensions/<uuid>` —
+the only place GNOME looks for user extensions. It follows the symlink when
+enumerating, and only requires the directory name to equal the uuid.
+
+**The enabled list is not owned here.** The image ships its own list of
+enabled extensions in `/etc/dconf/db/local.d`, and extensions installed by
+hand (MosaicWM) are the user's business too. The activation step therefore
+*appends* the managed uuids to `org.gnome.shell enabled-extensions` and
+leaves everything else alone.
+
+### Desktop settings
+
+`modules/gnome-settings.nix` declares the deviations from the image's GNOME
+defaults:
+
+- **Multitasking** — no edge tiling, workspaces on all displays, the window
+  switcher restricted to the current workspace.
+- **Sound** — the alert sound is a custom canberra theme (`__custom`) in
+  `~/.local/share/sounds/__custom`: `index.theme` plus `bell-terminal.ogg`
+  and `bell-window-system.ogg` symlinked to the "Swing" sample of the GNOME
+  sound theme. The theme files are written as plain files, not store
+  symlinks, so gnome-control-center can still rewrite them when the alert
+  sound changes.
+- **Default applications** — the web browser is Zen (`xdg.mimeApps`); every
+  other category keeps the image's default.
+- **Keyboard shortcuts** — window management, workspace switching, the
+  overview shortcuts and one custom binding (`<Super>Return` → `ghostty`).
+
+### Updating the extension pins
+
+```sh
+python3 scripts/update-gnome-extensions.py           # bump the pins
+python3 scripts/update-gnome-extensions.py --check   # report only
+python3 scripts/update-gnome-extensions.py --shell 51 # target a GNOME version
+```
+
+The script asks extensions.gnome.org which builds exist for the target
+GNOME version (default: the running shell's), compares them against the
+pins, and rewrites `version`/`versionTag`/`sha256` in place. It also diffs
+the new build against the pinned one and reports what would break:
+
+- the build no longer lists the target GNOME in its `shell-version`
+- the schema moved, or a managed key was removed or changed type
+- upstream's newest release has no build for the target GNOME version
+
+**Blocking** findings mean the settings in `modules/gnome-extensions.nix`
+no longer match upstream and have to be fixed by hand — the script never
+rewrites the *values* of those settings, they are opinions, not pins.
+
+Build gate after a bump: `nix build .#homeConfigurations.silver-hour.activationPackage`.
 
 ## Yazi plugin updates
 

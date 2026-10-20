@@ -28,6 +28,13 @@
   # docker -> podman alias + user socket.
   home.modules.podmanAlias.enable = true;
 
+  # User-level GNOME Shell extensions (pinned EGO builds) + their settings.
+  home.bundles.gnomeExtensions.enable = true;
+
+  # GNOME desktop settings: multitasking, alert sound, default apps,
+  # keyboard shortcuts.
+  home.modules.gnomeSettings.enable = true;
+
   # Base user-facing Flatpaks (devtoolbox stripped — the image covers it).
   home.bundles.flatpak.base.enable = true;
 }

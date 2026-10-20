@@ -29,6 +29,8 @@
     ./modules/lazydocker.nix
     ./modules/gtk.nix
     ./modules/fonts.nix
+    ./modules/gnome-extensions.nix
+    ./modules/gnome-settings.nix
     ./modules/sway.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
