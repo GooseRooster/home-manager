@@ -1,0 +1,29 @@
+# Personal dev hook — auto-created as ./.envrc.local by devshell-init
+# (gitignored). Sourced by .envrc AFTER `use flake`, so the devshell's `dotnet`
+# is already on PATH. Edits reload direnv automatically.
+#
+# This file is only a template — the real ./.envrc.local is entirely yours.
+
+# ─── Personal dotnet global tools ──────────────────────────────────────────
+#
+# `use_dotnet_personal` (defined in home-manager's direnv stdlib) install-or-
+# upgrades each tool via `dotnet tool update --global`, throttled to once per
+# day, and puts ~/.dotnet/tools on PATH after the Nix-provided binaries.
+# lazydotnet is run through a shim, because its apphost can't start against
+# the Nix dotnet runtime (GLIBC_x not found).
+use_dotnet_personal EasyDotnet lazydotnet
+
+# ─── Personal env vars ─────────────────────────────────────────────────────
+#
+# NVIM_LANGS tells nvim's environment profile (files/nvim/lua/config/
+# profile.lua) which editor features to load in this shell. Compose-safe:
+# keeps any host-default langs; the parser tolerates the empty leading token.
+export NVIM_LANGS="${NVIM_LANGS:-},dotnet"
+#
+# export ASPNETCORE_ENVIRONMENT=QA
+# export SOME_LOCAL_SECRET=...
+
+# ─── Personal aliases / functions ──────────────────────────────────────────
+#
+# Aliases don't survive direnv; use a small script on PATH instead:
+#   PATH_add ~/bin/this-project

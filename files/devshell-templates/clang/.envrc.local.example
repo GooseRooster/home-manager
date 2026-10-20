@@ -1,0 +1,11 @@
+# Personal dev hook — auto-created as ./.envrc.local by devshell-init
+# (gitignored). Sourced by .envrc AFTER `use flake`. Edits reload direnv.
+#
+# This file is only a template — the real ./.envrc.local is entirely yours.
+
+# NVIM_LANGS tells nvim's environment profile (files/nvim/lua/config/
+# profile.lua) which editor features to load in this shell. Compose-safe.
+# Drop ",cmake" if the project doesn't use CMake.
+export NVIM_LANGS="${NVIM_LANGS:-},clang,cmake"
+#
+# export SOME_LOCAL_SECRET=...

@@ -16,8 +16,8 @@
   #   * Toolchain: gcc/clang are expected from the host (gcc is on the home
   #     profile). Add a pinned clang from nixpkgs here if the project needs
   #     a specific compiler version.
-  #   * ./.dev.local.sh sourced on shell entry if present — the per-developer
-  #     personalization hook.
+  #   * Per-developer personalization lives in ./.envrc.local (gitignored,
+  #     sourced by .envrc) — nothing personal in this flake.
   #
   # Entry points:
   #   * direnv users:  `direnv allow`   (auto-activates via .envrc)
@@ -38,22 +38,13 @@
         default = pkgs.mkShell {
           # Intentionally minimal — the nvim-relevant tooling only. Drop
           # cmake/neocmakelsp from `packages` (and `cmake` from
-          # .dev.local.sh's NVIM_LANGS) if the project doesn't use CMake.
+          # .envrc.local's NVIM_LANGS) if the project doesn't use CMake.
           packages = with pkgs; [
             clang-tools
             vscode-extensions.vadimcn.vscode-lldb.adapter
             cmake
             neocmakelsp
           ];
-
-          shellHook = ''
-            # ── Personal hook. Gitignored; teammates without one see nothing.
-            #    Auto-created by devshell-init from .dev.local.sh.example.
-            if [ -f ./.dev.local.sh ]; then
-              # shellcheck source=/dev/null
-              . ./.dev.local.sh
-            fi
-          '';
         };
       });
     };

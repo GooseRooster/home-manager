@@ -19,8 +19,10 @@
   #     identical versions. Empty by default; edit to taste.
   #   * A stable ASP.NET Core dev HTTPS cert exported into ./.certs/ and
   #     Kestrel wired at it via env vars (gitignore ./.certs/ in your project).
-  #   * ./.dev.local.sh sourced on shell entry if present — the per-developer
-  #     personalization hook. See ./.dev.local.sh.example.
+  #
+  # Nothing personal lives here. Per-developer config (NVIM_LANGS, personal
+  # dotnet global tools like EasyDotnet / lazydotnet) goes in ./.envrc.local,
+  # sourced by .envrc after `use flake`. See ./.envrc.local.example.
   #
   # Entry points:
   #   * direnv users:  `direnv allow`   (auto-activates via .envrc)
@@ -40,7 +42,7 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           # Intentionally minimal. Anything project-specific belongs in the
-          # dotnet-tools manifest (shared, pinned) or ./.dev.local.sh (personal).
+          # dotnet-tools manifest (shared, pinned) or ./.envrc.local (personal).
           #
           # Deliberately NOT included:
           #   * openssh — host ssh + agent are already available on the host.
@@ -74,10 +76,6 @@
             # by Nix. Without this, `dotnet` writes first-run state to CWD.
             export DOTNET_CLI_HOME="$HOME"
 
-            # ── PATH: global dotnet tools stay useful for personal additions
-            # from ./.dev.local.sh. Local tools are invoked via `dotnet <tool>`.
-            export PATH="$HOME/.dotnet/tools:$PATH"
-
             # ── Restore dotnet local tools (if any pinned in the manifest).
             # Cheap no-op when the manifest hasn't changed; the marker keeps
             # re-entry latency low.
@@ -105,13 +103,6 @@
             fi
             export ASPNETCORE_Kestrel__Certificates__Default__Path="$PWD/.certs/localhost.pem"
             export ASPNETCORE_Kestrel__Certificates__Default__KeyPath="$PWD/.certs/localhost.key"
-
-            # ── Personal hook. Gitignored; teammates without one see nothing.
-            #    Auto-created by devshell-init from .dev.local.sh.example.
-            if [ -f ./.dev.local.sh ]; then
-              # shellcheck source=/dev/null
-              . ./.dev.local.sh
-            fi
           '';
         };
       });

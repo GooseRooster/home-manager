@@ -263,7 +263,7 @@ lockfile lives at the managed path as a mutable file instead (see the
 Which languages load is decided at runtime by the environment profile
 (`files/nvim/lua/config/profile.lua`): everything defaults to the lean
 baseline + `NVIM_LANGS` opt-ins (typically `export NVIM_LANGS=...,rust` from
-a project's `.dev.local.sh` — the personal/gitignored hook, not `.envrc`);
+a project's `.envrc.local` — the personal/gitignored hook sourced by the tracked `.envrc`);
 `NVIM_PROFILE=full` is a deliberate per-machine opt-in for hosts that
 genuinely carry every toolchain.
 
@@ -386,16 +386,17 @@ template into a target repo. Deployed by `modules/scripts.nix` (every host).
 Currently available:
 
 - **`dotnet`** — .NET SDK 10 + `dart-sass` + local-tool-manifest restore + dev
-  cert export to `./.certs/` + auto-created `./.dev.local.sh` personal hook
-  (pre-wired with `NVIM_LANGS=...,dotnet` + `EasyDotnet`). See
+  cert export to `./.certs/` + auto-created `./.envrc.local` personal hook
+  (pre-wired with `NVIM_LANGS=...,dotnet` + `use_dotnet_personal EasyDotnet
+  lazydotnet`, a direnv stdlib helper from `modules/direnv.nix`). See
   `files/devshell-templates/dotnet/README.md` for adoption details and a
   couple of NLog gotchas worth remembering.
 - **`rust`** — `rust-analyzer` + `codelldb` (vscode-lldb standalone adapter)
-  on PATH; `./.dev.local.sh` is auto-created with `NVIM_LANGS=...,rust` so
+  on PATH; `./.envrc.local` is auto-created with `NVIM_LANGS=...,rust` so
   nvim's rust extra loads only inside the shell. Toolchain itself comes from
   the host's rustup.
 - **`clang`** — `clang-tools` (clangd) + `codelldb` + `cmake`/`neocmakelsp`;
-  `./.dev.local.sh` is auto-created with `NVIM_LANGS=...,clang,cmake` for
+  `./.envrc.local` is auto-created with `NVIM_LANGS=...,clang,cmake` for
   C/C++ (+ CMake) projects.
 
 The rust/clang templates exist because mason's prebuilt native servers can't

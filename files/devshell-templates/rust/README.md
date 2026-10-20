@@ -8,11 +8,11 @@ Self-contained Nix devShell for Rust projects. Drop into a repo via
 - **`rust-analyzer`** via nixpkgs — nvim's LSP resolves it from PATH.
 - **`codelldb`** via the `vscode-extensions.vadimcn.vscode-lldb` standalone
   adapter (no top-level nixpkgs attr) — nvim's rust DAP resolves it from PATH.
-- **`.envrc`** with `use flake`. Deliberately does *not* set `NVIM_LANGS`
-  (that's a personal-editor concern, not a project-shared one); see
-  `.dev.local.sh` below.
-- **`./.dev.local.sh`** — the per-developer hook, sourced if present.
-  `devshell-init` auto-creates it from `.dev.local.sh.example` on scaffold
+- **`.envrc`** — `use flake`, then `source_env_if_exists .envrc.local`.
+  Deliberately does *not* set `NVIM_LANGS` (a personal-editor concern); see
+  `.envrc.local` below.
+- **`./.envrc.local`** — the per-developer hook, sourced by `.envrc` if present.
+  `devshell-init` auto-creates it from `.envrc.local.example` on scaffold
   (gitignored, never overwritten on re-run), pre-wired with
   `NVIM_LANGS=...,rust` so the nvim rust extra (rustaceanvim, DAP,
   formatters) loads with zero manual steps.
@@ -27,11 +27,11 @@ After `devshell-init rust`:
 
 1. Append to the target repo's `.gitignore`:
    ```
-   /.dev.local.sh
+   /.envrc.local
    /.direnv/
    ```
 2. Enter the shell: `direnv allow` or `nix develop`.
-3. `.dev.local.sh` is already there (auto-created by `devshell-init`) — edit
+3. `.envrc.local` is already there (auto-created by `devshell-init`) — edit
    it for additional personal tools / env vars / aliases.
 4. Verify nvim inside the shell: `:checkhealth vim.lsp` and
    `:lua print(vim.fn.exepath("rust-analyzer"))` should point at the

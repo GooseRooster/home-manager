@@ -2,7 +2,7 @@
 --   NVIM_PROFILE = "full" | "minimal"   coarse override (optional)
 --   NVIM_LANGS   = "rust,python,..."    comma list of extra langs (minimal only)
 
--- Read live at every startup, so a devshell's `.dev.local.sh` env export
+-- Read live at every startup, so a devshell's `.envrc.local` env export
 -- (typically via direnv) changes the profile without touching config files.
 
 local M = {}

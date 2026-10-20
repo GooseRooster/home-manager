@@ -11,8 +11,8 @@
 # Files are dropped at the target's ROOT (flake.nix, .envrc,
 # .config/dotnet-tools.json) — that's how Nix devShells are meant to sit.
 # README.md is deliberately NOT copied (scaffolder-only reference docs), and
-# .dev.local.sh.example is auto-materialized into .dev.local.sh (the
-# per-developer hook — NVIM_LANGS etc. live there, not in .envrc) rather
+# .envrc.local.example is auto-materialized into .envrc.local (the
+# per-developer hook, sourced by .envrc — NVIM_LANGS etc. live there) rather
 # than copied verbatim.
 #
 # Templates are looked up in $DEVSHELL_TEMPLATES_DIR (default:
@@ -87,13 +87,13 @@ fi
 # documentation, not something a consuming repo needs to carry around. It
 # stays readable from $TEMPLATE_SRC/README.md instead.
 #
-# .dev.local.sh.example is also handled separately below, so it can be
-# auto-materialized into .dev.local.sh rather than left as a manual step.
+# .envrc.local.example is also handled separately below, so it can be
+# auto-materialized into .envrc.local rather than left as a manual step.
 shopt -s dotglob
 for entry in "$TEMPLATE_SRC"/*; do
   base="$(basename "$entry")"
   case "$base" in
-  README.md | .dev.local.sh.example) continue ;;
+  README.md | .envrc.local.example) continue ;;
   esac
   cp -rL --no-preserve=mode "$entry" "$TARGET_DIR/$base"
 done
@@ -103,16 +103,15 @@ echo "Copied '$TEMPLATE_NAME' template into $TARGET_DIR"
 
 # Auto-materialize the personal dev hook from the template's example, so
 # NVIM_LANGS and friends are wired up with zero manual steps. Never
-# clobbers an existing .dev.local.sh (it's gitignored/personal — you may
+# clobbers an existing .envrc.local (it's gitignored/personal — you may
 # have already edited it), even under --force.
 DEV_LOCAL_NOTE=""
-if [[ -f "$TEMPLATE_SRC/.dev.local.sh.example" ]]; then
-  if [[ -f "$TARGET_DIR/.dev.local.sh" ]]; then
-    DEV_LOCAL_NOTE="  - $TARGET_DIR/.dev.local.sh already exists — left untouched."
+if [[ -f "$TEMPLATE_SRC/.envrc.local.example" ]]; then
+  if [[ -f "$TARGET_DIR/.envrc.local" ]]; then
+    DEV_LOCAL_NOTE="  - $TARGET_DIR/.envrc.local already exists — left untouched."
   else
-    cp -L --no-preserve=mode "$TEMPLATE_SRC/.dev.local.sh.example" "$TARGET_DIR/.dev.local.sh"
-    chmod +x "$TARGET_DIR/.dev.local.sh"
-    DEV_LOCAL_NOTE="  - Personal hook ready at $TARGET_DIR/.dev.local.sh (NVIM_LANGS + personal tools — edit freely, gitignored)."
+    cp -L --no-preserve=mode "$TEMPLATE_SRC/.envrc.local.example" "$TARGET_DIR/.envrc.local"
+    DEV_LOCAL_NOTE="  - Personal hook ready at $TARGET_DIR/.envrc.local (NVIM_LANGS etc. — edit freely, gitignored)."
   fi
 fi
 
@@ -120,7 +119,6 @@ echo ""
 echo "Next steps:"
 echo "  - Append to $TARGET_DIR/.gitignore:"
 echo "      /.certs/"
-echo "      /.dev.local.sh"
 echo "      /.direnv/"
 echo "      /.envrc.local"
 echo "      /.config/.tools-restored"

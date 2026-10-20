@@ -1,0 +1,19 @@
+# Personal dev hook — auto-created as ./.envrc.local by devshell-init
+# (gitignored). Sourced by .envrc AFTER `use flake`. Edits reload direnv.
+#
+# This file is only a template — the real ./.envrc.local is entirely yours.
+
+# NVIM_LANGS tells nvim's environment profile (files/nvim/lua/config/
+# profile.lua) which editor features to load in this shell. Compose-safe.
+export NVIM_LANGS="${NVIM_LANGS:-},rust"
+#
+# export SOME_LOCAL_SECRET=...
+
+# ─── Personal cargo/rustup extras ──────────────────────────────────────────
+#
+# rustup components/targets you personally want available (kept out of
+# flake.nix since rustc/cargo come from the host rustup, not a pinned
+# toolchain):
+#
+# rustup component add rust-analyzer >/dev/null 2>&1 || true
+# rustup target add wasm32-unknown-unknown >/dev/null 2>&1 || true

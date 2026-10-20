@@ -13,8 +13,8 @@
   #   * Toolchain: rustc/cargo come from the host's rustup (home profile).
   #     Pin a project toolchain here (fenix / rust-bin) only if builds need
   #     to be bit-reproducible.
-  #   * ./.dev.local.sh sourced on shell entry if present — the per-developer
-  #     personalization hook.
+  #   * Per-developer personalization lives in ./.envrc.local (gitignored,
+  #     sourced by .envrc) — nothing personal in this flake.
   #
   # Entry points:
   #   * direnv users:  `direnv allow`   (auto-activates via .envrc)
@@ -39,15 +39,6 @@
             rust-analyzer
             vscode-extensions.vadimcn.vscode-lldb.adapter
           ];
-
-          shellHook = ''
-            # ── Personal hook. Gitignored; teammates without one see nothing.
-            #    Auto-created by devshell-init from .dev.local.sh.example.
-            if [ -f ./.dev.local.sh ]; then
-              # shellcheck source=/dev/null
-              . ./.dev.local.sh
-            fi
-          '';
         };
       });
     };

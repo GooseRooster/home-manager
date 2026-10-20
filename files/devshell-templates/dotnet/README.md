@@ -17,17 +17,24 @@ via `devshell-init dotnet` (see `~/repos/home-manager` for the scaffolder).
 - **`.config/dotnet-tools.json`** — pinned local tool manifest, empty by
   default. Add project-shared tools here (nswag, jb ReSharper CLI,
   dotnet-ef, ...); `dotnet tool restore` runs on shell entry.
-- **`.envrc`** — `use flake`. Deliberately does *not* set `NVIM_LANGS`
-  (that's a personal-editor concern, not a project-shared one); see
-  `.dev.local.sh` below.
+- **`.envrc`** — `use flake`, then `source_env_if_exists .envrc.local`. The
+  personal layer is sourced *after* `use flake` so editing it reloads direnv
+  without invalidating nix-direnv's flake cache.
 - **`.certs/localhost.{pem,key}`** exported from `dotnet dev-certs https`
   on first shell entry, with `ASPNETCORE_Kestrel__Certificates__Default__*`
   env vars pre-set to point at them.
-- **`./.dev.local.sh`** — the per-developer hook, sourced if present.
-  `devshell-init` auto-creates it from `.dev.local.sh.example` on scaffold
-  (gitignored, never overwritten on re-run), pre-wired with
-  `NVIM_LANGS=...,dotnet` and `EasyDotnet` in `personal_tools` so nvim's
-  easy-dotnet/Roslyn LSP loads with zero manual steps.
+- **`./.envrc.local`** — the per-developer hook (gitignored).
+  `devshell-init` auto-creates it from `.envrc.local.example` on scaffold
+  (never overwritten on re-run), pre-wired with `NVIM_LANGS=...,dotnet` and
+  `use_dotnet_personal EasyDotnet lazydotnet`. `use_dotnet_personal` is
+  defined in home-manager's direnv stdlib (`modules/direnv.nix`), which also
+  provides a `lazydotnet` shim (the tool's apphost can't run against the Nix
+  runtime) and quiets direnv's output.
+- **No `flake.lock`** is shipped: the first `nix develop`/`direnv allow`
+  creates one against current nixpkgs. Commit it in the consuming repo.
+
+Nothing personal lives in `flake.nix`; the flake is safe to share with
+teammates who don't use these tools.
 
 ## Adoption checklist
 
@@ -36,7 +43,6 @@ After `devshell-init dotnet`:
 1. Append to the target repo's `.gitignore`:
    ```
    /.certs/
-   /.dev.local.sh
    /.direnv/
    /.envrc.local
    /.config/.tools-restored
@@ -46,11 +52,12 @@ After `devshell-init dotnet`:
    dotnet dev-certs https --trust
    ```
    (Linux/WSL: NSS-store step is manual — see .NET docs.)
-3. Enter the shell: `direnv allow` or `nix develop`.
+3. Enter the shell: `direnv allow` (or `nix develop`, which does not load
+   `.envrc.local`).
 4. Populate `.config/dotnet-tools.json` with any tools the project needs,
    then `dotnet tool restore`.
-5. `.dev.local.sh` is already there (auto-created by `devshell-init`) —
-   edit it for additional personal tools / env vars / aliases.
+5. `.envrc.local` is already there (auto-created by `devshell-init`) — edit
+   it for additional personal tools / env vars.
 
 ## NLog: repo-local log file for `tail -F`
 
