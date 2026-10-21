@@ -3,11 +3,13 @@
 # Feature flags. Hosts (hosts/*.nix) set these; modules use
 # `lib.mkIf`/`lib.optionalString` to include or omit files.
 let
-  mkFlag = desc: lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-    description = desc;
-  };
+  mkFlag =
+    desc:
+    lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = desc;
+    };
 in
 {
   options.home.modules = {
@@ -29,7 +31,7 @@ in
       enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in the shell.";
     };
     wsl = {
-      enable = mkFlag "NixOS-WSL profile: skip GUI dotfiles.";
+      enable = mkFlag "WSL profile: skip GUI dotfiles.";
     };
     silverHour = {
       enable = mkFlag "silver-hour image profile (GNOME, system fonts, gnomad/tinty theming).";

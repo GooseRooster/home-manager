@@ -19,7 +19,6 @@
     ./modules/nvim.nix
     ./modules/herdr.nix
     ./modules/starship.nix
-    ./modules/topgrade.nix
     ./modules/theming.nix
     ./modules/foot.nix
     ./modules/ghostty.nix
