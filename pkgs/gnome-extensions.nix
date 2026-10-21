@@ -68,9 +68,9 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     id = "nowplaying@epogonii.github.io";
     name = "Now Playing Card";
     schema = "org/gnome/shell/extensions/nowplaying";
-    version = "14";
-    versionTag = 76593;
-    sha256 = "sha256-S5uEck7P+qpCU/+zjoGXNr5znTAQCvCFew90vur+KPg=";
+    version = "15";
+    versionTag = 76913;
+    sha256 = "sha256-LJRs5jIysMsI6gPfR6ANZyMgW8kzR05lz/MZoj249Lk=";
   }
   {
     id = "quake-terminal@diegodario88.github.io";
@@ -100,9 +100,9 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     id = "lock-guard@fthx";
     name = "Lock Guard";
     schema = "org/gnome/shell/extensions/lock-guard";
-    version = "7";
-    versionTag = 69117;
-    sha256 = "sha256-6FF8x8nU7YqAYkSF/Lp52KtFhJm0rJN09WyBhw/YR7g=";
+    version = "8";
+    versionTag = 76888;
+    sha256 = "sha256-NYXbMMSZEVrMIPYliFcJjRGvxgVoo1ImIrYni5bBrIM=";
   }
   {
     id = "grand-theft-focus@zalckos.github.com";

@@ -21,14 +21,14 @@ let
   pluginsRepo = fetchPlugin {
     owner = "yazi-rs";
     repo = "plugins";
-    rev = "6229767f7fef39a2a78f5cee9122cc4dfb43f327";
-    hash = "sha256-/BNGoWziHIZ9i+RoTWGq/q3ZowNCyHGBOWiz8v2/vOE=";
+    rev = "9166202cc1694c98bac3a639874d6f4c0eaa2dab";
+    hash = "sha256-3ddGRQSzxyurNcyYJA+9LTLXTCjBFGATTqdkuGKixzA=";
   };
 
   plugins = {
     full-border = "${pluginsRepo}/full-border.yazi";
     recycle-bin = fetchPlugin { owner = "uhs-robert"; repo = "recycle-bin.yazi"; rev = "fe48a02778574b59ea15e289895f896a4e7e14eb"; hash = "sha256-ghmjM4jmXNC4+P2sl70UhI+8Vv5k3PZV7AwV7iBj1I4="; };
-    bunny = fetchPlugin { owner = "stelcodes"; repo = "bunny.yazi"; rev = "71b14a3d624572f4884354c2e218296e9ece07cc"; hash = "sha256-uQO0C00yOFPWq8KEO/kEZM6tFZRc9SiXfgN7kzlwDeA="; };
+    bunny = fetchPlugin { owner = "stelcodes"; repo = "bunny.yazi"; rev = "8f3f84e20ea0545d032c134cf184784eaff55d13"; hash = "sha256-AX7ILZTXPKqvEI3jgVADsfVeSR39qHB7Ti6NGHL0yag="; };
     compress = fetchPlugin { owner = "KKV9"; repo = "compress.yazi"; rev = "80e5268ec74c7ac17d4d739e13a9958cba4c70d3"; hash = "sha256-9cdA8D/TtwHcLqrtoyIixA0YJmTs+c8FSNrjxp8CYI0="; };
     starship = fetchPlugin { owner = "Rolv-Apneseth"; repo = "starship.yazi"; rev = "ea92cf49380466f07231c952b409831e6afd2156"; hash = "sha256-Jvoc/7YaOOppu8K2lJaVgiuBIyanRHHjEA6ZvnrFtiQ="; };
     mount = "${pluginsRepo}/mount.yazi";
