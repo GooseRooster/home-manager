@@ -17,6 +17,7 @@
     ./modules/nvim.nix
     ./modules/herdr.nix
     ./modules/starship.nix
+    ./modules/topgrade.nix
     ./modules/ghostty.nix
     ./modules/mpv.nix
     ./modules/btop.nix
