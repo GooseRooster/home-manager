@@ -13,19 +13,8 @@ let
 in
 {
   options.home.modules = {
-    # Full desktop session configs (Sway/Noctalia, GTK theming, terminal
-    # emulator). Desktop hosts set this; dev containers and WSL leave it off.
-    desktop = {
-      enable = mkFlag "Full desktop session configs (Sway/Noctalia, GTK theming, terminal).";
-    };
     gaming = {
       enable = mkFlag "Gaming-specific dotfile content (yazi Steam/Emulation hops).";
-    };
-    theming = {
-      enable = mkFlag "Theming tooling config (Noctalia palettes).";
-    };
-    noctalia = {
-      enable = mkFlag "Noctalia shell declarative settings + desktop session utilities.";
     };
     podmanAlias = {
       enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in the shell.";

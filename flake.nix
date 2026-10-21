@@ -19,11 +19,13 @@
     gnomad.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  # Standalone targets: foreign systems (WSL distros, dev containers) with a
-  # standalone Nix install, applied with (--impure reads $USER/$HOME at eval
-  # time — the user name varies by image/distro):
+  # Standalone targets: every host this flake builds for is applied with
+  # Home Manager directly (foreign WSL distros, dev containers, the atomic
+  # Fedora image). hosts/*.nix read $USER/$HOME at eval time, so the switch
+  # needs --impure (the user name varies by image/distro):
   #   home-manager switch --flake .#container --impure
   #   home-manager switch --flake .#wsl --impure
+  #   home-manager switch --flake .#silver-hour --impure
   outputs = { self, nixpkgs, home-manager, nix-flatpak, gnomad, ... }:
     let
       system = "x86_64-linux";
@@ -33,8 +35,7 @@
       # flake (modules/theming-tools-silver-hour.nix) are exposed to every HM
       # evaluation via extraSpecialArgs. Both are read as plain function
       # arguments (not _module.args, which would recurse when referenced from
-      # `imports`). The silver-hour module defaults `gnomad` to null, so the
-      # NixOS `hmModules` integration (which passes neither) still evaluates.
+      # `imports`).
       extraSpecialArgs = { inherit nix-flatpak gnomad; };
     in
     {
@@ -84,14 +85,6 @@
               ./hosts/silver-hour-gaming.nix
             ];
           };
-      };
-
-      # Reusable module bundles for NixOS integration
-      # (home-manager.users.<name>.imports = [ dotfiles.hmModules.default ];).
-      # nixos-config passes nix-flatpak via extraSpecialArgs on its side.
-      hmModules = {
-        default.imports = [ ./home.nix ];
-        wsl.imports = [ ./home.nix ./hosts/wsl.nix ];
       };
     };
 }

@@ -16,7 +16,7 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
   | Bundle | Contents | Default |
   |--------|----------|---------|
   | `base` | devcontainer-safe CLI tooling (`pkgs/base.nix`) | on for every target |
-  | `baseExtra` | visual/GUI extras — fonts, VS Code (`pkgs/base-extra.nix`) | off |
+  | `baseExtra` | visual/GUI extras (`pkgs/base-extra.nix`) | off |
   | `wsl` | WSL dev-host extras (`pkgs/wsl.nix`) | off |
 
 - **User-facing Flatpaks** live here too (`modules/flatpak.nix`), installed
@@ -29,19 +29,6 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
   | `flatpak.multimedia` | Stremio (`pkgs/flatpak-multimedia.nix`) |
   | `flatpak.gaming` | Proton management, emulators (`pkgs/flatpak-gaming.nix`) |
 
-  The system keeps only the "normie" baseline (GNOME core, mpv, Bazaar, …) in
-  `nixos-config/modules/flatpak/system.nix` — see the separation note below.
-
-- **Noctalia shell settings** are declarative here (`modules/noctalia.nix`,
-  flag `home.modules.noctalia.enable`): the top bar, widgets, shell behaviour,
-  idle, session actions and app-theming templates are written to
-  `~/.config/noctalia/config.toml`. The palette **choice** is deliberately not
-  declared — Noctalia persists it to its app-managed
-  `~/.local/state/noctalia/settings.toml`, which merges last and wins, so
-  themes stay a live GUI toggle.
-- **Theming tooling** (`gowall_convert_wallpapers`, `theme_regen`) lives here
-  (`modules/theming-tools.nix`, flag `home.modules.theming.enable`); it talks
-  to the Noctalia IPC and is a user concern, not a system one.
 - **GNOME Shell extensions** live here too (`modules/gnome-extensions.nix`,
   flag `home.bundles.gnomeExtensions.enable`): the user-level extensions
   (`~/.local/share/gnome-shell/extensions`) are pinned builds from
@@ -52,44 +39,6 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
   sound, the default applications and the keyboard shortcuts — the parts of
   GNOME that are a personal preference rather than image policy.
 
-### System vs. user split
-
-The guiding rule: the **system** (nixos-config) carries what is needed to
-boot, log in, drive hardware and provide the session; the **user**
-(this repo) carries opinionated preferences and user-facing apps, so they
-follow the person across machines/OSes. Concretely:
-
-- baseline/OS-integrated Flatpaks → system; everything else → user (above)
-- Noctalia settings, palette files, Sway keybinds, GTK/fonts, CLI batteries,
-  theming tooling → user
-- compositor, display manager, portals, pipewire, drivers, keyring, polkit,
-  podman, TuneD, secure-boot, kernel → system
-
-### Noctalia configuration layering
-
-Noctalia merges three layers, later wins:
-
-1. built-in defaults
-2. `~/.config/noctalia/*.toml` — **declarative**, owned by
-   `modules/noctalia.nix` (an HM-managed read-only symlink)
-3. `~/.local/state/noctalia/settings.toml` — **app-managed**, written by the
-   Settings GUI
-
-Because layer 3 wins, the curated layer 2 deliberately omits `[theme]` (palette
-choice) and the lock-screen widget layout — those stay GUI-owned/runtime. For
-`[wallpaper]` it only seeds the default browse `directory`, so a directory
-always resolves; a GUI/script choice in `settings.toml` still wins. **Anything
-the GUI wrote to `settings.toml` before this change still shadows the
-declarative config until it is cleared.** One-time cleanup: back up and trim
-`~/.local/state/noctalia/settings.toml`, keeping only `[theme]`, `[wallpaper]`,
-`[lockscreen_widgets]` and `config_version` (see
-`files/noctalia/settings.toml.trimmed`), then run `noctalia config validate`.
-
-Host-specific shell tweaks can be layered through
-`home.modules.noctalia.extraSettings` (merged with `lib.recursiveUpdate`). GPU
-monitoring is intentionally not modelled: add a GPU `sysmon` widget in the
-Settings UI on hosts that want it.
-
 ### Other conventions
 
 The `programs.<tool>` HM modules and the bundle lists share one nixpkgs
@@ -99,11 +48,6 @@ Also owns reusable **Nix devShell templates** (see
 environments. **Dev toolchains** (dotnet, java, rust, node, …) belong in
 project-local `nix develop` environments — never installed here directly.
 
-One exception to "HM owns the binary": `foot` is installed system-wide by
-`nixos-config` (`modules/desktop/terminal.nix`), and this repo only writes
-`foot.ini` directly (via `pkgs.formats.ini`) rather than using
-`programs.foot` — which, unlike `programs.ghostty`, has no `package = null`
-escape hatch and would install the terminal into every target's profile.
 
 ## Targets / flavors
 
@@ -112,28 +56,22 @@ use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 
 | Target | Use | Flags on |
 |--------|-----|----------|
-| `container` | lean dev container (standalone) | `bundles.base` (default) |
-| `wsl` | foreign-WSL dev host (standalone) | `bundles.wsl`, `wsl`, `podmanAlias` |
+| `container` | lean dev container | `bundles.base` (default) |
+| `wsl` | foreign-WSL dev host | `bundles.wsl`, `wsl`, `podmanAlias` |
+| `silver-hour` | atomic Fedora image | `silverHour`, `bundles.baseExtra`, `bundles.flatpak.base`, `bundles.gnomeExtensions`, `gnomeSettings`, `podmanAlias` |
+| `silver-hour-gaming` | the image + gaming content | the above plus `gaming`, `bundles.flatpak.gaming` |
 
-The NixOS hosts (desktop + NixOS-WSL) are not built here: they consume
-`hmModules.default` through `nixos-config`'s
-`home-manager.users.<name>.imports` and set the `home.modules.*` flags
-themselves — one source of truth per host, nothing mirrored between repos
-(see [NixOS integration](#nixos-integration-recommended)).
-
-Flags: `desktop`, `gaming`, `theming`, `noctalia`, `podmanAlias`, `wsl`,
-`gnomeSettings`, plus the `bundles` switches (see `modules/bundles.nix`).
-`desktop` enables the full Sway/Noctalia session configs (Sway, GTK theming,
-terminal) on desktop hosts; dev containers and WSL leave it off. Noctalia
-owns app theming through its builtin templates, so the `theming` flag ships
-the custom palettes plus the `gowall`/`theme_regen` tooling, and `noctalia`
-turns on the declarative shell settings. The silver-hour image targets
-additionally turn on `gnomeSettings` and `bundles.gnomeExtensions` (see
+Flags: `gaming`, `podmanAlias`, `wsl`, `silverHour`, `gnomeSettings`, plus the
+`bundles` switches (see `modules/bundles.nix`). `silverHour` selects the
+GNOME-image profile: the image's own fonts and VS Code are used, so the
+bundle lists leave them out, and the theming stack is gnomad + tinty
+(`modules/theming-tools-silver-hour.nix`) rather than a session shell. The
+silver-hour targets turn on `gnomeSettings` and `bundles.gnomeExtensions` (see
 [GNOME extensions & desktop settings](#gnome-extensions--desktop-settings)).
 
 ## Applying
 
-Standalone (any distro with Nix — foreign systems included):
+Every target is a standalone Home Manager configuration:
 
 ```sh
 # Lean dev container: base batteries + dotfiles.
@@ -141,16 +79,29 @@ home-manager switch --flake github:GooseRooster/home-manager#container --impure
 
 # Foreign-WSL dev host: base + wsl extras + dotfiles.
 home-manager switch --flake github:GooseRooster/home-manager#wsl --impure
+
+# Atomic Fedora image (workstation), and its gaming flavour.
+home-manager switch --flake github:GooseRooster/home-manager#silver-hour --impure
+home-manager switch --flake github:GooseRooster/home-manager#silver-hour-gaming --impure
 ```
 
-Both standalone targets use `--impure` because their `hosts/*.nix` read
-`$USER`/`$HOME` at eval time — the uid-1000 user's name varies by distro/image
-(NixOS-WSL `nixos`, Ubuntu-WSL `ubuntu`, …), so it can't be hardcoded.
+All targets use `--impure` because their `hosts/*.nix` read `$USER`/`$HOME` at
+eval time
+
 
 From a local checkout:
 
 ```sh
 home-manager switch --flake .#wsl --impure
+```
+
+The `hms`/`hmb` zsh helpers do the same against the remote flake (see
+`files/zsh/functions.zsh`):
+
+```sh
+hms                 # switch the default target (silver-hour)
+hms silver-hour-gaming
+hmb                 # build only, no activation
 ```
 
 First-time bootstrap on a foreign system without `home-manager` on PATH yet
@@ -161,9 +112,6 @@ installed into the user profile):
 nix run github:nix-community/home-manager/master -- \
   switch --flake github:GooseRooster/home-manager#container --impure
 ```
-
-On NixOS, prefer wiring it through `nixos-config` (see below) so `nixos-rebuild
-switch` applies it with rollback.
 
 ### Full foreign-WSL flow
 
@@ -184,65 +132,11 @@ nix run github:nix-community/home-manager/master -- \
 
 ## Adding a host
 
-For a **foreign** (non-NixOS) host, add it here in two spots:
-
 1. `hosts/<name>.nix` — set `home.username`/`home.homeDirectory` and the
-   `home.modules.*` flags. Copy `hosts/wsl.nix` for one whose user varies by
-   distro (reads `$USER`/`$HOME` via `--impure`).
-2. `flake.nix` — add a `homeConfigurations.<name>` and, if it should also be
-   reusable for NixOS integration, an `hmModules.<name>` bundle.
+   `home.modules.*` / `home.bundles.*` flags. Copy `hosts/wsl.nix` for a host
+   whose user varies by distro (reads `$USER`/`$HOME` via `--impure`).
+2. `flake.nix` — add a `homeConfigurations.<name>` entry pointing at it.
 
-For a **NixOS** host, don't add anything here — wire it through `nixos-config`
-(see below), which sets the flags per host.
-
-`homeConfigurations` is the standalone target (`home-manager switch --flake .#<name>`);
-`hmModules` is the reusable module for NixOS integration below. For a host that
-needs a non-`gooze` user, set `home.username`/`home.homeDirectory` in its
-`hosts/<name>.nix` (see `hosts/wsl.nix` for the env-driven variant).
-
-### NixOS integration (recommended)
-
-Add this repo + the HM tool as inputs in `nixos-config/flake.nix`:
-
-```nix
-inputs = {
-  home-manager.url = "github:nix-community/home-manager";
-  home-manager.inputs.nixpkgs.follows = "nixpkgs";
-
-  dotfiles.url = "github:GooseRooster/home-manager";
-  dotfiles.inputs.home-manager.follows = "home-manager";
-  dotfiles.inputs.nixpkgs.follows = "nixpkgs";
-};
-```
-
-Then per host (e.g. in `hosts/home/default.nix`):
-
-```nix
-{ inputs, ... }: {
-  imports = [ inputs.home-manager.nixosModules.home-manager ];
-  # The flatpak module reads nix-flatpak's HM module as a plain function arg.
-  home-manager.extraSpecialArgs = { inherit (inputs) nix-flatpak; };
-  home-manager.users.gooze = {
-    imports = [ inputs.dotfiles.hmModules.default ];
-    # Set the flags to mirror the system-side toggles (bundles.base is
-    # default-on; enable baseExtra for desktop hosts):
-    home.bundles.baseExtra.enable = true;
-    home.modules.gaming.enable = true;
-    home.modules.theming.enable = true;
-    home.modules.noctalia.enable = true;
-    # Per-user Flatpaks (the system keeps only the baseline set).
-    home.bundles.flatpak.base.enable = true;
-    home.bundles.flatpak.multimedia.enable = true;
-    home.bundles.flatpak.gaming.enable = true;
-  };
-}
-```
-
-`hmModules.default` is the shared base (no username/homeDirectory, no flags) —
-NixOS's HM integration infers the user from `home-manager.users.<name>`, so each
-host sets only the flags it needs. Per-host flags live in the **nixos-config**
-host file, next to the system-side toggles they mirror (e.g. desktop hosts set
-`home.modules.desktop.enable = true`).
 
 ## GNOME extensions & desktop settings
 
@@ -288,7 +182,7 @@ leaves everything else alone.
 ### Desktop settings
 
 `modules/gnome-settings.nix` declares the deviations from the image's GNOME
-defaults:
+defaults
 
 - **Multitasking** — no edge tiling, workspaces on all displays, the window
   switcher restricted to the current workspace.
@@ -369,105 +263,6 @@ Consequence for projects: a rust/clang/cmake project must provide its
 tooling via the devshell (`devshell-init rust` / `clang` scaffolds it) —
 opening nvim outside such a shell simply leaves those servers off.
 
-### Structure
-
-There is no "MiniMax" plugin to `import` — the upstream repo's
-`configs/nvim-<version>/` directory *is* the entire config, meant to be
-copied once and diverged from. So `vendor/nvim/` +
-`bash scripts/update-nvim.sh` only track upstream's reference config for
-review; nothing regenerates automatically, and nothing auto-merges — review
-the diff by hand after running it.
-
-The repo's own overlay (`files/nvim/`) layers on top of that vendor mirror:
-`lua/config/{profile,clue,run,xmldoc}.lua` (env-driven language profile,
-mini.clue helpers, the stack-agnostic Run/Unit-test group convention, the C#
-XML-doc snippet) plus `plugin/50-custom/*.lua` (one file per integration —
-LSP, DAP, dotnet, kulala/REST, zk notes, markdown, theming, notifications,
-and so on).
-
-### What's in the config today
-
-- **LSP, Mason-free** (`plugin/50-custom/lsp.lua` + `lua/config/profile.lua`)
-  — an `NVIM_PROFILE`/`NVIM_LANGS` environment-driven language profile:
-  a server enables only when
-  `profile.has(feature)` **and** its binary resolves on PATH (lspconfig's
-  `cmd[1]`, with a fallback-binary override table for servers whose `cmd` is
-  a function). No PATH binary means the server silently never attaches — no
-  errors, no Mason install prompts. Binaries come from `pkgs/base.nix` or a
-  project devshell. Tree-sitter parsers for enabled features install
-  alongside.
-- **DAP + dotnet** (`plugin/50-custom/dap.lua`, `easy-dotnet.lua`) — a single
-  narrow left dapui column (scopes + breakpoints + repl); codelldb
-  (rust/C/C++) and python/debugpy adapters register when their feature +
-  binary are present; easy-dotnet registers its own adapter. Dotnet sessions
-  additionally get a bottom row with the CPU/mem profiler widgets, shown
-  only for `session.config.type == 'easy-dotnet'`. easy-dotnet's managed
-  console (the process's stdout/stderr panel, which pops open unprompted on
-  every run/debug) is patched to auto-hide itself immediately — press
-  `<Leader>rT` to reveal it on demand instead. `<Leader>r`/`<Leader>u` are
-  meant to mean "Run"/"Unit test" regardless of stack (see
-  `lua/config/run.lua` for the letter convention); only dotnet implements
-  them today, and its own bare test-runner shortcuts were moved off
-  `<Leader>r`/`t`/`d`/`e`/`p` onto `<Leader>u*` to avoid shadowing that
-  group. For a full multi-pane dapui layout (extra columns, always-on
-  profiler row), override per-project with a `.nvim.lua` calling
-  `require('dapui').setup({...})` again.
-- **Keymap clues** (`lua/config/clue.lua`, `plugin/50-custom/mini-clue-icons.lua`)
-  — which-key-style group labels via `mini.clue`. Global groups append to
-  `Config.leader_group_clues`; buffer-scoped groups (dotnet, kulala's REST
-  client, zk notes, markdown) go through `add_buf()`, which appends to
-  `vim.b[bufnr].miniclue_config.clues` — verified against `mini.clue`'s own
-  source that this *concatenates* rather than overrides, so more than one
-  `FileType` autocmd can safely target the same buffer. Both the global and
-  buffer-local paths prefix a hand-picked Nerd Font glyph onto known group
-  descriptions (written as `\xEF\x..\x..` UTF-8 byte escapes, not literal
-  characters — several editors/terminals silently mangle raw
-  Private-Use-Area bytes on save).
-- **Notifications** (`plugin/50-custom/notify.lua`, `fidget.lua`) — `vim.notify`
-  routes through `mini.notify` so every notification lands in
-  `<Leader>en`'s history, with a hand-rolled wrapper (rather than
-  `mini.notify`'s own bare `make_notify()`) that additionally honors the
-  nvim-notify/snacks `id`/`replace` convention — needed so spinner-style
-  progress messages (e.g. easy-dotnet's job spinner, one `vim.notify` call
-  per animation frame) update one notification in place instead of stacking
-  a new popup per frame. `fidget.nvim` sits alongside it for animated
-  LSP-progress spinners specifically (mini.notify has no spinner primitive
-  of its own).
-- **Diagnostics** — gutter signs are icon glyphs for Warning/Error (Info/Hint
-  stay signless, matching the stock severity filter); inline text comes from
-  `tiny-inline-diagnostic.nvim` instead of Neovim's built-in virtual text.
-- **Ported LazyVim `core_extras` equivalents** — kept: yanky,
-  dial, inc-rename (upgrades the stock `<Leader>lr` in place), navic,
-  mini-animate, startuptime; dropped: neogen, illuminate, outline,
-  smear-cursor, dot (mini-surround and mini-hipatterns were already native).
-  `goto-preview.nvim` ("peek" a definition/type/implementation/declaration
-  in a float without leaving the cursor) rounds out the `<Leader>l`
-  "+Language" group as uppercase siblings of the existing jump-to actions
-  (`lS`/`lT`/`lI`/`lD`, plus `lq` to close preview floats).
-- **Explorer & pickers** — stock `mini.files` (widened preview pane,
-  `<CR>` opens-and-closes on a file) and `mini.pick`/`mini.extra`
-  (`<C-j>`/`<C-k>` navigation) needed no porting; `mini.icons` already
-  supplies file/directory/LSP-kind icons everywhere it's asked to.
-- **Theming** — `osc-colors.nvim` (reads the terminal's live palette) drives
-  the colorscheme, replacing stock `miniwinter`.
-- **cairn.nvim** (file arena/quick-jump) on `<Leader>c`, **herdr-nvim**
-  (agent-output sidebar) on `<Leader>a`, **kulala.nvim** (REST client) on
-  buffer-local `<Leader>R` in `.http` files, **zk** notes on buffer-local
-  `<Leader>z` in notebook markdown — each with its own `mini.clue` group.
-
-### Gotcha worth remembering
-
-`vim.pack`'s lockfile (`nvim-pack-lock.json`) needs to be genuinely absent
-from the deployed config, not just present-and-writable: MiniMax's upstream
-repo ships one (a snapshot of the maintainer's installed revisions), so a
-naive vendor mirror turns it into a read-only store symlink sitting exactly
-where `vim.pack` needs to *overwrite* it on every install/update — breaking
-every `vim.pack.add()` call outright. `modules/nvim.nix` `rm`s it
-from the build output before the overlay lands, so home-manager never
-manages that path and `vim.pack` is free to create a real mutable file there
-on first run. If you ever see `vim.pack.add()` failing to persist lock data
-after touching the vendor mirror, check whether a vendored lockfile snuck
-back in.
 
 ## Devshell templates
 
@@ -521,7 +316,6 @@ something worth propagating back to future scaffolds.
 | Neovim | `vendor/nvim/` + eval-time merge; `nvim-pack-lock.json` written at runtime |
 | yazi plugins | `programs.yazi.plugins` (pinned rev + hash, Nix store) |
 | tldr cache | `tealdeer/config.toml` with `auto_update = true` |
-| Noctalia theme | app-managed `~/.local/state/noctalia/settings.toml` (GUI wins over the declarative `config.toml`; see below) |
 
 ## Local overrides
 

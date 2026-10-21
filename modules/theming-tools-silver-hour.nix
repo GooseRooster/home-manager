@@ -6,15 +6,13 @@
   ...
 }:
 
-# silver-hour theming tooling (GNOME/tinty flow). This is the counterpart to
-# modules/theming-tools.nix (which is the Noctalia/gowall flow): the two are
-# mutually exclusive and selected by home.modules.silverHour.
+# silver-hour theming tooling (GNOME/tinty flow): gnomad picks the base16/base24
+# scheme, tinty syncs the tinted-theming item set.
 #
-# Restores the tinty + gnomad setup that predated the Noctalia migration
-# (removed in c86c580): gnomad comes from its own flake (flake.nix input), the
-# custom gnomad schemes live under files/gnomad/schemes, and tinty syncs the
-# tinted-theming item set. `theme = "tinted-theming"` in modules/ghostty.nix
-# makes the tinted-terminal ghostty hook effective.
+# gnomad comes from its own flake (flake.nix input), the custom gnomad schemes
+# live under files/gnomad/schemes, and tinty syncs the tinted-theming item set.
+# `theme = "tinted-theming"` in modules/ghostty.nix makes the tinted-terminal
+# ghostty hook effective.
 let
   cfg = config.home.modules;
 

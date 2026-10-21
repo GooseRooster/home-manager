@@ -8,8 +8,6 @@
     ./modules/flavors.nix
     ./modules/bundles.nix
     ./modules/flatpak.nix
-    ./modules/noctalia.nix
-    ./modules/theming-tools.nix
     ./modules/theming-tools-silver-hour.nix
     ./modules/zsh.nix
     ./modules/wsl-shell-launcher.nix
@@ -19,18 +17,14 @@
     ./modules/nvim.nix
     ./modules/herdr.nix
     ./modules/starship.nix
-    ./modules/theming.nix
-    ./modules/foot.nix
     ./modules/ghostty.nix
     ./modules/mpv.nix
     ./modules/btop.nix
     ./modules/lazygit.nix
     ./modules/lazydocker.nix
-    ./modules/gtk.nix
     ./modules/fonts.nix
     ./modules/gnome-extensions.nix
     ./modules/gnome-settings.nix
-    ./modules/sway.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
     ./modules/caches.nix
@@ -50,14 +44,10 @@
     options = "--delete-older-than 14d";
   };
 
-  # The NixOS hosts consume this repo through nixos-config's
-  # `home-manager.users.<name>.imports = [ dotfiles.hmModules.default ]`, which
-  # sets home-manager.backupFileExtension (hm-backup) on its side.
-
-  # Some bundle packages are unfree (vscode in base-extra, claude-code in
-  # base-extra/wsl). This scopes allowUnfree to the HM-built nixpkgs instance
-  # only; system-wide nix commands still need `NIXPKGS_ALLOW_UNFREE=1 --impure`
-  # (or a user ~/.config/nix/nix.conf entry).
+  # Some bundle packages are unfree (claude-code in base-extra/wsl). This
+  # scopes allowUnfree to the HM-built nixpkgs instance only; system-wide nix
+  # commands still need `NIXPKGS_ALLOW_UNFREE=1 --impure` (or a user
+  # ~/.config/nix/nix.conf entry).
   nixpkgs.config.allowUnfree = true;
 
   home.stateVersion = "26.05";

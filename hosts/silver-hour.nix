@@ -13,7 +13,8 @@
   # alterations (see modules/flavors.nix and modules/theming-tools-silver-hour.nix).
   home.modules.silverHour.enable = true;
 
-  # base is default-on; add the visual/misc extras (fonts/VS Code stripped).
+  # base is default-on; add the visual/misc extras (fonts/VS Code are provided
+  # by the image, so they are not in the list).
   home.bundles.baseExtra.enable = true;
 
   # nix-flatpak's flatpak-managed-install.service installs the whole Flatpak set
@@ -35,6 +36,6 @@
   # keyboard shortcuts.
   home.modules.gnomeSettings.enable = true;
 
-  # Base user-facing Flatpaks (devtoolbox stripped — the image covers it).
+  # Base user-facing Flatpaks (the image provides devtoolbox system-wide).
   home.bundles.flatpak.base.enable = true;
 }

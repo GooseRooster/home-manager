@@ -51,20 +51,9 @@
     services.flatpak.packages =
       let
         cfg = config.home.bundles.flatpak;
-
-        # The silver-hour image ships devtoolbox's replacement tooling (native
-        # VS Code + CLI) and ProtonPlus/Protontricks as system Flatpaks, so the
-        # base/gaming lists drop those entries; home.modules.silverHour selects
-        # the trimmed variants.
-        base = if config.home.modules.silverHour.enable
-          then ../pkgs/flatpak-base-silver-hour.nix
-          else ../pkgs/flatpak-base.nix;
-        gaming = if config.home.modules.silverHour.enable
-          then ../pkgs/flatpak-gaming-silver-hour.nix
-          else ../pkgs/flatpak-gaming.nix;
       in
-      lib.optionals cfg.base.enable (import base)
+      lib.optionals cfg.base.enable (import ../pkgs/flatpak-base.nix)
       ++ lib.optionals cfg.multimedia.enable (import ../pkgs/flatpak-multimedia.nix)
-      ++ lib.optionals cfg.gaming.enable (import gaming);
+      ++ lib.optionals cfg.gaming.enable (import ../pkgs/flatpak-gaming.nix);
   };
 }

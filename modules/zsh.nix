@@ -111,7 +111,7 @@ in
 
       # fast-syntax-highlighting's "base16" theme uses only ANSI slots 0-15
       # (see its themes/base16.ini), so highlighting follows the palette the
-      # terminal currently has loaded (foot + Noctalia), the same as every
+      # terminal currently has loaded (ghostty), the same as every
       # other terminal-color-aware tool here — no extra wiring needed.
       # Applied manually (rather than via the module's own
       # `fastSyntaxHighlighting.theme` option) so stderr can be silenced:
