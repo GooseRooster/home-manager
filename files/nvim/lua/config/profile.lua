@@ -92,7 +92,7 @@ M.feature_treesitter = {
 	yaml = { "yaml" },
 	nix = { "nix" },
 	git = { "gitcommit", "gitignore", "git_rebase", "gitattributes" },
-	dotnet = { "c_sharp", "razor", "html" }, -- html is required by razor's injections.scm for markup regions
+	dotnet = { "c_sharp", "razor", "html", "xml" }, -- html is required by razor's injections.scm for markup regions; xml for .csproj/.props/.xaml
 }
 
 local function resolve_profile()

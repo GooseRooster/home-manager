@@ -104,6 +104,23 @@ local function install_and_start_parsers(langs)
 		end
 	end
 	Config.new_autocmd("FileType", filetypes, ts_start, "Start tree-sitter (profile bundles)")
+
+	-- This all runs in `Config.later()`, i.e. after startup: for `nvim foo.cs`
+	-- that buffer's FileType already fired before the autocmd above existed,
+	-- so it would never get tree-sitter (no highlighting, and no tree for
+	-- tree-sitter textobjects to read) — only buffers opened afterwards did.
+	-- Catch up any already-loaded matching buffers (vendor's '40_plugins.lua'
+	-- dodges this by using `now_if_args`; same gap 'easy-dotnet.lua' closes
+	-- for its own buffer setup).
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if
+			vim.api.nvim_buf_is_loaded(buf)
+			and vim.tbl_contains(filetypes, vim.bo[buf].filetype)
+			and not vim.treesitter.highlighter.active[buf]
+		then
+			ts_start({ buf = buf })
+		end
+	end
 end
 
 Config.later(function()
