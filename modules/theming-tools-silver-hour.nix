@@ -103,6 +103,8 @@ let
     ];
     text = ''
       export CHROMALEON_PALETTE="${../files/scripts/chromaleon_palette.py}"
+      export CHROMALEON_PIXELS="${../files/scripts/chromaleon_pixels.js}"
+      export CHROMALEON_DEPTH="${toString cfg.chromaleon.depth}"
     '' + builtins.readFile ../files/scripts/chromaleon_tinty;
   };
 
@@ -118,7 +120,20 @@ let
     text = builtins.readFile ../files/scripts/chromaleon_tinty_watch;
   };
 in
-lib.mkIf cfg.silverHour.enable {
+{
+  options.home.modules.chromaleon = {
+    depth = lib.mkOption {
+      type = lib.types.ints.between 0 3;
+      default = 1;
+      description = ''
+        How far the generated terminal palette moves away from the ChromaLeon
+        shell surface in OKLCH. 0 matches the shell surface exactly; 3 adds a
+        pronounced luminance/chroma separation for depth.
+      '';
+    };
+  };
+
+  config = lib.mkIf cfg.silverHour.enable {
   assertions = [
     {
       assertion = gnomad != null;
@@ -208,5 +223,6 @@ lib.mkIf cfg.silverHour.enable {
     };
 
     Install.WantedBy = [ "graphical-session.target" ];
+  };
   };
 }

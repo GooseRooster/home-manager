@@ -3,8 +3,9 @@
 # through tinty. Runs as a systemd user oneshot (path unit on ChromaLeon's
 # generated stylesheets, and once at graphical session start).
 #
-# CHROMALEON_PALETTE is injected by the home-manager module (writeShellApplication
-# text) and points at the store copy of chromaleon_palette.py.
+# CHROMALEON_PALETTE and CHROMALEON_PIXELS are injected by the home-manager
+# module (writeShellApplication text) and point at the store copies of
+# chromaleon_palette.py and chromaleon_pixels.js.
 
 force=0
 if [ "${1:-}" = "--force" ]; then
@@ -23,8 +24,29 @@ read_key() {
   dconf read "$1" 2>/dev/null | tr -d "'" || true
 }
 
+read_bool() {
+  # dconf has no value for an unset key; apply the ChromaLeon schema default.
+  value="$(read_key "$1")"
+  if [ -z "$value" ]; then
+    value="${2:-false}"
+  fi
+  if [ "$value" = "true" ]; then
+    printf 'true\n'
+  else
+    printf 'false\n'
+  fi
+}
+
 accent="$(read_key /org/gnome/shell/extensions/chromaleon/accent-color)"
 accent="${accent:-#785ef0}"
+gnome_colors="$(read_bool /org/gnome/shell/extensions/chromaleon/gnome-colors false)"
+gnome_accent="$(read_key /org/gnome/desktop/interface/accent-color)"
+tint_shell="$(read_bool /org/gnome/shell/extensions/chromaleon/tint-shell false)"
+tint_panel="$(read_bool /org/gnome/shell/extensions/chromaleon/tint-panel true)"
+tinting_strength="$(read_key /org/gnome/shell/extensions/chromaleon/tinting-strength)"
+tinting_strength="${tinting_strength:-1}"
+darker="$(read_bool /org/gnome/shell/extensions/chromaleon/darker false)"
+full_light="$(read_bool /org/gnome/shell/extensions/chromaleon/full-light false)"
 color_scheme="$(read_key /org/gnome/desktop/interface/color-scheme)"
 prefer_light="$(read_key /org/gnome/shell/extensions/chromaleon/prefer-light)"
 
@@ -36,6 +58,14 @@ elif [ "$prefer_light" = "true" ] || [ "$color_scheme" = "prefer-light" ]; then
   variant="light"
 else
   variant="dark"
+fi
+
+# ChromaLeon writes the light and dark stylesheets side by side; the active one
+# is selected with the same logic it uses for the shell.
+if [ "$variant" = "light" ]; then
+  shell_css="$home/.cache/chromaleon/chromaleon-shell.css"
+else
+  shell_css="$home/.cache/chromaleon/chromaleon-shell-dark.css"
 fi
 
 # Wallpaper selection mirrors ChromaLeon's _getWallpaperUri.
@@ -59,19 +89,56 @@ flock 9
 
 mkdir -p "$scheme_dir"
 tmp="$(mktemp)"
-trap 'rm -f "$tmp"' EXIT
+pixels_tmp="$(mktemp)"
+trap 'rm -f "$tmp" "$pixels_tmp"' EXIT
+
+run_palette() {
+  python3 "$CHROMALEON_PALETTE" \
+    --accent "$accent" \
+    --gnome-colors "$gnome_colors" \
+    --gnome-accent "$gnome_accent" \
+    --variant "$variant" \
+    --shell-css "$shell_css" \
+    --tint-shell "$tint_shell" \
+    --tint-panel "$tint_panel" \
+    --tint-strength "$tinting_strength" \
+    --darker "$darker" \
+    --full-light "$full_light" \
+    --surface-target "${CHROMALEON_SURFACE_TARGET:-auto}" \
+    --depth "${CHROMALEON_DEPTH:-1}" \
+    "$@"
+}
 
 generated=0
 if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
-  if magick "$wallpaper" -alpha off -resize 64x64! -depth 8 rgb:- 2>/dev/null \
-    | python3 "$CHROMALEON_PALETTE" --accent "$accent" --variant "$variant" >"$tmp"; then
-    generated=1
+  # Prefer GdkPixbuf via GJS: it reproduces ChromaLeon's 64x64
+  # aspect-preserving scale exactly. The system GJS is the same runtime the
+  # extension uses, so the extracted swatches match its cache.
+  if command -v gjs >/dev/null 2>&1 && [ -n "${CHROMALEON_PIXELS:-}" ]; then
+    if gjs "$CHROMALEON_PIXELS" "$wallpaper" >"$pixels_tmp" 2>/dev/null \
+      && [ -s "$pixels_tmp" ]; then
+      if run_palette --pixels-b64 <"$pixels_tmp" >"$tmp"; then
+        generated=1
+      fi
+    fi
+  fi
+
+  # Fallback for systems without GJS: preserve the aspect ratio and use the
+  # closest ImageMagick filter, then let the OKLCH layer absorb the small
+  # differences.
+  if [ "$generated" -eq 0 ]; then
+    if magick "$wallpaper" -alpha off -resize 64x64 -filter Hermite \
+      -depth 8 rgb:- 2>/dev/null | run_palette >"$tmp"; then
+      if [ -s "$tmp" ]; then
+        generated=1
+      fi
+    fi
   fi
 fi
 
 if [ "$generated" -eq 0 ]; then
   # Dynamic/XML wallpaper or extraction failure: derive from the accent alone.
-  python3 "$CHROMALEON_PALETTE" --accent "$accent" --variant "$variant" </dev/null >"$tmp"
+  run_palette </dev/null >"$tmp"
 fi
 
 if [ ! -s "$tmp" ]; then

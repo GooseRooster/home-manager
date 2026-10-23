@@ -90,6 +90,55 @@ to standalone Home Manager, enabled with `home.modules.steamAdwaita.enable`
   [tinted-adwaita-for-steam](https://github.com/GooseRooster/tinted-adwaita-for-steam)
   tinty item (gated on `steamAdwaita`), whose hook writes that `custom.css`.
 
+## ChromaLeon → tinty bridge
+
+`modules/theming-tools-silver-hour.nix` turns ChromaLeon's live GNOME Shell
+colours into a tinted8 scheme for tinty. It is not a separate theme choice:
+the scheme follows ChromaLeon rather than re-extracting colours in a vacuum.
+
+- The accent is ChromaLeon's `accent-color` (or the mapped GNOME accent when
+  `gnome-colors` is on), and is kept exact in `ui.accent.normal`.
+- The background anchor is ChromaLeon's *actual* shell surface, resolved from
+  the generated `chromaleon-shell*.css` by evaluating its `st-mix(...)`
+  expressions. That means `tint-shell`, `tint-panel`, `tinting-strength`,
+  `darker`, `full-light`, and `prefer-light` are followed automatically.
+- Wallpaper swatches are extracted with GdkPixbuf via GJS
+  (`files/scripts/chromaleon_pixels.js`), matching ChromaLeon's
+  aspect-preserving `64x64` scale. ImageMagick is the fallback.
+- The eight palette slots are placed in OKLCH: wallpaper hues are normalised
+  into consistent lightness/chroma bands, missing hues are synthesized from
+  the wallpaper's median chroma, and collapsed slots (notably red/yellow) are
+  pushed apart. The accent slot is never modified.
+- The terminal stays deliberately a sibling of the shell, not a clone. The
+  depth dial moves the background away from the shell surface in OKLCH
+  (luminance separation plus a little chroma recession) while leaving the
+  accent exact.
+
+The dial is a Home Manager option:
+
+```nix
+home.modules.chromaleon.depth = 1; # 0 = exact shell match, 3 = deep
+```
+
+To inspect the current result without applying it:
+
+```sh
+URI=$(dconf read /org/gnome/desktop/background/picture-uri-dark | tr -d "'")
+WP=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.argv[1][7:]))' "$URI")
+gjs files/scripts/chromaleon_pixels.js "$WP" \
+  | python3 files/scripts/chromaleon_palette.py --pixels-b64 \
+      --accent "$(dconf read /org/gnome/shell/extensions/chromaleon/accent-color | tr -d "'")" \
+      --variant dark \
+      --shell-css "$HOME/.cache/chromaleon/chromaleon-shell-dark.css" \
+      --audit
+```
+
+The audit prints the resolved shell surfaces, each palette slot's OKLCH
+coordinates, contrast against the background, ΔE from the accent, and any
+warnings (synthesized hues, a slot below 4.5:1, etc.). The accent's ANSI copy
+is allowed to sit slightly below 4.5:1 rather than silently changing the
+user's chosen colour.
+
 ## Applying
 
 Every target is a standalone Home Manager configuration:
