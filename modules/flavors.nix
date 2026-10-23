@@ -16,6 +16,9 @@ in
     gaming = {
       enable = mkFlag "Gaming-specific dotfile content (yazi Steam/Emulation hops).";
     };
+    steamAdwaita = {
+      enable = mkFlag "Adwaita-for-Steam skinning (native or Flatpak Steam).";
+    };
     podmanAlias = {
       enable = mkFlag "DOCKER_HOST -> podman socket and docker -> podman alias in the shell.";
     };

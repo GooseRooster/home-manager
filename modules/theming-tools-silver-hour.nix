@@ -19,9 +19,9 @@ let
   schemesDir = ../files/gnomad/schemes;
   schemes = lib.filterAttrs (_: type: type == "regular") (builtins.readDir schemesDir);
 
-  # Tinty scheme-sync items. The Steam Millennium hook was dropped with the
-  # silver-hour move (the image's Steam skin is applied by its own systemd
-  # service); the Vesktop hook stays, gaming-gated.
+  # Tinty scheme-sync items. The Steam hook writes the Adwaita-for-Steam
+  # custom.css consumed by modules/steam-adwaita.nix; the Vesktop hook stays,
+  # gaming-gated.
   tintyItems = [
     {
       path = "https://github.com/tinted-theming/tinted-shell";
@@ -72,6 +72,19 @@ let
       theme-file-extension = ".theme.css";
       supported-systems = [ "base16" ];
       hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
+    }
+  ] ++ lib.optionals cfg.steamAdwaita.enable [
+    {
+      # Adwaita-for-Steam: modules/steam-adwaita.nix watches this file and
+      # re-runs the skin installer after each tinty apply.
+      path = "https://github.com/GooseRooster/tinted-adwaita-for-steam";
+      name = "tinted-adwaita-for-steam";
+      themes-dir = "output";
+      supported-systems = [ "base16" "base24" "tinted8" ];
+      hook = ''
+        mkdir -p "$HOME/.config/AdwSteamGtk"
+        cp -f "$TINTY_THEME_FILE_PATH" "$HOME/.config/AdwSteamGtk/custom.css"
+      '';
     }
   ];
 
@@ -140,6 +153,7 @@ lib.mkIf cfg.silverHour.enable {
     run() {
       local dirs="$HOME/.config/ghostty/themes $HOME/.claude/themes"
       ${lib.optionalString cfg.gaming.enable ''dirs="$dirs $HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings"''}
+      ${lib.optionalString cfg.steamAdwaita.enable ''dirs="$dirs $HOME/.config/AdwSteamGtk"''}
       mkdir -p $dirs
 
       if [ ! -d "$HOME/.local/share/tinted-theming/tinty" ]; then

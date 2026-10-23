@@ -66,12 +66,37 @@
         www = [ "<Super>b" ];
         custom-keybindings = [
           "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+          "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/"
+          "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/"
+          "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/"
+          "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/"
         ];
       };
       "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
         name = "Terminal";
         command = "ghostty";
         binding = "<Super>Return";
+      };
+      # GSR screenshot/recording helpers, shipped at /usr/bin by the image.
+      "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2" = {
+        name = "GSR Screenshot (Fullscreen)";
+        command = "gsr-shot full";
+        binding = "<Super>Print";
+      };
+      "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3" = {
+        name = "GSR Record (screen)";
+        command = "gsr-rec screen";
+        binding = "<Alt><Super>1";
+      };
+      "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4" = {
+        name = "GSR Record Stop";
+        command = "gsr-rec stop";
+        binding = "<Alt><Super>q";
+      };
+      "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5" = {
+        name = "GSR Record (screen + mic)";
+        command = "gsr-rec --mic screen";
+        binding = "<Alt><Super>2";
       };
     };
 

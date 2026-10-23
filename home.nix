@@ -9,6 +9,7 @@
     ./modules/bundles.nix
     ./modules/flatpak.nix
     ./modules/theming-tools-silver-hour.nix
+    ./modules/steam-adwaita.nix
     ./modules/zsh.nix
     ./modules/wsl-shell-launcher.nix
     ./modules/eza.nix

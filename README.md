@@ -59,15 +59,36 @@ use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 | `container` | lean dev container | `bundles.base` (default) |
 | `wsl` | foreign-WSL dev host | `bundles.wsl`, `wsl`, `podmanAlias` |
 | `silver-hour` | atomic Fedora image | `silverHour`, `bundles.baseExtra`, `bundles.flatpak.base`, `bundles.gnomeExtensions`, `gnomeSettings`, `podmanAlias` |
-| `silver-hour-gaming` | the image + gaming content | the above plus `gaming`, `bundles.flatpak.gaming` |
+| `silver-hour-gaming` | the image + gaming content | the above plus `gaming`, `steamAdwaita`, `bundles.flatpak.gaming` |
 
-Flags: `gaming`, `podmanAlias`, `wsl`, `silverHour`, `gnomeSettings`, plus the
-`bundles` switches (see `modules/bundles.nix`). `silverHour` selects the
-GNOME-image profile: the image's own fonts and VS Code are used, so the
-bundle lists leave them out, and the theming stack is gnomad + tinty
-(`modules/theming-tools-silver-hour.nix`) rather than a session shell. The
-silver-hour targets turn on `gnomeSettings` and `bundles.gnomeExtensions` (see
+Flags: `gaming`, `steamAdwaita`, `podmanAlias`, `wsl`, `silverHour`,
+`gnomeSettings`, plus the `bundles` switches (see `modules/bundles.nix`).
+`silverHour` selects the GNOME-image profile: the image's own fonts and VS
+Code are used, so the bundle lists leave them out, and the theming stack is
+gnomad + tinty (`modules/theming-tools-silver-hour.nix`) rather than a
+session shell. The silver-hour targets turn on `gnomeSettings` and
+`bundles.gnomeExtensions` (see
 [GNOME extensions & desktop settings](#gnome-extensions--desktop-settings)).
+
+## Steam (Adwaita-for-Steam)
+
+`modules/steam-adwaita.nix` ports the NixOS gaming module's
+[Adwaita-for-Steam](https://github.com/tkashkin/Adwaita-for-Steam) integration
+to standalone Home Manager, enabled with `home.modules.steamAdwaita.enable`
+(`silver-hour-gaming` only):
+
+- `pkgs/adwaita-for-steam/default.nix` packages the upstream installer and
+  stages a writable temp copy, since Steam's mutable `steamui` must be patched
+  at runtime.
+- `target` defaults to `auto`: it prefers native `~/.steam/steam`, then Flatpak
+  `~/.var/app/com.valvesoftware.Steam/.steam/steam`, and no-ops when Steam is
+  absent. `native`, `flatpak`, or an explicit path are also accepted.
+- A user service re-applies the skin at login and whenever
+  `~/.config/AdwSteamGtk/custom.css` changes (the path unit debounces rapid
+  theming-tool writes).
+- `modules/theming-tools-silver-hour.nix` adds the
+  [tinted-adwaita-for-steam](https://github.com/GooseRooster/tinted-adwaita-for-steam)
+  tinty item (gated on `steamAdwaita`), whose hook writes that `custom.css`.
 
 ## Applying
 
@@ -195,7 +216,11 @@ defaults
 - **Default applications** — the web browser is Zen (`xdg.mimeApps`); every
   other category keeps the image's default.
 - **Keyboard shortcuts** — window management, workspace switching, the
-  overview shortcuts and one custom binding (`<Super>Return` → `ghostty`).
+  overview shortcuts, plus custom bindings for the terminal (`<Super>Return`
+  → `ghostty`) and the image's GSR screenshot/recording helpers:
+  `<Super>Print` → `gsr-shot full`, `<Alt><Super>1` → `gsr-rec screen`,
+  `<Alt><Super>2` → `gsr-rec --mic screen`, and `<Alt><Super>q` →
+  `gsr-rec stop`.
 
 ### Updating the extension pins
 

@@ -11,5 +11,10 @@
 
   home.modules.gaming.enable = true;
 
+  # Apply the Adwaita-for-Steam skin (auto-detects native vs Flatpak Steam).
+  # tinty feeds it ~/.config/AdwSteamGtk/custom.css; the module's path unit
+  # re-installs whenever that file changes.
+  home.modules.steamAdwaita.enable = true;
+
   home.bundles.flatpak.gaming.enable = true;
 }

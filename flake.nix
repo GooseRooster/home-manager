@@ -17,6 +17,14 @@
     # module), so the silver-hour theming module installs its package directly.
     gnomad.url = "github:GooseRooster/gnomad";
     gnomad.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Steam skin that makes the client look native (see
+    # modules/steam-adwaita.nix). Pinned as flake = false: install.py runs from
+    # this source tree at login/refresh time.
+    adwaita-for-steam = {
+      url = "github:tkashkin/Adwaita-for-Steam";
+      flake = false;
+    };
   };
 
   # Standalone targets: every host this flake builds for is applied with
@@ -26,17 +34,21 @@
   #   home-manager switch --flake .#container --impure
   #   home-manager switch --flake .#wsl --impure
   #   home-manager switch --flake .#silver-hour --impure
-  outputs = { self, nixpkgs, home-manager, nix-flatpak, gnomad, ... }:
+  outputs = inputs@{ self, nixpkgs, home-manager, nix-flatpak, gnomad, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
-      # nix-flatpak's home-manager module (modules/flatpak.nix) and the gnomad
-      # flake (modules/theming-tools-silver-hour.nix) are exposed to every HM
-      # evaluation via extraSpecialArgs. Both are read as plain function
-      # arguments (not _module.args, which would recurse when referenced from
-      # `imports`).
-      extraSpecialArgs = { inherit nix-flatpak gnomad; };
+      # nix-flatpak's home-manager module (modules/flatpak.nix), the gnomad
+      # flake (modules/theming-tools-silver-hour.nix), and the unpinned
+      # Adwaita-for-Steam source (modules/steam-adwaita.nix) are exposed to
+      # every HM evaluation via extraSpecialArgs. They are read as plain
+      # function arguments (not _module.args, which would recurse when
+      # referenced from `imports`).
+      extraSpecialArgs = {
+        inherit nix-flatpak gnomad;
+        adwaitaForSteam = inputs.adwaita-for-steam;
+      };
     in
     {
       homeConfigurations = {
