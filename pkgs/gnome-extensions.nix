@@ -76,9 +76,9 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     id = "quake-terminal@diegodario88.github.io";
     name = "Quake Terminal";
     schema = "org/gnome/shell/extensions/quake-terminal";
-    version = "41";
-    versionTag = 76704;
-    sha256 = "sha256-b7XmSL8J4WnalE5o33e2AWI02SQbUnoT0p4Nl7aqbpY=";
+    version = "43";
+    versionTag = 77206;
+    sha256 = "sha256-u9fUaREa7YEZ+eFbInFzc3p6gVb8Wri5L+EHxJPt9aE=";
   }
   {
     id = "user-accent-colors@fabito02";
