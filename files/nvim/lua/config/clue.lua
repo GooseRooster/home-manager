@@ -36,7 +36,6 @@ local M = {}
 -- group's icon doesn't depend on which mechanism registered it.
 local icons = {
   -- Global groups (Config.leader_group_clues)
-  ['<Leader>a'] = '\xEF\x81\x80', -- U+F040 pencil (herdr: annotations)
   ['<Leader>b'] = '\xEF\x83\x85', -- U+F0C5 files-o (Buffer)
   ['<Leader>c'] = '\xEF\x82\x8D', -- U+F08D thumb-tack (cairn: arena)
   ['<Leader>d'] = '\xEF\x86\x88', -- U+F188 bug (Debug)

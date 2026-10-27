@@ -1,12 +1,10 @@
 -- File arena/quick-jump plugin (GooseRooster/cairn.nvim).
 --
--- Keymaps landed on `<Leader>c*` (matching the plugin's own name) after two
--- collisions with cairn's own `<leader>m*` defaults: MiniMax's stock
--- 'plugin/20_keymaps.lua' claims `<Leader>m` for 'mini.map', and
--- `herdr-nvim` owns `<Leader>a` by its own default prefix. No hard keymap
--- clash in either spot (different exact leaf sequences), but two unrelated
--- plugins sharing one mini.clue group prefix is exactly the ambiguity to
--- avoid.
+-- Keymaps landed on `<Leader>c*` (matching the plugin's own name) rather than
+-- cairn's own `<leader>m*` defaults: MiniMax's stock
+-- 'plugin/20_keymaps.lua' claims `<Leader>m` for 'mini.map'. No hard keymap
+-- clash (different exact leaf sequences), but two unrelated plugins sharing
+-- one mini.clue group prefix is exactly the ambiguity to avoid.
 --
 -- The global group clue is appended onto `Config.leader_group_clues` (read
 -- by '30_mini.lua's `later()`-deferred `MiniClue.setup()`; the nested list
