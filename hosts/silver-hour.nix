@@ -13,6 +13,10 @@
   # alterations (see modules/flavors.nix and modules/theming-tools-silver-hour.nix).
   home.modules.silverHour.enable = true;
 
+  # Generic AppImage launcher (see modules/appimages.nix). Desktop-only: the
+  # container and WSL targets have no FUSE/GUI stack to run AppImages against.
+  home.modules.appImages.enable = true;
+
   # base is default-on; add the visual/misc extras (fonts/VS Code are provided
   # by the image, so they are not in the list).
   home.bundles.baseExtra.enable = true;

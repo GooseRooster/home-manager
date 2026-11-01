@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+#
+# appimage — launch an AppImage from a Nix desktop without tripping over the
+# Nix-built interpreter that shadows the system one.
+#
+# Why this exists
+# ---------------
+# AppImages are foreign artifacts: they bundle their own payload, but assume
+# the host provides a *system* runtime for anything they dlopen() by soname
+# (libGL.so.1, libEGL.so.1, libssl.so.1, …) and, some of them, an
+# interpreter. A Nix install breaks both assumptions:
+#
+#   * Home Manager links the whole transitive closure of home.packages into
+#     ~/.nix-profile, and ~/.nix-profile/bin precedes /usr/bin on PATH — so
+#     `python3` resolves to a Nix CPython even when the user never asked for
+#     one. (Here it arrives as a transitive dependency of `gnomad`.)
+#   * Nix builds its own glibc. That loader does not read /etc/ld.so.cache,
+#     and its built-in system search path is the Nix glibc directory, so it
+#     cannot see *any* distribution library.
+#
+# Jackify.AppImage hit exactly that: it bundles PySide6 6.7.3, runs the first
+# `python3` on PATH, and died with
+#
+#     ImportError: libGL.so.1: cannot open shared object file
+#
+# …even though libGL.so.1 was installed and sitting in /usr/lib64. The
+# distribution's python3 loads it fine; the Nix one cannot, because the Nix
+# loader never consults the system library cache.
+#
+# What this wrapper does
+# ----------------------
+#   1. Puts the system directories at the FRONT of PATH, so `python3`,
+#      `fusermount` and friends resolve to the system copies. Nix paths stay
+#      on PATH — merely deprioritised, never removed.
+#   2. Drops /nix/store entries from LD_LIBRARY_PATH, so Nix's libstdc++ and
+#      libQt cannot shadow the host's. Not cosmetic: with /usr/lib64 on
+#      LD_LIBRARY_PATH the loader picks up the distribution's Qt 6.11 next to
+#      the AppImage's bundled Qt 6.7.3 and fails with
+#      "version `Qt_6.11' not found".
+#   3. Falls back to --appimage-extract-and-run if the FUSE mount fails.
+#
+# Usage:
+#   appimage <path/to/Foo.AppImage> [args...]
+#   appimage --check <path/to/Foo.AppImage>
+#   appimage --extract-and-run <path/to/Foo.AppImage>
+
+set -uo pipefail
+
+PROG="${0##*/}"
+
+# System directories, front of PATH. /usr/bin before /usr/local/bin on
+# purpose: the goal is the distribution's python3/fusermount, and
+# /usr/local/bin is where hand-installed (possibly stale) copies land.
+SYSTEM_PATH="/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+# The same directories, for stripping a duplicated prefix out of PATH.
+SYSTEM_PATH_ENTRIES="/usr/bin /bin /usr/local/bin /usr/local/sbin /usr/sbin /sbin"
+
+# Error signatures emitted by the type2 AppImage runtime (and by libfuse)
+# when the embedded squashfs image cannot be mounted. Matched against the
+# captured stderr to decide whether the --appimage-extract-and-run fallback
+# is worth trying. Keep in sync with the runtime's own message set:
+#   "Cannot mount AppImage, please check your FUSE setup."
+#   "Error: No suitable fusermount binary found on the $PATH"
+#   "fuse: dlopen(%s) failed: %s" / "fuse: failed to exec $FUSERMOUNT_PROG"
+#   "fuse: device not found, try 'modprobe fuse' first"
+FUSE_ERROR_RE='Cannot mount AppImage|No suitable fusermount|fuse: dlopen|fuse: failed to exec|fuse: device not found|fuse: symbol'
+
+usage() {
+    cat <<EOF
+Usage: $PROG [options] <appimage> [args...]
+
+Launch an AppImage with the environment sanitized for a Nix host, so that a
+Nix-built interpreter on PATH cannot shadow the system runtime the AppImage
+depends on. See the comments at the top of this script for the full rationale.
+
+Options:
+  -e, --extract-and-run   Skip FUSE entirely: extract to a temp dir and run
+                          from there. Slower to start, but works without FUSE.
+  -c, --check             Report environment diagnostics and exit without
+                          launching anything.
+  -h, --help              Show this help.
+EOF
+}
+
+# ── PATH / LD_LIBRARY_PATH sanitizing ──────────────────────────────────────
+
+# Rebuild PATH as: system directories first, then every original entry that
+# is not itself a system directory (and in its original order). Nothing is
+# dropped — Nix paths are only demoted.
+sanitize_path() {
+    local -a kept=()
+    local p
+    while IFS= read -r p; do
+        [ -z "$p" ] && continue
+        case " $SYSTEM_PATH_ENTRIES " in
+            *" $p "*) continue ;;
+        esac
+        kept+=("$p")
+    done < <(printf '%s\n' "$1" | tr ':' '\n')
+
+    if [ ${#kept[@]} -eq 0 ]; then
+        printf '%s' "$SYSTEM_PATH"
+    else
+        printf '%s:%s' "$SYSTEM_PATH" "$(IFS=:; printf '%s' "${kept[*]}")"
+    fi
+}
+
+# Remove /nix/store entries from LD_LIBRARY_PATH, keeping everything else
+# (in order). Nix's libstdc++/libQt must not shadow the host's, but a user's
+# own library directories are none of our business.
+sanitize_ldpath() {
+    local kept="" p
+    while IFS= read -r p; do
+        [ -z "$p" ] && continue
+        case "$p" in
+            /nix/store/*) continue ;;
+        esac
+        if [ -z "$kept" ]; then kept="$p"; else kept="$kept:$p"; fi
+    done < <(printf '%s\n' "$1" | tr ':' '\n')
+    printf '%s' "$kept"
+}
+
+apply_sanitized_env() {
+    PATH="$(sanitize_path "${PATH:-}")"
+    export PATH
+
+    if [ -n "${LD_LIBRARY_PATH:-}" ]; then
+        LD_LIBRARY_PATH="$(sanitize_ldpath "$LD_LIBRARY_PATH")"
+        if [ -z "$LD_LIBRARY_PATH" ]; then
+            unset LD_LIBRARY_PATH
+        else
+            export LD_LIBRARY_PATH
+        fi
+    fi
+}
+
+# ── diagnostics ────────────────────────────────────────────────────────────
+
+# Does this interpreter see the system libGL? That single check is the
+# canary for the whole class of failure this script exists to prevent: a
+# Nix-built python answers "no" even when libGL.so.1 is installed.
+python_sees_libgl() {
+    local py="$1"
+    [ -n "$py" ] || return 1
+    "$py" -c 'import ctypes; ctypes.CDLL("libGL.so.1")' >/dev/null 2>&1
+}
+
+check_target() {
+    local appimage="$1"
+    local py_before="$2"
+    local py_after magic fusermount_bin libs c p
+
+    echo "AppImage:  $appimage"
+    magic="$(od -An -tx1 -j8 -N3 "$appimage" 2>/dev/null | tr -d ' \n')"
+    if [ "$magic" = "414902" ]; then
+        echo "  format:  ELF AppImage (type 2 magic ok)"
+    else
+        echo "  format:  WARNING — no AppImage magic at offset 8 (got '${magic:-none}')"
+    fi
+    if [ -x "$appimage" ]; then
+        echo "  mode:    executable"
+    else
+        echo "  mode:    NOT executable (chmod +x)"
+    fi
+
+    echo
+    echo "PATH resolution of python3 (the AppImage picks the first one it finds):"
+    py_after="$(PATH="$SYSTEM_PATH:$PATH" command -v python3 2>/dev/null || echo '<none>')"
+    echo "  before sanitizing: $py_before"
+    echo "  after  sanitizing: $py_after"
+
+    echo
+    echo "System library visibility (can the interpreter dlopen libGL.so.1?):"
+    for py in "$py_before" "$py_after"; do
+        [ "$py" = '<none>' ] && continue
+        if python_sees_libgl "$py"; then
+            echo "  $py: yes"
+        else
+            echo "  $py: NO — cannot load system libraries"
+        fi
+    done
+
+    echo
+    echo "FUSE:"
+    fusermount_bin=""
+    for c in fusermount fusermount3; do
+        if p="$(command -v "$c" 2>/dev/null)"; then fusermount_bin="$p"; break; fi
+    done
+    if [ -n "$fusermount_bin" ]; then
+        echo "  fusermount:  $fusermount_bin"
+    else
+        echo "  fusermount:  MISSING — FUSE mounts will fail (use --extract-and-run)"
+    fi
+    libs="$(ldconfig -p 2>/dev/null | awk '/libfuse/ {print $NF}' | sort -u | tr '\n' ' ')"
+    echo "  libfuse:     ${libs:-none found in the loader cache}"
+}
+
+# ── launching ───────────────────────────────────────────────────────────────
+
+# Run a command with stderr streamed to the terminal AND captured to
+# $CAPTURE_FILE. The FIFO keeps the capture complete (no truncation race)
+# without losing live stderr output.
+run_captured() {
+    local dir fifo tee_pid rc
+    dir="$(mktemp -d)"
+    fifo="$dir/stderr"
+    mkfifo "$fifo"
+    : > "$CAPTURE_FILE"
+
+    tee "$CAPTURE_FILE" <"$fifo" >&2 &
+    tee_pid=$!
+
+    (
+        exec 2>"$fifo"
+        "$@"
+    )
+    rc=$?
+
+    wait "$tee_pid" 2>/dev/null
+    rm -rf "$dir"
+    return "$rc"
+}
+
+# ── main ───────────────────────────────────────────────────────────────────
+
+mode=launch
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -e|--extract-and-run) mode=extract; shift ;;
+        -c|--check)            mode=check;  shift ;;
+        -h|--help)            usage; exit 0 ;;
+        --)                   shift; break ;;
+        -*) echo "$PROG: unknown option: $1" >&2; usage >&2; exit 2 ;;
+        *)  break ;;
+    esac
+done
+
+if [ $# -lt 1 ]; then
+    echo "$PROG: missing <appimage> argument" >&2
+    usage >&2
+    exit 2
+fi
+
+target="$1"; shift
+
+if [ ! -e "$target" ]; then
+    echo "$PROG: no such file: $target" >&2
+    exit 1
+fi
+if [ ! -f "$target" ]; then
+    echo "$PROG: not a regular file: $target" >&2
+    exit 1
+fi
+
+# Resolve to an absolute path: the AppImage runtime chdir()s, and a relative
+# path would not survive that.
+appimage="$(cd -- "$(dirname -- "$target")" && pwd)/$(basename -- "$target")"
+
+if [ ! -x "$appimage" ]; then
+    echo "$PROG: not executable: $appimage" >&2
+    echo "$PROG:   fix with: chmod +x \"$appimage\"" >&2
+    exit 1
+fi
+
+# Captured BEFORE sanitizing, so --check can report the "before" baseline
+# truthfully. (The AppImage's own AppRun picks the first python3 it finds on
+# PATH, so this is the interpreter it would actually have used.)
+PY_BEFORE="$(command -v python3 2>/dev/null || echo '<none>')"
+
+apply_sanitized_env
+
+if [ "$mode" = check ]; then
+    check_target "$appimage" "$PY_BEFORE"
+    exit 0
+fi
+
+if [ "$mode" = extract ]; then
+    exec "$appimage" --appimage-extract-and-run "$@"
+fi
+
+CAPTURE_FILE="$(mktemp)"
+trap 'rm -f "$CAPTURE_FILE"' EXIT
+
+run_captured "$appimage" "$@"
+rc=$?
+
+if [ "$rc" -ne 0 ] && grep -qE "$FUSE_ERROR_RE" "$CAPTURE_FILE" 2>/dev/null; then
+    echo "$PROG: FUSE mount failed; retrying with --appimage-extract-and-run" >&2
+    "$appimage" --appimage-extract-and-run "$@"
+    exit $?
+fi
+
+exit "$rc"

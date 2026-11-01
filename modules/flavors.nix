@@ -28,5 +28,11 @@ in
     silverHour = {
       enable = mkFlag "silver-hour image profile (GNOME, system fonts, gnomad/tinty theming).";
     };
+    appImages = {
+      enable = mkFlag "Generic AppImage launcher (~/.local/bin/appimage) with a Nix-sanitized environment.";
+    };
+    jackify = {
+      enable = mkFlag "Jackify (Wabbajack modlist manager), installed from its GitHub release as an AppImage.";
+    };
   };
 }

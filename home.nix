@@ -29,6 +29,8 @@
     ./modules/gnome-settings.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
+    ./modules/appimages.nix
+    ./modules/jackify.nix
     ./modules/caches.nix
     ./modules/podman.nix
   ];
