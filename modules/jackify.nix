@@ -147,19 +147,33 @@ in
       mimeType = [ "x-scheme-handler/jackify" "x-scheme-handler/nxm" ];
     };
 
-    # Make Jackify the default handler for nxm:// links ("Download from Nexus
-    # Mods" buttons on the web), which is what the entry's MimeType
-    # declaration above is for.
+    # Make Jackify the default handler for the URL schemes it owns:
+    #   x-scheme-handler/nxm    — "Download from Nexus Mods" links on the web
+    #   x-scheme-handler/jackify — the app's own OAuth callback scheme
     #
-    # Declaring it here rather than letting Jackify self-register matters: the
-    # app tries to write ~/.config/mimeapps.list at startup, but that path is
-    # an HM-managed symlink into the read-only store, so its own registration
-    # fails with "Permission denied" (visible in Jackify's log as a warning
-    # from nexus_oauth_protocol). Declaring it declaratively sidesteps that.
+    # Declaring these here rather than letting Jackify self-register matters.
+    # The app registers itself by writing ~/.local/share/applications/
+    # com.jackify.app.desktop and ~/.config/mimeapps.list at startup — but
+    # both paths are Home Manager's, so its own attempts fail with
+    # "Permission denied" (visible in Jackify's log as a warning from
+    # nexus_oauth_protocol). Worse, the desktop file it writes points Exec
+    # straight at $APPIMAGE, bypassing the sanitizing wrapper, so it would
+    # break the launcher: see modules/appimages.nix for the details.
+    #
+    # The entry itself is owned by the appimages module, which installs it
+    # into ~/.local/share/applications — the same path the app tries to
+    # write. Home Manager links it into the read-only store, so the app's
+    # write attempt fails harmlessly and our Exec line survives.
     xdg.mimeApps = {
       enable = true;
-      defaultApplications."x-scheme-handler/nxm" = "com.jackify.app.desktop";
-      associations.added."x-scheme-handler/nxm" = [ "com.jackify.app.desktop" ];
+      defaultApplications = {
+        "x-scheme-handler/nxm" = "com.jackify.app.desktop";
+        "x-scheme-handler/jackify" = "com.jackify.app.desktop";
+      };
+      associations.added = {
+        "x-scheme-handler/nxm" = [ "com.jackify.app.desktop" ];
+        "x-scheme-handler/jackify" = [ "com.jackify.app.desktop" ];
+      };
     };
   };
 }

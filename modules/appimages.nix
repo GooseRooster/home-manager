@@ -94,6 +94,23 @@ in
         the sanitizing wrapper. The attribute name becomes the .desktop
         filename, so use the reverse-DNS application id (e.g.
         "com.example.foo") rather than a display name.
+
+        The entries are installed into ~/.local/share/applications — i.e.
+        XDG_DATA_HOME — rather than the profile's share/applications, for two
+        reasons:
+
+          * XDG_DATA_HOME is searched BEFORE the XDG_DATA_DIRS, so an entry
+            there takes precedence over one in the profile. Applications that
+            register themselves write exactly there (Jackify does, on every
+            launch), so this is where such an entry can shadow ours.
+          * Owning the path also makes the entry authoritative. Home Manager
+            links it into the read-only store, so an application's own
+            attempt to rewrite it fails with EACCES — it catches that and
+            logs a warning — instead of silently replacing it with an Exec
+            line that bypasses the sanitizing wrapper.
+
+        Note that mimeType only declares what the entry can handle; making a
+        type the *default* handler is done separately with xdg.mimeApps.
       '';
     };
   };
@@ -101,16 +118,29 @@ in
   config = lib.mkIf cfg.appImages.enable {
     home.sessionPath = [ "$HOME/.local/bin" ];
 
-    home.file.".local/bin/appimage" = {
-      source = ../files/scripts/appimage;
-      executable = true;
-      force = true;
-    };
-
-    # Drop the unset (null) options so the generated .desktop file simply
-    # omits those keys instead of writing empty ones.
-    xdg.desktopEntries = lib.mapAttrs (
-      _name: entry: lib.filterAttrs (_key: value: value != null) entry
+    home.file = {
+      ".local/bin/appimage" = {
+        source = ../files/scripts/appimage;
+        executable = true;
+        force = true;
+      };
+    } // lib.mapAttrs' (
+      id: entry:
+      lib.nameValuePair ".local/share/applications/${id}.desktop" {
+        # makeDesktopItem renders the entry with nixpkgs' own desktop-entry
+        # writer and validates it with desktop-file-validate at build time.
+        source = "${pkgs.makeDesktopItem {
+          name = id;
+          desktopName = entry.name;
+          exec = entry.exec;
+          icon = entry.icon;
+          comment = entry.comment;
+          terminal = false;
+          categories = entry.categories;
+          mimeTypes = entry.mimeType;
+        }}/share/applications/${id}.desktop";
+        force = true;
+      }
     ) cfg.appImages.desktopEntries;
   };
 }
