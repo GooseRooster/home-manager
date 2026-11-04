@@ -68,9 +68,9 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     id = "nowplaying@epogonii.github.io";
     name = "Now Playing Card";
     schema = "org/gnome/shell/extensions/nowplaying";
-    version = "16";
-    versionTag = 77462;
-    sha256 = "sha256-2GPIMh3bT1M9z1/40H40Px3WyWCa3wCd5qbYqIltAIQ=";
+    version = "17";
+    versionTag = 77722;
+    sha256 = "sha256-k34IRJIyQFSulLoOPN9CRO5ZVaAeHxNRmdsqOOjzVx8=";
   }
   {
     id = "quake-terminal@diegodario88.github.io";
