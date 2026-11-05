@@ -1,4 +1,4 @@
-{ ... }:
+{ lib, ... }:
 
 # Gaming flavour of the silver-hour image. Everything from the workstation
 # target plus the gaming dotfile content (yazi Steam/Emulation hops, tinty
@@ -25,10 +25,10 @@
   home.bundles.flatpak.gaming.enable = true;
 
   # Marker for the `hms`/`hmb` helpers: they read this file to pick the target
-  # this machine runs. Without it they would default to the plain silver-hour
-  # target, and switching that here would drop the gaming content (Jackify,
-  # the Steam skin, the gaming Flatpaks) out of the profile.
-  home.file.".config/home-manager-host" = {
+  # this machine runs. mkForce, because this host imports silver-hour.nix —
+  # which writes the same file for the plain target — and the imported module
+  # would otherwise win the merge.
+  home.file.".config/home-manager-host" = lib.mkForce {
     text = "silver-hour-gaming\n";
   };
 }
