@@ -93,7 +93,39 @@ let
   # wallpaper and map it onto a tinted8 scheme. The bridge itself ships in
   # gnomad's own repository (assets/chromaleon-bridge) and is packaged as
   # `chromaleon-bridge`; this module only wires up the units around it.
-  chromaleonBridge = gnomad.packages.${pkgs.stdenv.hostPlatform.system}.chromaleon-bridge;
+  gnomadBridge = gnomad.packages.${pkgs.stdenv.hostPlatform.system}.chromaleon-bridge;
+
+  # The bridge, with the depth dial baked in.
+  #
+  # `depth` is a property of the installation, not of the invocation: the
+  # systemd units and gnomad's on_wallpaper_apply hook both end up calling the
+  # same script, and they must agree — otherwise each one regenerates the
+  # scheme with a different palette and they overwrite each other. Baking it
+  # into the wrapper makes the nix option the single source of truth for
+  # every path (units, the hook, a manual run).
+  chromaleonBridge = pkgs.runCommand "gnomad-chromaleon-bridge"
+    { nativeBuildInputs = [ pkgs.makeWrapper ]; }
+    ''
+      mkdir -p $out/bin
+      cp ${gnomadBridge}/bin/chromaleon_tinty \
+         ${gnomadBridge}/bin/chromaleon_tinty_watch \
+         ${gnomadBridge}/bin/chromaleon_palette.py \
+         ${gnomadBridge}/bin/chromaleon_pixels.js \
+         $out/bin/
+      chmod +x $out/bin/*
+      wrapProgram $out/bin/chromaleon_tinty \
+        --set CHROMALEON_DEPTH ${toString cfg.chromaleon.depth} \
+        --prefix PATH : ${pkgs.lib.makeBinPath [
+          pkgs.coreutils pkgs.dconf pkgs.gjs pkgs.imagemagick
+          pkgs.python3 pkgs.tinty pkgs.util-linux
+        ]}
+      wrapProgram $out/bin/chromaleon_tinty_watch \
+        --set CHROMALEON_DEPTH ${toString cfg.chromaleon.depth} \
+        --prefix PATH : ${pkgs.lib.makeBinPath [
+          pkgs.coreutils pkgs.dconf pkgs.gjs pkgs.imagemagick
+          pkgs.python3 pkgs.tinty pkgs.util-linux
+        ]}
+    '';
 in
 {
   options.home.modules.chromaleon = {
@@ -184,7 +216,6 @@ in
     Service = {
       Type = "oneshot";
       ExecStart = "${chromaleonBridge}/bin/chromaleon_tinty --force";
-      Environment = "CHROMALEON_DEPTH=${toString cfg.chromaleon.depth}";
     };
 
     Install.WantedBy = [ "graphical-session.target" ];
@@ -199,7 +230,6 @@ in
 
     Service = {
       ExecStart = "${chromaleonBridge}/bin/chromaleon_tinty_watch";
-      Environment = "CHROMALEON_DEPTH=${toString cfg.chromaleon.depth}";
       Restart = "always";
       RestartSec = 2;
     };
