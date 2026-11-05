@@ -18,4 +18,11 @@
 
   home.modules.wsl.enable = true;
   home.modules.podmanAlias.enable = true;
+
+  # Marker for the `hms`/`hmb` helpers: they read this file to pick the target
+  # this machine runs, so the helpers work without an explicit argument once
+  # the target has been applied here once.
+  home.file.".config/home-manager-host" = {
+    text = "wsl\n";
+  };
 }

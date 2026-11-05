@@ -12,4 +12,11 @@
 
   # home.bundles.base is default-on — nothing to enable here. Add per-image
   # feature flags (home.modules.*) below if a container needs them.
+
+  # Marker for the `hms`/`hmb` helpers: they read this file to pick the target
+  # this machine runs, so the helpers work without an explicit argument once
+  # the target has been applied here once.
+  home.file.".config/home-manager-host" = {
+    text = "container\n";
+  };
 }

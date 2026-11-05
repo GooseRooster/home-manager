@@ -56,22 +56,56 @@ copy() {
 
 # ── Functions: home-manager ───────────────────────────────────────────────────
 # Standalone Home Manager against the *remote* dotfiles flake. The host is a
-# flake output (homeConfigurations.<host>), defaulting to the workstation
-# silver-hour target; extra args are passed through (e.g. `hms silver-hour -n`).
+# flake output (homeConfigurations.<host>), defaulting to the target this
+# machine actually runs; extra args are passed through (e.g. `hms silver-hour -n`).
 # --impure is always used: hosts/*.nix read $USER/$HOME at eval time.
 _HM_FLAKE="github:GooseRooster/home-manager"
+
+# Which target this machine runs. Written by the target's own home.file entry
+# (~/.config/home-manager-host), so it always matches the configuration that
+# was last applied here. Before the first switch on a machine there is no
+# marker, and the helper then refuses to guess — applying the wrong target
+# would drop or add whole feature sets (gaming content, GNOME dotfiles).
+_hm_default_host() {
+  local marker="${HOME}/.config/home-manager-host"
+  if [[ -r "$marker" ]]; then
+    read -r host <"$marker"
+    if [[ -n "$host" ]]; then
+      print -r -- "$host"
+      return
+    fi
+  fi
+  print -r -- ""
+}
+
+# Resolve the target to apply: an explicit argument wins, otherwise the
+# marker file. Prints nothing (and fails) when neither is available.
+_hm_host() {
+  local host="$1"
+  if [[ -z "$host" ]]; then
+    host="$(_hm_default_host)"
+  fi
+  if [[ -z "$host" ]]; then
+    print -u2 "hms: no target known — pass one explicitly, e.g. 'hms silver-hour-gaming'."
+    print -u2 "hms: known targets: container, wsl, silver-hour, silver-hour-gaming"
+    return 1
+  fi
+  print -r -- "$host"
+}
 
 # Switch (build + activate) the remote flake. --refresh forces Nix to re-resolve
 # the GitHub branch ref instead of reusing the cached tarball, so a freshly
 # pushed commit is picked up.
 hms() {
-  local host="${1:-silver-hour}"
+  local host
+  host="$(_hm_host "${1:-}")" || return 1
   home-manager switch --flake "${_HM_FLAKE}#${host}" --impure --refresh "${@[2,-1]}"
 }
 
 # Build only (no activation) — preview a change.
 hmb() {
-  local host="${1:-silver-hour}"
+  local host
+  host="$(_hm_host "${1:-}")" || return 1
   home-manager build --flake "${_HM_FLAKE}#${host}" --impure --refresh "${@[2,-1]}"
 }
 

@@ -42,4 +42,11 @@
 
   # Base user-facing Flatpaks (the image provides devtoolbox system-wide).
   home.bundles.flatpak.base.enable = true;
+
+  # Marker for the `hms`/`hmb` helpers: they read this file to pick the target
+  # this machine runs, so the helpers work without an explicit argument once
+  # the target has been applied here once. The gaming flavour overrides it.
+  home.file.".config/home-manager-host" = {
+    text = "silver-hour\n";
+  };
 }

@@ -23,4 +23,12 @@
   home.modules.steamAdwaita.enable = true;
 
   home.bundles.flatpak.gaming.enable = true;
+
+  # Marker for the `hms`/`hmb` helpers: they read this file to pick the target
+  # this machine runs. Without it they would default to the plain silver-hour
+  # target, and switching that here would drop the gaming content (Jackify,
+  # the Steam skin, the gaming Flatpaks) out of the profile.
+  home.file.".config/home-manager-host" = {
+    text = "silver-hour-gaming\n";
+  };
 }

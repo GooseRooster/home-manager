@@ -61,6 +61,11 @@ use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 | `silver-hour` | atomic Fedora image | `silverHour`, `bundles.baseExtra`, `bundles.flatpak.base`, `bundles.gnomeExtensions`, `gnomeSettings`, `podmanAlias` |
 | `silver-hour-gaming` | the image + gaming content | the above plus `gaming`, `steamAdwaita`, `bundles.flatpak.gaming` |
 
+> Each target writes `~/.config/home-manager-host` with its own name, and the
+> `hms`/`hmb` helpers read that file to pick the target *this* machine runs.
+> Apply the target explicitly when you are not on the machine in question —
+> see [AGENTS.md](AGENTS.md).
+
 Flags: `gaming`, `steamAdwaita`, `podmanAlias`, `wsl`, `silverHour`,
 `gnomeSettings`, plus the `bundles` switches (see `modules/bundles.nix`).
 `silverHour` selects the GNOME-image profile: the image's own fonts and VS
@@ -96,15 +101,20 @@ to standalone Home Manager, enabled with `home.modules.steamAdwaita.enable`
 colours into a tinted8 scheme for tinty. It is not a separate theme choice:
 the scheme follows ChromaLeon rather than re-extracting colours in a vacuum.
 
+The bridge itself is **not** in this repository — it ships in gnomad's own
+(`assets/chromaleon-bridge/`, packaged as
+`gnomad.packages.<system>.chromaleon-bridge`). This module installs that
+package and wires the systemd units around it; there is no second copy to keep
+in sync.
+
 - The accent is ChromaLeon's `accent-color` (or the mapped GNOME accent when
   `gnome-colors` is on), and is kept exact in `ui.accent.normal`.
 - The background anchor is ChromaLeon's *actual* shell surface, resolved from
   the generated `chromaleon-shell*.css` by evaluating its `st-mix(...)`
   expressions. That means `tint-shell`, `tint-panel`, `tinting-strength`,
   `darker`, `full-light`, and `prefer-light` are followed automatically.
-- Wallpaper swatches are extracted with GdkPixbuf via GJS
-  (`files/scripts/chromaleon_pixels.js`), matching ChromaLeon's
-  aspect-preserving `64x64` scale. ImageMagick is the fallback.
+- Wallpaper swatches are extracted with GdkPixbuf via GJS, matching
+  ChromaLeon's aspect-preserving `64x64` scale. ImageMagick is the fallback.
 - The eight palette slots are placed in OKLCH: wallpaper hues are normalised
   into consistent lightness/chroma bands, missing hues are synthesized from
   the wallpaper's median chroma, and collapsed slots (notably red/yellow) are
@@ -113,6 +123,52 @@ the scheme follows ChromaLeon rather than re-extracting colours in a vacuum.
   depth dial moves the background away from the shell surface in OKLCH
   (luminance separation plus a little chroma recession) while leaving the
   accent exact.
+
+### What makes the bridge fire
+
+Three triggers, all landing on the same script (`chromaleon_tinty`):
+
+| Trigger | Mechanism |
+|---|---|
+| ChromaLeon restyles the shell | systemd path unit on `~/.cache/chromaleon/chromaleon-shell{,-dark}.css` → `gnomad-chromaleon.service` |
+| The desktop light/dark toggle flips | `gnomad-chromaleon-variant.service` watches `org.gnome.desktop.interface.color-scheme` |
+| The wallpaper changes | the same service also watches `org.gnome.desktop.background` (the `picture-uri` keys) |
+
+The wallpaper watch is what makes the bridge work with **gnomad in
+gowall-only mode**. gowall recolours the wallpaper to the scheme's palette
+*before* it is set, so the accent ChromaLeon derives from the new image is
+almost always the scheme's own colour and barely moves from image to image.
+ChromaLeon only rewrites its stylesheets when that accent changes, so without
+the wallpaper watch the bridge would never run and the terminal theme would
+stay on the previous wallpaper's palette.
+
+gnomad's own `on_wallpaper_apply` hook can drive the bridge as well, which is
+the deterministic variant (gnomad waits `wallpaper_settle_ms` after setting
+the wallpaper, so ChromaLeon has published its new accent before the bridge
+reads it):
+
+```toml
+# ~/.config/gnomad/config.toml — not managed by home-manager
+[hooks]
+on_wallpaper_apply = "$HOME/.nix-profile/bin/chromaleon_tinty"
+```
+
+`chromaleon_tinty` is installed into the profile (`home.packages`), so it is
+callable by name from a shell as well.
+
+> **A note on ChromaLeon's own state.** The extension derives its accent
+> asynchronously and serialises all of its work through a single promise chain
+> (`extension.js`, `_runOperation`). `ColorUtils.calculateVibrantColor()` has
+> no error handling, so a wallpaper the extension cannot decode (an XML
+> slideshow, a JPEG XL file) leaves that promise unsettled — and every later
+> operation, including `accent-color` changes, queues behind it forever. The
+> symptom is "the extension still shows the new colours in its UI, but
+> changing them does nothing". Reloading the extension clears it:
+>
+> ```sh
+> gnome-extensions disable user-accent-colors@fabito02
+> gnome-extensions enable user-accent-colors@fabito02
+> ```
 
 The dial is a Home Manager option:
 
@@ -125,8 +181,8 @@ To inspect the current result without applying it:
 ```sh
 URI=$(dconf read /org/gnome/desktop/background/picture-uri-dark | tr -d "'")
 WP=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.argv[1][7:]))' "$URI")
-gjs files/scripts/chromaleon_pixels.js "$WP" \
-  | python3 files/scripts/chromaleon_palette.py --pixels-b64 \
+gjs ~/.nix-profile/bin/chromaleon_pixels.js "$WP" \
+  | python3 ~/.nix-profile/bin/chromaleon_palette.py --pixels-b64 \
       --accent "$(dconf read /org/gnome/shell/extensions/chromaleon/accent-color | tr -d "'")" \
       --variant dark \
       --shell-css "$HOME/.cache/chromaleon/chromaleon-shell-dark.css" \

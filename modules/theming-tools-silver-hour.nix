@@ -90,35 +90,10 @@ let
 
   # ChromaLeon -> tinty bridge. ChromaLeon only persists a single accent colour
   # (plus a per-wallpaper cache), so we re-derive the palette from the current
-  # wallpaper and map it onto a tinted8 scheme. See files/scripts/chromaleon_*.
-  chromaleonTinty = pkgs.writeShellApplication {
-    name = "chromaleon_tinty";
-    runtimeInputs = with pkgs; [
-      coreutils
-      dconf
-      imagemagick
-      python3
-      tinty
-      util-linux
-    ];
-    text = ''
-      export CHROMALEON_PALETTE="${../files/scripts/chromaleon_palette.py}"
-      export CHROMALEON_PIXELS="${../files/scripts/chromaleon_pixels.js}"
-      export CHROMALEON_DEPTH="${toString cfg.chromaleon.depth}"
-    '' + builtins.readFile ../files/scripts/chromaleon_tinty;
-  };
-
-  # Long-running dconf watcher: keeps the scheme variant in step with the
-  # desktop light/dark toggle even when ChromaLeon does not rewrite its CSS.
-  chromaleonTintyWatch = pkgs.writeShellApplication {
-    name = "chromaleon_tinty_watch";
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.dconf
-      chromaleonTinty
-    ];
-    text = builtins.readFile ../files/scripts/chromaleon_tinty_watch;
-  };
+  # wallpaper and map it onto a tinted8 scheme. The bridge itself ships in
+  # gnomad's own repository (assets/chromaleon-bridge) and is packaged as
+  # `chromaleon-bridge`; this module only wires up the units around it.
+  chromaleonBridge = gnomad.packages.${pkgs.stdenv.hostPlatform.system}.chromaleon-bridge;
 in
 {
   options.home.modules.chromaleon = {
@@ -143,9 +118,13 @@ in
 
   # gnomad's package wraps git/gowall/tinty/glib into its PATH; tinty is also
   # installed directly so the user can drive scheme sync by hand.
+  # The ChromaLeon bridge is installed as well so it can be called by name —
+  # gnomad's `on_wallpaper_apply` hook is the deterministic way to re-derive
+  # the scheme when gnomad changes the wallpaper.
   home.packages = [
     gnomad.packages.${pkgs.stdenv.hostPlatform.system}.gnomad
     pkgs.tinty
+    chromaleonBridge
   ];
 
   home.file = lib.mapAttrs' (name: _: {
@@ -180,11 +159,12 @@ in
   '';
 
   # ChromaLeon integration (silver-hour only). The path unit fires whenever
-  # ChromaLeon rewrites its generated Shell stylesheets (wallpaper change,
-  # accent pick, tint settings); the login oneshot applies the scheme at session
-  # start (--force so an unchanged scheme still re-runs the tinty hooks); the
-  # variant service watches GNOME's color-scheme key for live light/dark flips.
-  systemd.user.paths.tinty-chromaleon = {
+  # ChromaLeon rewrites its generated Shell stylesheets (accent pick, tint
+  # settings); the login oneshot applies the scheme at session start (--force
+  # so an unchanged scheme still re-runs the tinty hooks); the variant service
+  # watches GNOME's color-scheme key and the wallpaper, so the palette follows
+  # a wallpaper change even when ChromaLeon does not restyle the shell.
+  systemd.user.paths.gnomad-chromaleon = {
     Unit.Description = "Watch ChromaLeon stylesheets for accent changes";
 
     Path = {
@@ -192,32 +172,34 @@ in
         "%h/.cache/chromaleon/chromaleon-shell.css"
         "%h/.cache/chromaleon/chromaleon-shell-dark.css"
       ];
-      Unit = "tinty-chromaleon.service";
+      Unit = "gnomad-chromaleon.service";
     };
 
     Install.WantedBy = [ "default.target" ];
   };
 
-  systemd.user.services.tinty-chromaleon = {
+  systemd.user.services.gnomad-chromaleon = {
     Unit.Description = "Generate and apply the ChromaLeon tinted8 scheme";
 
     Service = {
       Type = "oneshot";
-      ExecStart = "${chromaleonTinty}/bin/chromaleon_tinty --force";
+      ExecStart = "${chromaleonBridge}/bin/chromaleon_tinty --force";
+      Environment = "CHROMALEON_DEPTH=${toString cfg.chromaleon.depth}";
     };
 
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  systemd.user.services.tinty-chromaleon-variant = {
+  systemd.user.services.gnomad-chromaleon-variant = {
     Unit = {
-      Description = "Re-apply the ChromaLeon tinted8 scheme on light/dark changes";
+      Description = "Re-apply the ChromaLeon tinted8 scheme on wallpaper/light-dark changes";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
     };
 
     Service = {
-      ExecStart = "${chromaleonTintyWatch}/bin/chromaleon_tinty_watch";
+      ExecStart = "${chromaleonBridge}/bin/chromaleon_tinty_watch";
+      Environment = "CHROMALEON_DEPTH=${toString cfg.chromaleon.depth}";
       Restart = "always";
       RestartSec = 2;
     };
