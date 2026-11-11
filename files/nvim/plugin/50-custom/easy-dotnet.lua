@@ -4,9 +4,12 @@
 -- Gated on `profile.has('dotnet')` (see 'lua/config/profile.lua') — only
 -- loaded (and only downloads roslyn) when the dotnet feature is on for this
 -- environment. In the full profile (dotnet not asked for by name) it also
--- needs `dotnet` on PATH and a solution/project file above the cwd: unlike
--- the PATH-gated LSP servers it loads eagerly, so it would otherwise run in
--- every nvim.
+-- needs `dotnet` on PATH and a solution/project file above the cwd or a few
+-- levels below it (repos that keep the .sln next to the project in a
+-- subfolder): unlike the PATH-gated LSP servers it loads eagerly, so it
+-- would otherwise run in every nvim. The downward scan is depth-capped,
+-- skips hidden/build/dependency dirs, and never runs from $HOME or /, so
+-- startup in a big tree stays cheap.
 --
 -- `picker = 'basic'` (`vim.ui.select`-backed): easy-dotnet has no
 -- 'mini.pick' integration (its own priority list is snacks -> fzf ->
@@ -25,7 +28,20 @@ Config.later(function()
     local is_dotnet_root = function(name)
       return name:match('%.slnx?$') ~= nil or name:match('%.csproj$') ~= nil
     end
-    if not vim.fs.root(vim.fn.getcwd(), is_dotnet_root) then return end
+    local cwd = vim.fn.getcwd()
+    local has_dotnet_below = function()
+      if cwd == vim.env.HOME or cwd == '/' then return false end
+      local skip_dirs = { node_modules = true, bin = true, obj = true, target = true }
+      local skip = function(dir)
+        local name = vim.fs.basename(dir)
+        return not (name:sub(1, 1) == '.' or skip_dirs[name])
+      end
+      for name, type in vim.fs.dir(cwd, { depth = 3, skip = skip }) do
+        if type == 'file' and is_dotnet_root(vim.fs.basename(name)) then return true end
+      end
+      return false
+    end
+    if not (vim.fs.root(cwd, is_dotnet_root) or has_dotnet_below()) then return end
   end
 
   -- The `dotnet-easydotnet` apphost bakes in a glibc interpreter path at
