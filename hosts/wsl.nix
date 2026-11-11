@@ -16,6 +16,9 @@
   # opencode, openfortivpn, ...).
   home.bundles.wsl.enable = true;
 
+  # Cross-stack toolchains, so repos without a flake work (pkgs/dev.nix).
+  home.bundles.dev.enable = true;
+
   home.modules.wsl.enable = true;
   home.modules.podmanAlias.enable = true;
 

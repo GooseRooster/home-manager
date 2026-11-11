@@ -3,6 +3,10 @@
 Self-contained Nix devShell for .NET web/service projects. Drop into a repo
 via `devshell-init dotnet` (see `~/repos/home-manager` for the scaffolder).
 
+On hosts with home-manager's `bundles.dev` these tools are already in the home
+profile, so a repo works without this template; use it to pin versions for the
+project (the devshell's packages come first on PATH).
+
 ## What ships
 
 - **`.NET SDK 10`** via nixpkgs `dotnetCorePackages.sdk_10_0`.

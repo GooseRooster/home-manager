@@ -24,7 +24,9 @@ in
 {
   home.activation.wslShellLauncher = lib.mkIf cfg.wsl.enable (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run() {
+      # Not "run": every activation step shares one script, and a function
+      # named run would replace Home Manager's run helper for every later step.
+      wslShellLauncherStep() {
         local bashrc="$HOME/.bashrc"
         [ -e "$bashrc" ] || return 0
         # Strip any previously materialized block — the generic marker AND
@@ -53,7 +55,7 @@ fi
 # <<< home-manager: shell launcher <<<
 EOF
       }
-      run
+      wslShellLauncherStep
     ''
   );
 }

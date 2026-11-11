@@ -203,13 +203,15 @@ in
   # extra.zsh: materialize once, never overwrite. NOT xdg.configFile — that
   # would clobber user edits on every switch.
   home.activation.materializeZshExtra = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    run() {
+    # Not "run": every activation step shares one script, and a function
+    # named run would replace Home Manager's run helper for every later step.
+    materializeZshExtraStep() {
       local target="$HOME/.config/zsh/extra.zsh"
       if [ ! -e "$target" ]; then
         mkdir -p "$(dirname "$target")"
         cp ${pkgs.writeText "extra.zsh" extraScaffold} "$target"
       fi
     }
-    run
+    materializeZshExtraStep
   '';
 }

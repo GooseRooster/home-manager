@@ -50,12 +50,12 @@ in
 {
   # Shell-agnostic session env: home.sessionVariables feeds the systemd user
   # environment, so GUI apps and termapp-launched shells get these even without
-  # an interactive shell bootstrap. NVIM_PROFILE is read by nvim's profile.lua
-  # (files/nvim/lua/config/profile.lua).
+  # an interactive shell bootstrap. NVIM_PROFILE is deliberately unset: nvim's
+  # profile.lua (files/nvim/lua/config/profile.lua) defaults to "full" and
+  # narrows to "minimal" when a devshell exports NVIM_LANGS.
   home.sessionVariables = {
     EDITOR = "${pkgs.neovim}/bin/nvim";
     VISUAL = "${pkgs.neovim}/bin/nvim";
-    NVIM_PROFILE = "minimal";
   };
 
   home.file.".config/nvim" = {

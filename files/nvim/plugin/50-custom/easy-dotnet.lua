@@ -3,7 +3,10 @@
 --
 -- Gated on `profile.has('dotnet')` (see 'lua/config/profile.lua') — only
 -- loaded (and only downloads roslyn) when the dotnet feature is on for this
--- environment.
+-- environment. In the full profile (dotnet not asked for by name) it also
+-- needs `dotnet` on PATH and a solution/project file above the cwd: unlike
+-- the PATH-gated LSP servers it loads eagerly, so it would otherwise run in
+-- every nvim.
 --
 -- `picker = 'basic'` (`vim.ui.select`-backed): easy-dotnet has no
 -- 'mini.pick' integration (its own priority list is snacks -> fzf ->
@@ -15,7 +18,15 @@
 -- groups — see 'lua/config/run.lua' for the letter convention and how a
 -- future non-dotnet stack would plug into the same two groups.
 Config.later(function()
-  if not require('config.profile').has('dotnet') then return end
+  local profile = require('config.profile')
+  if not profile.has('dotnet') then return end
+  if not profile.explicit('dotnet') then
+    if vim.fn.executable('dotnet') ~= 1 then return end
+    local is_dotnet_root = function(name)
+      return name:match('%.slnx?$') ~= nil or name:match('%.csproj$') ~= nil
+    end
+    if not vim.fs.root(vim.fn.getcwd(), is_dotnet_root) then return end
+  end
 
   -- The `dotnet-easydotnet` apphost bakes in a glibc interpreter path at
   -- install time, so it breaks (GLIBC_x not found) whenever nixpkgs moves

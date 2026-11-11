@@ -3,6 +3,10 @@
 Self-contained Nix devShell for Rust projects. Drop into a repo via
 `devshell-init rust` (see `~/repos/home-manager` for the scaffolder).
 
+On hosts with home-manager's `bundles.dev` these tools are already in the home
+profile, so a repo works without this template; use it to pin versions for the
+project (the devshell's packages come first on PATH).
+
 ## What ships
 
 - **`rust-analyzer`** via nixpkgs — nvim's LSP resolves it from PATH.

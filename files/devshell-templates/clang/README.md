@@ -3,6 +3,10 @@
 Self-contained Nix devShell for C/C++ (and CMake) projects. Drop into a repo
 via `devshell-init clang` (see `~/repos/home-manager` for the scaffolder).
 
+On hosts with home-manager's `bundles.dev` these tools are already in the home
+profile, so a repo works without this template; use it to pin versions for the
+project (the devshell's packages come first on PATH).
+
 ## What ships
 
 - **`clangd`** via nixpkgs `clang-tools` — nvim's LSP resolves it from PATH.

@@ -6,7 +6,8 @@
 # containers all get the same mechanism.
 #
 #   container   base (default-on — zero config needed)
-#   wsl         base + wsl
+#   wsl         base + wsl + dev
+#   silver-hour base + baseExtra + dev
 #   desktop     base + baseExtra (set in nixos-config's home-manager.users)
 {
   options.home.bundles = {
@@ -31,6 +32,17 @@
         '';
       };
     };
+    dev = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Cross-stack dev toolchains (.NET SDKs, roslyn-ls, netcoredbg,
+          codelldb, clangd, cmake, vtsls) so repos without a flake still get
+          LSP + DAP. Project devshells shadow them. Off for dev containers.
+        '';
+      };
+    };
     wsl = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -50,6 +62,7 @@
     lib.mkMerge [
       (lib.mkIf cfg.base.enable (import ../pkgs/base.nix { inherit pkgs; }))
       (lib.mkIf cfg.baseExtra.enable (import ../pkgs/base-extra.nix { inherit pkgs; }))
+      (lib.mkIf cfg.dev.enable (import ../pkgs/dev.nix { inherit pkgs; }))
       (lib.mkIf cfg.wsl.enable (import ../pkgs/wsl.nix { inherit pkgs; }))
     ];
 }

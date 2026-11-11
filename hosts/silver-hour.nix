@@ -21,6 +21,9 @@
   # by the image, so they are not in the list).
   home.bundles.baseExtra.enable = true;
 
+  # Cross-stack toolchains, so repos without a flake work (pkgs/dev.nix).
+  home.bundles.dev.enable = true;
+
   # nix-flatpak's flatpak-managed-install.service installs the whole Flatpak set
   # on activation; on a cold cache that runs past sd-switch's 120000 ms default
   # (TimeoutStartSec=infinity on the unit, so sd-switch is the only bound). When

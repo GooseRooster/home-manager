@@ -17,6 +17,7 @@ home-manager    ← this repo: home dotfiles + CLI "batteries" (package bundles)
   |--------|----------|---------|
   | `base` | devcontainer-safe CLI tooling (`pkgs/base.nix`) | on for every target |
   | `baseExtra` | visual/GUI extras (`pkgs/base-extra.nix`) | off |
+  | `dev` | cross-stack toolchains: .NET SDKs, roslyn-ls, netcoredbg, codelldb, clangd, cmake, vtsls (`pkgs/dev.nix`) | off (on for `wsl` and `silver-hour`) |
   | `wsl` | WSL dev-host extras (`pkgs/wsl.nix`) | off |
 
 - **User-facing Flatpaks** live here too (`modules/flatpak.nix`), installed
@@ -57,8 +58,8 @@ use with `lib.mkIf`/`lib.optionalString` to include or omit files.
 | Target | Use | Flags on |
 |--------|-----|----------|
 | `container` | lean dev container | `bundles.base` (default) |
-| `wsl` | foreign-WSL dev host | `bundles.wsl`, `wsl`, `podmanAlias` |
-| `silver-hour` | atomic Fedora image | `silverHour`, `bundles.baseExtra`, `bundles.flatpak.base`, `bundles.gnomeExtensions`, `gnomeSettings`, `podmanAlias` |
+| `wsl` | foreign-WSL dev host | `bundles.wsl`, `bundles.dev`, `wsl`, `podmanAlias` |
+| `silver-hour` | atomic Fedora image | `silverHour`, `bundles.baseExtra`, `bundles.dev`, `bundles.flatpak.base`, `bundles.gnomeExtensions`, `gnomeSettings`, `podmanAlias` |
 | `silver-hour-gaming` | the image + gaming content | the above plus `gaming`, `steamAdwaita`, `bundles.flatpak.gaming` |
 
 > Each target writes `~/.config/home-manager-host` with its own name, and the
@@ -378,20 +379,26 @@ lockfile lives at the managed path as a mutable file instead (see the
 ### Environment profile
 
 Which languages load is decided at runtime by the environment profile
-(`files/nvim/lua/config/profile.lua`): everything defaults to the lean
-baseline + `NVIM_LANGS` opt-ins (typically `export NVIM_LANGS=...,rust` from
-a project's `.envrc.local` — the personal/gitignored hook sourced by the tracked `.envrc`);
-`NVIM_PROFILE=full` is a deliberate per-machine opt-in for hosts that
-genuinely carry every toolchain.
+(`files/nvim/lua/config/profile.lua`): with no `NVIM_LANGS` set it is the
+`full` profile (every feature; a server still only starts if its binary is on
+PATH). Setting `NVIM_LANGS` (typically `export NVIM_LANGS=...,rust` from a
+project's `.envrc.local` — the personal/gitignored hook sourced by the tracked
+`.envrc`) narrows it to the lean baseline + those opt-ins. An explicit
+`NVIM_PROFILE=full|minimal` overrides both.
+
+In the `full` profile easy-dotnet (the one plugin that loads eagerly) also
+requires `dotnet` on PATH and a `*.sln`/`*.slnx`/`*.csproj` above the working
+directory; an explicit `NVIM_LANGS=dotnet` loads it unconditionally.
 
 LSP servers are Mason-free: a server enables only when its feature is in the
 profile **and** its binary resolves on PATH. A small set of **native** tools
 (`lua-language-server`, `clangd`, `rust-analyzer`, `neocmakelsp`, `codelldb`,
-`stylua`) therefore comes from PATH — home profile (`pkgs/base.nix`) or
-project devshell — since prebuilt native binaries cannot run on NixOS.
-Consequence for projects: a rust/clang/cmake project must provide its
-tooling via the devshell (`devshell-init rust` / `clang` scaffolds it) —
-opening nvim outside such a shell simply leaves those servers off.
+`stylua`) therefore comes from PATH — home profile (`pkgs/base.nix`, plus
+`pkgs/dev.nix` on hosts with `bundles.dev`) or project devshell — since
+prebuilt native binaries cannot run on NixOS. On a `bundles.dev` host a repo
+without a flake works as-is; elsewhere (the container) a rust/clang/cmake
+project must provide its tooling via the devshell (`devshell-init rust` /
+`clang` scaffolds it).
 
 
 ## Devshell templates

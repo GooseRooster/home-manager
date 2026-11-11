@@ -3,13 +3,19 @@
 Operational guidance for coding agents working in this repository. For the
 project description and architecture, see [README.md](README.md).
 
-## This host
+## Which host is this?
 
-**This machine runs the `silver-hour-gaming` target.** Apply changes with:
+This repository is shared by every target, so this file cannot name the
+machine. **Read `~/.config/home-manager-host` before building or switching**:
+it holds the target this machine runs (written by `hosts/*.nix`, one per
+target). Then apply with that target's line from the table below, e.g.:
 
 ```bash
-home-manager switch --flake '.#silver-hour-gaming' --impure
+home-manager switch --flake ".#$(cat ~/.config/home-manager-host)" --impure
 ```
+
+If the marker is missing, ask — never guess a target: switching the wrong one
+replaces the whole profile.
 
 > Quote the flake reference: `silver-hour-gaming` contains a hyphen, which Nix
 > parses as subtraction in an unquoted attribute path.
@@ -35,8 +41,8 @@ home-manager switch --flake github:GooseRooster/home-manager#silver-hour-gaming 
 ```
 
 `hms`/`hmb` pick the target from `~/.config/home-manager-host`, which the
-target itself writes (`hosts/*.nix`, one per target) — so on this machine they
-resolve to `silver-hour-gaming` on their own. They build the *remote* flake
+target itself writes (`hosts/*.nix`, one per target) — so they resolve to
+this machine's target on their own. They build the *remote* flake
 (`github:GooseRooster/home-manager`); use the local path for changes that are
 not pushed yet.
 
@@ -45,11 +51,11 @@ not pushed yet.
 > `hms wsl`) before `hms` alone works on them. Until then the helpers refuse
 > to guess rather than applying the wrong target.
 
-### Do not apply the plain `silver-hour` target here
+### Do not apply the plain `silver-hour` target on a gaming host
 
 `silver-hour-gaming` = `silver-hour` + `gaming`, `steamAdwaita`,
 `jackify` and `bundles.flatpak.gaming`. Switching the plain `silver-hour`
-target on this host replaces the profile with the non-gaming one and removes
+target on a `silver-hour-gaming` machine replaces the profile with the non-gaming one and removes
 the gaming content from it: the Jackify AppImage
 (`~/Modding/General Tools/Jackify`), the Adwaita-for-Steam skin
 (`~/.config/AdwSteamGtk/`) and the gaming Flatpaks. The home is then in a

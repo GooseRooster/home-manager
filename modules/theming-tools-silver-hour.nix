@@ -176,7 +176,9 @@ in
   # gnomad / `tinty apply` work immediately. Idempotent: sync only runs when the
   # data dir is absent. Runs after writeBoundary so the config above exists.
   home.activation.tintySetup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    run() {
+    # Not "run": every activation step shares one script, and a function
+    # named run would replace Home Manager's run helper for every later step.
+    tintySetupStep() {
       local dirs="$HOME/.config/ghostty/themes $HOME/.claude/themes"
       ${lib.optionalString cfg.gaming.enable ''dirs="$dirs $HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings"''}
       ${lib.optionalString cfg.steamAdwaita.enable ''dirs="$dirs $HOME/.config/AdwSteamGtk"''}
@@ -187,7 +189,7 @@ in
           || echo "WARN: 'tinty sync' failed (offline?), skipping." >&2
       fi
     }
-    run
+    tintySetupStep
   '';
 
   # ChromaLeon integration (silver-hour only). The path unit fires whenever

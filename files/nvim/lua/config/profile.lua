@@ -1,6 +1,10 @@
 -- Environment-driven feature profile
 --   NVIM_PROFILE = "full" | "minimal"   coarse override (optional)
 --   NVIM_LANGS   = "rust,python,..."    comma list of extra langs (minimal only)
+--
+-- Default: "full" when neither is set (every feature on; servers are still
+-- PATH-gated, so a repo without a devshell gets whatever the home profile
+-- carries). Setting NVIM_LANGS implies "minimal" + those langs.
 
 -- Read live at every startup, so a devshell's `.envrc.local` env export
 -- (typically via direnv) changes the profile without touching config files.
@@ -100,7 +104,10 @@ local function resolve_profile()
 	if p == "full" or p == "minimal" then
 		return p
 	end
-	return "minimal"
+	if env("NVIM_LANGS") then
+		return "minimal"
+	end
+	return "full"
 end
 
 local function resolve_langs()
@@ -131,6 +138,13 @@ M.langs = resolve_langs()
 --- Is a given feature enabled in this environment?
 function M.has(feature)
 	return M.langs[feature] == true
+end
+
+--- Was a feature asked for by name (NVIM_LANGS / minimal_langs), rather than
+--- swept in by the full profile? Lets eager plugins (easy-dotnet) add their
+--- own project check in the full profile only.
+function M.explicit(feature)
+	return M.profile == "minimal" and M.has(feature)
 end
 
 --- Any language enabled at all? Used to gate the generic dap.lua wiring.
