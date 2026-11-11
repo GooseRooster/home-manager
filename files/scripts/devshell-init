@@ -8,12 +8,13 @@
 #   devshell-init                                # list available templates
 #   devshell-init <template-name> --force        # allow overwriting existing files
 #
-# Files are dropped at the target's ROOT (flake.nix, .envrc,
-# .config/dotnet-tools.json) — that's how Nix devShells are meant to sit.
-# README.md is deliberately NOT copied (scaffolder-only reference docs), and
-# .envrc.local.example is auto-materialized into .envrc.local (the
-# per-developer hook, sourced by .envrc — NVIM_LANGS etc. live there) rather
-# than copied verbatim.
+# Files are dropped at the target's ROOT (flake.nix, .envrc, and any
+# template-specific extras such as dotnet's .config/dotnet-tools.json) —
+# that's how Nix devShells are meant to sit. README.md is deliberately NOT
+# copied (scaffolder-only reference docs), and .envrc.local.example is
+# auto-materialized into .envrc.local (the per-developer hook, sourced by
+# .envrc after `use flake` — NVIM_LANGS etc. live there) rather than copied
+# verbatim.
 #
 # Templates are looked up in $DEVSHELL_TEMPLATES_DIR (default:
 # ~/.local/share/devshell-templates), which is materialized by
@@ -29,10 +30,28 @@ _list_templates() {
     echo "  (templates dir missing — run 'home-manager switch' to materialize)"
     return
   fi
+  local dir name desc
   for dir in "$TEMPLATES_DIR"/*/; do
     [[ -d "$dir" ]] || continue
-    echo "  - $(basename "$dir")"
+    name="$(basename "$dir")"
+    desc=""
+    if [[ -f "$dir/flake.nix" ]]; then
+      desc="$(sed -n 's/^[[:space:]]*description[[:space:]]*=[[:space:]]*"\(.*\)";.*/\1/p' "$dir/flake.nix" | head -n1)"
+    fi
+    if [[ -n "$desc" ]]; then
+      printf '  - %-8s %s\n' "$name" "$desc"
+    else
+      echo "  - $name"
+    fi
   done
+}
+
+# Relative paths of every file the template ships into the target, i.e.
+# everything except the scaffolder-only README.md and .envrc.local.example
+# (handled separately). `find -L` follows the per-file Nix-store symlinks
+# that home.file (recursive = true) leaves under $TEMPLATES_DIR.
+_template_files() {
+  (cd "$1" && find -L . -type f ! -path ./README.md ! -path ./.envrc.local.example | sed 's|^\./||' | sort)
 }
 
 FORCE=false
@@ -59,47 +78,37 @@ if [[ ! -d "$TEMPLATE_SRC" ]]; then
   exit 1
 fi
 
+mapfile -t FILES < <(_template_files "$TEMPLATE_SRC")
+
 mkdir -p "$TARGET_DIR"
 
-# Refuse to clobber a repo that already has a flake.nix / .envrc / dotnet
-# manifest unless explicitly forced. These are the sentinels most likely to
-# indicate the repo already has a devShell of its own.
+# Refuse to clobber anything the template would write (flake.nix, .envrc,
+# dotnet's tool manifest, ...) unless explicitly forced — an existing one
+# most likely means the repo already has a devShell of its own.
 if [[ "$FORCE" != true ]]; then
-  for sentinel in flake.nix .envrc .config/dotnet-tools.json; do
-    if [[ -e "$TARGET_DIR/$sentinel" ]]; then
-      echo "ERROR: $TARGET_DIR/$sentinel already exists. Pass --force to overwrite." >&2
+  for rel in "${FILES[@]}"; do
+    if [[ -e "$TARGET_DIR/$rel" ]]; then
+      echo "ERROR: $TARGET_DIR/$rel already exists. Pass --force to overwrite." >&2
       exit 1
     fi
   done
 fi
 
-# Copy template contents (dotfiles included) into the target root.
+# Copy file-by-file rather than `cp -r` per top-level entry: copying a
+# directory onto an existing one (e.g. the repo already has .config/) would
+# nest it as .config/.config/ instead of merging.
 #
-# Every file under $TEMPLATES_DIR is itself a symlink into the Nix store
-# (home.file with recursive=true symlinks leaves, not the whole tree), so a
-# plain recursive cp preserves those symlinks verbatim — the target repo
-# ends up with dangling-on-other-machines links back into /nix/store instead
-# of real files. `-L` dereferences every symlink into real content;
-# `--no-preserve=mode` drops the store's read-only 444 so the copies land as
-# normal writable files.
-#
-# README.md is intentionally skipped: it's scaffolder/reference
-# documentation, not something a consuming repo needs to carry around. It
-# stays readable from $TEMPLATE_SRC/README.md instead.
-#
-# .envrc.local.example is also handled separately below, so it can be
-# auto-materialized into .envrc.local rather than left as a manual step.
-shopt -s dotglob
-for entry in "$TEMPLATE_SRC"/*; do
-  base="$(basename "$entry")"
-  case "$base" in
-  README.md | .envrc.local.example) continue ;;
-  esac
-  cp -rL --no-preserve=mode "$entry" "$TARGET_DIR/$base"
+# Every file under $TEMPLATES_DIR is itself a symlink into the Nix store, so
+# `-L` dereferences it into real content (no dangling-on-other-machines links
+# back into /nix/store), and `--no-preserve=mode` drops the store's read-only
+# 444 so the copies land as normal writable files.
+for rel in "${FILES[@]}"; do
+  mkdir -p "$TARGET_DIR/$(dirname "$rel")"
+  cp -L --no-preserve=mode "$TEMPLATE_SRC/$rel" "$TARGET_DIR/$rel"
 done
-shopt -u dotglob
 
-echo "Copied '$TEMPLATE_NAME' template into $TARGET_DIR"
+echo "Copied '$TEMPLATE_NAME' template into $TARGET_DIR:"
+printf '      %s\n' "${FILES[@]}"
 
 # Auto-materialize the personal dev hook from the template's example, so
 # NVIM_LANGS and friends are wired up with zero manual steps. Never
@@ -115,16 +124,30 @@ if [[ -f "$TEMPLATE_SRC/.envrc.local.example" ]]; then
   fi
 fi
 
+# Per-template adoption steps, mirroring each template's README checklist.
+GITIGNORE=(/.direnv/ /.envrc.local)
+EXTRA_STEPS=()
+case "$TEMPLATE_NAME" in
+dotnet)
+  GITIGNORE=(/.certs/ /.direnv/ /.envrc.local /.config/.tools-restored)
+  EXTRA_STEPS+=(
+    "  - Trust the dev cert on this host (one-off; Linux/WSL NSS step is manual):"
+    "      dotnet dev-certs https --trust"
+    "  - Pin project-shared tools in $TARGET_DIR/.config/dotnet-tools.json (restored on shell entry)."
+  )
+  ;;
+esac
+
 echo ""
 echo "Next steps:"
 echo "  - Append to $TARGET_DIR/.gitignore:"
-echo "      /.certs/"
-echo "      /.direnv/"
-echo "      /.envrc.local"
-echo "      /.config/.tools-restored"
-echo "  - Trust the dev cert on this host (one-off):"
-echo "      dotnet dev-certs https --trust"
-echo "  - Enter the shell:  direnv allow   (or: nix develop)"
+printf '      %s\n' "${GITIGNORE[@]}"
+if [[ "${#EXTRA_STEPS[@]}" -gt 0 ]]; then
+  printf '%s\n' "${EXTRA_STEPS[@]}"
+fi
+echo "  - git add the scaffolded files — flakes inside a git repo only see tracked files."
+echo "  - Enter the shell:  direnv allow   (or: nix develop — which skips .envrc.local)"
+echo "  - Commit the flake.lock created on first entry (none is shipped)."
 if [[ -n "$DEV_LOCAL_NOTE" ]]; then
   echo "$DEV_LOCAL_NOTE"
 fi

@@ -432,8 +432,12 @@ Usage from any repo:
 devshell-init                     # list available templates
 devshell-init dotnet              # scaffold into CWD
 devshell-init dotnet path/to/repo # scaffold into a target dir
-devshell-init dotnet --force      # allow overwrite of existing flake.nix / .envrc
+devshell-init dotnet --force      # allow overwrite of files the template ships
 ```
+
+The "next steps" it prints (`.gitignore` entries, dotnet cert trust, …) are
+per-template and mirror each template's README checklist; an existing
+`.envrc.local` is never overwritten, even with `--force`.
 
 Templates are personal reference material — each is a snapshot you copy and
 then diverge from per-project. Refresh a template in-place when you learn
