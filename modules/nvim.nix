@@ -39,12 +39,19 @@ let
   # itself is untouched (still a normal tracked file, still useful as a
   # diffable reference of what upstream had installed at vendoring time) —
   # only the copy that would've landed in the live config is removed.
+  #
+  # `lua/config/theme_backend.lua` is generated here, not kept in files/nvim:
+  # it records whether this target runs tinty (home.modules.tinty), which
+  # 'plugin/50-custom/theme.lua' reads to pick tinted-nvim or osc-colors.
   nvimConfig = pkgs.runCommand "nvim-config" { } ''
     mkdir -p $out
     cp -r ${../vendor/nvim}/. $out/
     chmod -R u+w $out
     rm -f $out/nvim-pack-lock.json
     cp -rf ${../files/nvim}/. $out/
+    chmod u+w $out/lua/config
+    echo 'return "${if config.home.modules.tinty.enable then "tinted" else "osc"}"' \
+      > $out/lua/config/theme_backend.lua
   '';
 in
 {

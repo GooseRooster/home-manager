@@ -22,6 +22,11 @@
   home.modules.wsl.enable = true;
   home.modules.podmanAlias.enable = true;
 
+  # tinty with the terminal items only: tinted-nvim, tinted-fzf, Claude Code,
+  # and Windows Terminal itself (modules/windows-terminal.nix), which retints
+  # everything else that reads the ANSI palette.
+  home.modules.tinty.enable = true;
+
   # Marker for the `hms`/`hmb` helpers: they read this file to pick the target
   # this machine runs, so the helpers work without an explicit argument once
   # the target has been applied here once.

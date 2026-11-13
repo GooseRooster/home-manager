@@ -28,6 +28,9 @@ in
     silverHour = {
       enable = mkFlag "silver-hour image profile (GNOME, system fonts, gnomad/tinty theming).";
     };
+    tinty = {
+      enable = mkFlag "tinty scheme manager + the terminal template items (see modules/tinty.nix).";
+    };
     appImages = {
       enable = mkFlag "Generic AppImage launcher (~/.local/bin/appimage) with a Nix-sanitized environment.";
     };

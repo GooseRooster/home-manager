@@ -8,7 +8,9 @@
     ./modules/flavors.nix
     ./modules/bundles.nix
     ./modules/flatpak.nix
+    ./modules/tinty.nix
     ./modules/theming-tools-silver-hour.nix
+    ./modules/windows-terminal.nix
     ./modules/steam-adwaita.nix
     ./modules/zsh.nix
     ./modules/wsl-shell-launcher.nix

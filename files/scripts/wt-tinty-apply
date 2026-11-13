@@ -1,0 +1,97 @@
+# wt-tinty-apply — tinty hook for the Windows Terminal item (WSL only; wired
+# up by modules/windows-terminal.nix, wrapped by writeShellApplication).
+#
+# Upserts the rendered tinted-terminal scheme into Windows Terminal's
+# settings.json under a fixed name ("tinted-theming") and points this
+# distro's WSL profile at it. Windows Terminal reloads settings.json when it
+# changes, so open tabs retint immediately.
+#
+#   wt-tinty-apply [THEME_FILE]
+#
+# THEME_FILE defaults to $TINTY_THEME_FILE_PATH (set by tinty for the hook),
+# then to the current artifact, so it can also be re-run by hand.
+#
+# Environment:
+#   WT_SETTINGS  settings.json path; empty = first match of the known installs
+#   WT_PROFILE   profile name to switch; empty = $WSL_DISTRO_NAME
+#
+# Never fails the tinty apply: every problem is a warning and a clean exit.
+# The first run keeps the original file as settings.json.pre-tinty.
+
+scheme_name="tinted-theming"
+artifact="$HOME/.local/share/tinted-theming/tinty/artifacts/tinted-terminal-wt-themes-windows-terminal-file.theme"
+theme="${1:-${TINTY_THEME_FILE_PATH:-$artifact}}"
+profile="${WT_PROFILE:-${WSL_DISTRO_NAME:-}}"
+
+warn() {
+  echo "wt-tinty-apply: $*" >&2
+}
+
+if [ ! -r "$theme" ]; then
+  warn "no theme file at $theme; skipping."
+  exit 0
+fi
+
+settings="${WT_SETTINGS:-}"
+if [ -z "$settings" ]; then
+  shopt -s nullglob
+  for candidate in \
+    /mnt/c/Users/*/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json \
+    /mnt/c/Users/*/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json \
+    /mnt/c/Users/*/AppData/Local/Microsoft/"Windows Terminal"/settings.json; do
+    settings="$candidate"
+    break
+  done
+  shopt -u nullglob
+fi
+
+if [ -z "$settings" ] || [ ! -f "$settings" ]; then
+  warn "Windows Terminal settings.json not found (set home.modules.windowsTerminal.settingsPath); skipping."
+  exit 0
+fi
+
+# The template renders a fragment meant for pasting into "schemes": a leading
+# `//` comment and a trailing comma. Strip both to get one JSON object.
+if ! scheme="$(
+  sed -e 's/\r$//' -e '/^[[:space:]]*\/\//d' "$theme" \
+    | sed -z -e 's/,[[:space:]]*$//' \
+    | jq -c --arg name "$scheme_name" '.name = $name'
+)"; then
+  warn "could not parse $theme; skipping."
+  exit 0
+fi
+
+[ -e "$settings.pre-tinty" ] || cp -p "$settings" "$settings.pre-tinty"
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+# Replace the scheme by name, then set colorScheme on the WSL profile whose
+# name is this distro (other profiles keep their own schemes). jq rejects
+# JSONC comments: a hand-commented settings.json is left untouched.
+if ! jq --indent 4 --argjson scheme "$scheme" --arg profile "$profile" '
+  .schemes = ([.schemes[]? | select(.name != $scheme.name)] + [$scheme])
+  | if $profile == "" then .
+    else .profiles.list |= map(
+      if .name == $profile and ((.source // "") | test("wsl"; "i"))
+      then .colorScheme = $scheme.name
+      else .
+      end)
+    end
+' "$settings" >"$tmp"; then
+  warn "could not update $settings (comments in the JSON?); left untouched."
+  exit 0
+fi
+
+if [ -z "$profile" ]; then
+  warn "WSL_DISTRO_NAME is unset: scheme added, no profile switched (set home.modules.windowsTerminal.profileName)."
+elif ! jq -e --arg profile "$profile" \
+  'any(.profiles.list[]?; .name == $profile and ((.source // "") | test("wsl"; "i")))' \
+  "$tmp" >/dev/null; then
+  warn "no WSL profile named '$profile' in $settings: scheme added, no profile switched."
+fi
+
+# Write in place rather than mv: Windows Terminal watches the file for
+# writes, and keeping the same file avoids depending on rename events
+# crossing the WSL/Windows boundary.
+cat "$tmp" >"$settings"

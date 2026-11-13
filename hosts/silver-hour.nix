@@ -13,6 +13,10 @@
   # alterations (see modules/flavors.nix and modules/theming-tools-silver-hour.nix).
   home.modules.silverHour.enable = true;
 
+  # tinty (modules/tinty.nix): the shared terminal items; silverHour appends
+  # the desktop ones and drives it from ChromaLeon.
+  home.modules.tinty.enable = true;
+
   # Generic AppImage launcher (see modules/appimages.nix). Desktop-only: the
   # container and WSL targets have no FUSE/GUI stack to run AppImages against.
   home.modules.appImages.enable = true;

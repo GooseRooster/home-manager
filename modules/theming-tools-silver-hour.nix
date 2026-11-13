@@ -9,19 +9,20 @@
 # silver-hour theming tooling (GNOME/tinty flow): gnomad picks the base16/base24
 # scheme, tinty syncs the tinted-theming item set.
 #
-# gnomad comes from its own flake (flake.nix input), the custom gnomad schemes
-# live under files/gnomad/schemes, and tinty syncs the tinted-theming item set.
-# `theme = "tinted-theming"` in modules/ghostty.nix makes the tinted-terminal
-# ghostty hook effective.
+# gnomad comes from its own flake (flake.nix input) and the custom gnomad
+# schemes live under files/gnomad/schemes. tinty itself (package, config.toml,
+# sync, the shared terminal items) is modules/tinty.nix; this module appends
+# the desktop items. `theme = "tinted-theming"` in modules/ghostty.nix makes
+# the tinted-terminal ghostty hook effective.
 let
   cfg = config.home.modules;
 
   schemesDir = ../files/gnomad/schemes;
   schemes = lib.filterAttrs (_: type: type == "regular") (builtins.readDir schemesDir);
 
-  # Tinty scheme-sync items. The Steam hook writes the Adwaita-for-Steam
-  # custom.css consumed by modules/steam-adwaita.nix; the Vesktop hook stays,
-  # gaming-gated.
+  # Desktop tinty items, appended to home.modules.tinty.items. The Steam hook
+  # writes the Adwaita-for-Steam custom.css consumed by
+  # modules/steam-adwaita.nix; the Vesktop hook stays, gaming-gated.
   tintyItems = [
     {
       path = "https://github.com/tinted-theming/tinted-shell";
@@ -29,15 +30,6 @@ let
       themes-dir = "scripts";
       hook = ". %f";
       supported-systems = [ "base16" "tinted8" ];
-    }
-    {
-      # Claude Code
-      name = "tinted-claude-code";
-      path = "https://github.com/tinted-theming/tinted-claude-code";
-      themes-dir = "scripts";
-      theme-file-extension = ".js";
-      supported-systems = [ "base16" "base24" "tinted8" ];
-      hook = "mkdir -p \"$HOME/.claude/themes\" && node \"$TINTY_THEME_FILE_PATH\" > \"$HOME/.claude/themes/tinty.json\"";
     }
     {
       # Ghostty — with `theme` set to "tinted-theming" (see modules/ghostty.nix),
@@ -71,7 +63,10 @@ let
       themes-dir = "themes";
       theme-file-extension = ".theme.css";
       supported-systems = [ "base16" ];
-      hook = "cp \"$TINTY_THEME_FILE_PATH\" \"$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css\"";
+      hook = ''
+        mkdir -p "$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings"
+        cp -f "$TINTY_THEME_FILE_PATH" "$HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings/quickCss.css"
+      '';
     }
   ] ++ lib.optionals cfg.steamAdwaita.enable [
     {
@@ -146,16 +141,21 @@ in
       assertion = gnomad != null;
       message = "home.modules.silverHour requires the gnomad flake input (see flake.nix extraSpecialArgs).";
     }
+    {
+      assertion = cfg.tinty.enable;
+      message = "home.modules.silverHour requires home.modules.tinty (the ChromaLeon bridge runs `tinty apply`).";
+    }
   ];
 
-  # gnomad's package wraps git/gowall/tinty/glib into its PATH; tinty is also
-  # installed directly so the user can drive scheme sync by hand.
-  # The ChromaLeon bridge is installed as well so it can be called by name —
-  # gnomad's `on_wallpaper_apply` hook is the deterministic way to re-derive
-  # the scheme when gnomad changes the wallpaper.
+  home.modules.tinty.items = tintyItems;
+
+  # gnomad's package wraps git/gowall/tinty/glib into its PATH; tinty itself
+  # comes from modules/tinty.nix. The ChromaLeon bridge is installed as well
+  # so it can be called by name — gnomad's `on_wallpaper_apply` hook is the
+  # deterministic way to re-derive the scheme when gnomad changes the
+  # wallpaper.
   home.packages = [
     gnomad.packages.${pkgs.stdenv.hostPlatform.system}.gnomad
-    pkgs.tinty
     chromaleonBridge
   ];
 
@@ -165,32 +165,7 @@ in
       force = true;
       source = schemesDir + "/${name}";
     };
-  }) schemes // {
-    ".config/tinted-theming/tinty/config.toml" = {
-      force = true;
-      source = (pkgs.formats.toml { }).generate "tinty-config" { items = tintyItems; };
-    };
-  };
-
-  # Pre-create the hook output dirs, then run the initial `tinty sync` so
-  # gnomad / `tinty apply` work immediately. Idempotent: sync only runs when the
-  # data dir is absent. Runs after writeBoundary so the config above exists.
-  home.activation.tintySetup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    # Not "run": every activation step shares one script, and a function
-    # named run would replace Home Manager's run helper for every later step.
-    tintySetupStep() {
-      local dirs="$HOME/.config/ghostty/themes $HOME/.claude/themes"
-      ${lib.optionalString cfg.gaming.enable ''dirs="$dirs $HOME/.var/app/dev.vencord.Vesktop/config/vesktop/settings"''}
-      ${lib.optionalString cfg.steamAdwaita.enable ''dirs="$dirs $HOME/.config/AdwSteamGtk"''}
-      mkdir -p $dirs
-
-      if [ ! -d "$HOME/.local/share/tinted-theming/tinty" ]; then
-        PATH="${pkgs.git}/bin:$PATH" ${pkgs.tinty}/bin/tinty sync \
-          || echo "WARN: 'tinty sync' failed (offline?), skipping." >&2
-      fi
-    }
-    tintySetupStep
-  '';
+  }) schemes;
 
   # ChromaLeon integration (silver-hour only). The path unit fires whenever
   # ChromaLeon rewrites its generated Shell stylesheets (accent pick, tint
