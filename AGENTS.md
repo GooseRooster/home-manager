@@ -80,6 +80,12 @@ files/scripts/     — shell scripts installed into the profile
   `files/` or `modules/` and re-switch.
 - `~/.config/gnomad/config.toml` is the one exception: gnomad owns it, and it
   is *not* managed by home-manager. Hand edits survive a switch.
+- `~/.config/theming/mode` is *runtime* state owned by the `theming` toggle
+  (`files/scripts/theming`), not by home-manager. `~/.config/yazi/theme.toml`
+  is runtime state too, written by tinty's global hook (it follows the
+  scheme system). Do not hand either to a module's `home.file` — a module
+  that also wrote them would fight the runtime owner over the same path on
+  every switch.
 - The ChromaLeon → tinty bridge is **not** in this repository. It lives in
   gnomad (`assets/chromaleon-bridge/`) and is consumed as
   `gnomad.packages.<system>.chromaleon-bridge`; `modules/theming-tools-silver-hour.nix`

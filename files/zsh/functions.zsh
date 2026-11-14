@@ -109,6 +109,25 @@ hmb() {
   home-manager build --flake "${_HM_FLAKE}#${host}" --impure --refresh "${@[2,-1]}"
 }
 
+# ── Functions: theming ───────────────────────────────────────────────────────
+
+# The theming toggle lives in the Nix profile; this wrapper only makes sure
+# it is found when the profile is not on PATH yet.
+theming() {
+  if (( ${+commands[theming]} )); then
+    command theming "$@"
+  else
+    print -u2 "theming: not in PATH — run 'home-manager switch' first."
+    return 1
+  fi
+}
+
+# lazygit needs no wrapper here: Home Manager's own `lg` shell function
+# calls `command lazygit`, so the interception lives one level down, in the
+# lazygit binary itself (modules/lazygit.nix) — that way `lg`, a bare
+# `lazygit` and the other shells' integrations all pick the base16 template
+# up.
+
 # ── Custom completions ────────────────────────────────────────────────────────
 # dotnet — delegate to dotnet's own completion library (carapace has no
 # built-in dotnet completer; its bridges are cobra/argcomplete/clap only).

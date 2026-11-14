@@ -19,6 +19,12 @@
 # list in /etc/dconf/db/local.d and the user may enable further extensions
 # by hand (MosaicWM, for one). This module only appends the extensions it
 # manages, so nothing else is disturbed.
+#
+# Extensions that belong to a theming stack (the `mode` attribute in
+# pkgs/gnome-extensions.nix) are the exception: only the one of the *active*
+# stack may be enabled, because ChromaLeon and the User Themes extension
+# conflict with each other. Those are left to the theming toggle
+# (files/scripts/theming), which enables one and disables the other.
 {
   options.home.bundles.gnomeExtensions = {
     enable = lib.mkOption {
@@ -34,6 +40,11 @@
   config = lib.mkIf config.home.bundles.gnomeExtensions.enable (
     let
       extensions = import ../pkgs/gnome-extensions.nix { inherit pkgs; };
+
+      # Everything that is on, whatever the theming mode is. The
+      # extensions of a theming stack (the `mode` attribute in
+      # pkgs/gnome-extensions.nix) are enabled by the toggle instead.
+      alwaysExtensions = lib.filter (ext: !(ext ? mode)) extensions;
 
       # dconf path -> settings, for the extensions that carry a GSettings
       # schema. Only values that differ from the schema default are listed;
@@ -97,6 +108,9 @@
       # are not in the list yet, leave everything else alone. The image
       # enables its own extensions through /etc/dconf/db/local.d, and the
       # user may have enabled others by hand — neither should be lost.
+      #
+      # The theming stack's extensions are not touched here: which one of
+      # them is enabled depends on the mode, which is runtime state.
       home.activation.gnomeExtensionsEnable = lib.hm.dag.entryAfter [ "installPackages" ] ''
         gsettings_bin="${pkgs.glib}/bin/gsettings"
         current="$("$gsettings_bin" get org.gnome.shell enabled-extensions 2>/dev/null || echo "@as []")"
@@ -107,7 +121,7 @@
         esac
 
         added=""
-        for uuid in ${lib.concatStringsSep " " (map (ext: ext.id) extensions)}; do
+        for uuid in ${lib.concatStringsSep " " (map (ext: ext.id) alwaysExtensions)}; do
           case "$current" in
             *"'$uuid'"*) continue ;;
           esac

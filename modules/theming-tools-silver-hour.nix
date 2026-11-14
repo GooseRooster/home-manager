@@ -55,7 +55,7 @@ let
       '';
       supported-systems = [ "base16" "base24" "tinted8" ];
     }
-  ] ++ lib.optionals cfg.gaming.enable [
+    ] ++ lib.optionals cfg.gaming.enable [
     {
       # Vesktop (Discord)
       path = "https://github.com/deathbeam/base16-discord.git";
@@ -121,6 +121,40 @@ let
           pkgs.python3 pkgs.tinty pkgs.util-linux
         ]}
     '';
+
+  # The theming toggle: switch the desktop between the ChromaLeon stack and
+  # the gnomad stack. See files/scripts/theming for what each mode does.
+  gnomadPkg = gnomad.packages.${pkgs.stdenv.hostPlatform.system}.gnomad;
+
+  # The two extensions the toggle switches between. Read from the extension
+  # pins (the single source of truth) rather than repeated here.
+  extensionPins = import ../pkgs/gnome-extensions.nix { inherit pkgs; };
+
+  modeUuid =
+    mode:
+    let
+      ext = lib.findFirst (e: (e.mode or "") == mode) null extensionPins;
+    in
+    if ext == null then null else ext.id;
+
+  chromaleonUuid = modeUuid "chromaleon";
+  gnomadUuid = modeUuid "gnomad";
+
+  themingScript = pkgs.writeShellApplication {
+    name = "theming";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.gnused
+      pkgs.tinty
+    ];
+    runtimeEnv = {
+      THEMING_CHROMALEON_UUID = chromaleonUuid;
+      THEMING_GNOMAD_UUID = gnomadUuid;
+      THEMING_CHROMALEON_TINTY = "${chromaleonBridge}/bin/chromaleon_tinty";
+      THEMING_GNOMAD = "${gnomadPkg}/bin/gnomad";
+    };
+    text = builtins.readFile ../files/scripts/theming;
+  };
 in
 {
   options.home.modules.chromaleon = {
@@ -145,6 +179,14 @@ in
       assertion = cfg.tinty.enable;
       message = "home.modules.silverHour requires home.modules.tinty (the ChromaLeon bridge runs `tinty apply`).";
     }
+    {
+      assertion = chromaleonUuid != null && gnomadUuid != null;
+      message = "The theming toggle needs one extension per mode (the `mode` attribute in pkgs/gnome-extensions.nix).";
+    }
+    {
+      assertion = config.home.bundles.gnomeExtensions.enable;
+      message = "home.modules.silverHour requires home.bundles.gnomeExtensions (the theming toggle switches between two shell extensions).";
+    }
   ];
 
   home.modules.tinty.items = tintyItems;
@@ -153,11 +195,19 @@ in
   # comes from modules/tinty.nix. The ChromaLeon bridge is installed as well
   # so it can be called by name — gnomad's `on_wallpaper_apply` hook is the
   # deterministic way to re-derive the scheme when gnomad changes the
-  # wallpaper.
+  # wallpaper. The toggle is the way between the two theming stacks.
   home.packages = [
     gnomad.packages.${pkgs.stdenv.hostPlatform.system}.gnomad
     chromaleonBridge
+    themingScript
   ];
+
+  # The toggle owns the mode-dependent state (which extension is enabled,
+  # what gnomad's config says, which yazi theme is selected), so the
+  # activation just asks it to converge on the mode that is already set.
+  home.activation.themingSync = lib.hm.dag.entryAfter [ "installPackages" ] ''
+    ${themingScript}/bin/theming --sync || echo "WARN: 'theming --sync' failed." >&2
+  '';
 
   home.file = lib.mapAttrs' (name: _: {
     name = ".config/gnomad/schemes/${name}";
@@ -209,6 +259,25 @@ in
       ExecStart = "${chromaleonBridge}/bin/chromaleon_tinty_watch";
       Restart = "always";
       RestartSec = 2;
+    };
+
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # The scheme of the *active* stack, applied at session start. In gnomad
+  # mode that is the base16 scheme gnomad owns; in chromaleon mode the
+  # bridge above does the work and this one has nothing to do (the bridge
+  # is a no-op while the extension is disabled).
+  systemd.user.services.gnomad-apply = {
+    Unit = {
+      Description = "Apply the scheme of the active theming mode";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${themingScript}/bin/theming --apply";
     };
 
     Install.WantedBy = [ "graphical-session.target" ];

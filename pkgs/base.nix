@@ -1,5 +1,9 @@
 # Base CLI tooling — devcontainer-safe. Selected via home.bundles.base
 # (default-on for every target).
+#
+# lazygit is deliberately *not* here: modules/lazygit.nix ships a wrapper
+# around it (the binary merges the base16 template into lazygit's config),
+# and two `lazygit` binaries in one profile collide.
 { pkgs }:
 
 # The LSP binaries here back the nvim config's base profile
@@ -34,7 +38,6 @@ with pkgs;
   deja
   imagemagick
   jq
-  lazygit
   lua-language-server
   neovim
   nixd

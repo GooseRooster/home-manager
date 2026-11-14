@@ -46,7 +46,15 @@ in
 
     settings = lib.importTOML ../files/yazi/yazi.toml;
     keymap = lib.importTOML ../files/yazi/keymap.toml;
-    theme = lib.importTOML ../files/yazi/theme.toml;
+
+    # ~/.config/yazi/theme.toml selects the flavor. On a tinty host it
+    # follows the *scheme system* instead of being fixed: the base16
+    # template's flavor when the scheme is a base16 one, the terminal's ANSI
+    # palette otherwise (the ChromaLeon bridge applies a tinted8 scheme,
+    # which the base16-only templates cannot express). A tinty global hook
+    # writes the file on every apply (see modules/tinty.nix), so Home
+    # Manager must not own it there — only on the hosts without tinty.
+    theme = lib.optionalAttrs (!cfg.tinty.enable) (lib.importTOML ../files/yazi/theme.toml);
 
     initLua = builtins.replaceStrings
       [ "{{ GAMING_HOPS }}" ]
@@ -63,10 +71,13 @@ in
   };
 
   # force: HM owns these even if a pre-existing file is present.
-  xdg.configFile = {
+  # yazi/theme.toml is owned by HM only where there is no tinty; on a tinty
+  # host the hook in modules/tinty.nix writes it.
+  xdg.configFile = lib.optionalAttrs (!cfg.tinty.enable) {
+    "yazi/theme.toml".force = true;
+  } // {
     "yazi/yazi.toml".force = true;
     "yazi/keymap.toml".force = true;
-    "yazi/theme.toml".force = true;
     "yazi/init.lua".force = true;
     "yazi/flavors/inherit.yazi".force = true;
   };

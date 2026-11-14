@@ -14,6 +14,11 @@
 #              of the download URL). Shell-version specific: EGO publishes
 #              one build per supported GNOME version.
 #   sha256     flat SHA-256 of the downloaded zip (SRI).
+#   mode       optional. Extensions that belong to one of the two theming
+#              stacks carry it: "chromaleon" or "gnomad". They are installed
+#              like the others, but only the extension of the *active* stack
+#              is enabled (see files/scripts/theming) — ChromaLeon and the
+#              User Themes extension conflict with each other.
 #
 # Bump with:  python3 scripts/update-gnome-extensions.py
 # (rewrites version / versionTag / sha256 in place and reports schema
@@ -87,6 +92,9 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     version = "89";
     versionTag = 76023;
     sha256 = "sha256-bfWA3SecOZ8VJJ3baTEpf3FezosD3ZjqiTUFlMMxL40=";
+    # ChromaLeon conflicts directly with the User Themes extension, so the
+    # two are never enabled at the same time (see files/scripts/theming).
+    mode = "chromaleon";
   }
   {
     id = "weatherornot@somepaulo.github.io";
@@ -111,5 +119,18 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     version = "12";
     versionTag = 76068;
     sha256 = "sha256-i46nPmzGmVKGKIXZ5Y+GRzkyoxCK6fAi5UoCZakLwcc=";
+  }
+  {
+    # User Themes — the shell-theme loader gnomad's own Shell CSS needs.
+    # It is the counterpart of ChromaLeon: only one of the two is enabled at
+    # a time (see files/scripts/theming). The image does not ship it (Fedora
+    # keeps it in a separate subpackage), so it is pinned here like the rest.
+    id = "user-theme@gnome-shell-extensions.gcampax.github.com";
+    name = "User Themes";
+    schema = "org/gnome/shell/extensions/user-theme";
+    version = "78";
+    versionTag = 75038;
+    sha256 = "sha256-9ei3EE8jhayPfff6FRztnSXthM+oDqndVjKfNyAB+gc=";
+    mode = "gnomad";
   }
 ]

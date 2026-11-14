@@ -1,0 +1,347 @@
+#!/usr/bin/env bash
+#
+# theming — switch the silver-hour desktop between its two theming stacks.
+#
+#   chromaleon   ChromaLeon owns the shell, the GTK apps and the accent. The
+#                bridge turns ChromaLeon's colours into a tinted8 scheme, and
+#                tinty pushes that scheme to the terminal apps. gnomad is only
+#                a wallpaper engine here (gowall).
+#
+#   gnomad       gnomad owns everything: gowall for the wallpaper, tinty for
+#                the scheme, and its own GTK/Shell CSS — which needs the User
+#                Themes extension to be visible. ChromaLeon is off.
+#
+# The two extensions conflict (ChromaLeon against User Themes), so exactly
+# one of them is enabled at a time; that is the whole point of this command.
+#
+# The two stacks also differ in the *scheme system* they end up on: the
+# bridge applies a tinted8 scheme, gnomad applies a base16 one. tinty skips
+# the items that do not support the current system, so the base16-only
+# templates (yazi, lazygit, Discord) are applied in gnomad mode and left
+# alone in chromaleon mode — without this command having to know about them.
+#
+# Usage:
+#   theming status           show the current mode and what it implies
+#   theming gnomad [slug]    switch to gnomad mode (slug = scheme to apply)
+#   theming chromaleon       switch to chromaleon mode
+#   theming toggle           flip to the other mode
+#   theming --apply          (re)apply the scheme of the current mode
+#   theming --sync           reconcile the current mode's files and extensions
+#
+# The mode lives in $XDG_CONFIG_HOME/theming/mode ("gnomad" | "chromaleon").
+# A missing file means "chromaleon" — the stack this machine started on.
+
+# errexit/nounset/pipefail come from writeShellApplication; the values below
+# are baked in by Nix (see modules/theming-tools-silver-hour.nix):
+#
+#   THEMING_CHROMALEON_UUID   the ChromaLeon extension
+#   THEMING_GNOMAD_UUID       the User Themes extension
+#   THEMING_CHROMALEON_TINTY  the ChromaLeon -> tinty bridge
+#   THEMING_GNOMAD            the gnomad binary
+#
+# yazi's theme is not the toggle's business: it follows the *scheme system*
+# (a tinty global hook writes it), so the base16 templates apply wherever the
+# scheme is a base16 one — on the WSL host as much as in gnomad mode.
+
+MODE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/theming/mode"
+GNOMAD_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/gnomad/config.toml"
+
+msg() { printf '%s\n' "$*"; }
+warn() { printf 'theming: %s\n' "$*" >&2; }
+
+# ── Mode ─────────────────────────────────────────────────────────────────────
+
+mode_read() {
+  local mode
+  mode="$(cat "$MODE_FILE" 2>/dev/null || true)"
+  case "$mode" in
+    gnomad | chromaleon)
+      printf '%s\n' "$mode"
+      ;;
+    "")
+      # Nothing written yet: the stack this machine started on.
+      printf 'chromaleon\n'
+      ;;
+    *)
+      warn "unknown mode '$mode' in $MODE_FILE — treating it as chromaleon"
+      printf 'chromaleon\n'
+      ;;
+  esac
+}
+
+mode_write() {
+  mkdir -p "$(dirname "$MODE_FILE")"
+  printf '%s\n' "$1" >"$MODE_FILE"
+}
+
+# ── GNOME extensions ────────────────────────────────────────────────────────
+
+ext_installed() {
+  gnome-extensions info "$1" >/dev/null 2>&1
+}
+
+# The extension is on disk but the shell has not loaded it yet: GNOME only
+# picks up extensions that appeared while it was running at the next login.
+ext_on_disk() {
+  [ -d "$HOME/.local/share/gnome-shell/extensions/$1" ]
+}
+
+ext_enabled() {
+  gnome-extensions list --enabled 2>/dev/null | grep -qxF "$1"
+}
+
+ext_state() {
+  if ! ext_installed "$1"; then
+    if ext_on_disk "$1"; then
+      printf 'installed, not loaded'
+    else
+      printf 'not installed'
+    fi
+  elif ext_enabled "$1"; then
+    printf 'enabled'
+  else
+    printf 'disabled'
+  fi
+}
+
+ext_enable() {
+  local uuid="$1"
+  if ! ext_installed "$uuid"; then
+    if ext_on_disk "$uuid"; then
+      warn "$uuid is installed but the shell has not picked it up yet — log out and back in"
+    else
+      warn "$uuid is not installed — run 'home-manager switch' first"
+    fi
+    return 0
+  fi
+  if ext_enabled "$uuid"; then
+    return 0
+  fi
+  if gnome-extensions enable "$uuid" >/dev/null 2>&1; then
+    msg "enabled $uuid"
+  else
+    warn "could not enable $uuid"
+  fi
+}
+
+ext_disable() {
+  local uuid="$1"
+  if ! ext_installed "$uuid" || ! ext_enabled "$uuid"; then
+    return 0
+  fi
+  if gnome-extensions disable "$uuid" >/dev/null 2>&1; then
+    msg "disabled $uuid"
+  else
+    warn "could not disable $uuid"
+  fi
+}
+
+# The shell theme User Themes loads. Only settable while the extension is
+# loaded — a disabled extension's schema is not registered with GSettings.
+user_theme_set() {
+  if ! command -v gsettings >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! gsettings writable org.gnome.shell.extensions.user-theme name >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! gsettings set org.gnome.shell.extensions.user-theme name "$1"; then
+    warn "could not set the shell theme"
+  fi
+}
+
+# ── gnomad's own configuration ──────────────────────────────────────────────
+
+# gnomad's config.toml belongs to gnomad, not to Home Manager, so it is
+# edited in place: only the one key changes, everything else is preserved.
+gnomad_set_gowall_only() {
+  local want="$1" tmp
+  if [ ! -f "$GNOMAD_CONFIG" ]; then
+    warn "no gnomad config at $GNOMAD_CONFIG"
+    return 0
+  fi
+  if grep -q '^gowall_only[[:space:]]*=' "$GNOMAD_CONFIG"; then
+    sed -i "s/^gowall_only[[:space:]]*=.*/gowall_only = $want/" "$GNOMAD_CONFIG"
+    return 0
+  fi
+  # Insert before the first table header: a bare key below "[hooks]" would
+  # belong to that table instead of the document root.
+  tmp="$GNOMAD_CONFIG.theming.tmp"
+  awk -v line="gowall_only = $want" '
+    !inserted && /^[[:space:]]*\[/ { print line; inserted = 1 }
+    { print }
+    END { if (!inserted) print line }
+  ' "$GNOMAD_CONFIG" >"$tmp"
+  mv "$tmp" "$GNOMAD_CONFIG"
+}
+
+# The name of the theme gnomad generates ("gnomad" by default).
+gnomad_theme_name() {
+  local name
+  name="$(sed -n 's/^theme_name[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+    "$GNOMAD_CONFIG" 2>/dev/null | head -n1)"
+  printf '%s\n' "${name:-gnomad}"
+}
+
+# The last scheme gnomad applied — it keeps it in its own config.
+gnomad_scheme_slug() {
+  [ -f "$GNOMAD_CONFIG" ] || return 0
+  sed -n 's/^default_scheme[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+    "$GNOMAD_CONFIG" | head -n1
+}
+
+# ── Applying a scheme ───────────────────────────────────────────────────────
+
+apply_gnomad() {
+  local slug="${1:-}"
+  if [ -z "$slug" ]; then
+    slug="$(gnomad_scheme_slug)"
+  fi
+  if [ -z "$slug" ]; then
+    warn "no scheme to apply — pick one in gnomad, or run: theming gnomad <slug>"
+    return 1
+  fi
+  msg "applying $slug (gnomad)"
+  "$THEMING_GNOMAD" --apply "$slug"
+}
+
+apply_chromaleon() {
+  msg "applying the ChromaLeon bridge"
+  if [ "${1:-}" = "--force" ]; then
+    "$THEMING_CHROMALEON_TINTY" --force
+  else
+    "$THEMING_CHROMALEON_TINTY"
+  fi
+}
+
+# ── Switching ───────────────────────────────────────────────────────────────
+
+switch_to_gnomad() {
+  local slug="${1:-}"
+  mode_write gnomad
+  gnomad_set_gowall_only false
+  ext_disable "$THEMING_CHROMALEON_UUID"
+  ext_enable "$THEMING_GNOMAD_UUID"
+  user_theme_set "$(gnomad_theme_name)"
+  # The apply is what switches the terminal apps over to the base16
+  # templates: the scheme becomes a base16 one, so tinty builds them.
+  if ! apply_gnomad "$slug"; then
+    warn "gnomad could not apply a scheme — the terminal theme was left alone"
+  fi
+}
+
+switch_to_chromaleon() {
+  mode_write chromaleon
+  gnomad_set_gowall_only true
+  # Clear gnomad's shell theme while the extension is still loaded, so it
+  # cannot fight ChromaLeon once it is back in charge.
+  user_theme_set ""
+  ext_disable "$THEMING_GNOMAD_UUID"
+  ext_enable "$THEMING_CHROMALEON_UUID"
+  # The bridge applies the tinted8 scheme, which the base16-only templates
+  # cannot express — they are skipped, and yazi goes back to the ANSI
+  # palette.
+  if ! apply_chromaleon --force; then
+    warn "the ChromaLeon bridge failed — is the extension enabled?"
+  fi
+}
+
+# Bring the machine in line with the mode that is already set, without
+# touching the scheme. Run by the Home Manager activation, so a switch
+# converges on the mode that is active.
+sync_mode() {
+  local mode
+  mode="$(mode_read)"
+  case "$mode" in
+    gnomad)
+      gnomad_set_gowall_only false
+      ext_disable "$THEMING_CHROMALEON_UUID"
+      ext_enable "$THEMING_GNOMAD_UUID"
+      user_theme_set "$(gnomad_theme_name)"
+      ;;
+    *)
+      gnomad_set_gowall_only true
+      user_theme_set ""
+      ext_disable "$THEMING_GNOMAD_UUID"
+      ext_enable "$THEMING_CHROMALEON_UUID"
+      ;;
+  esac
+}
+
+apply_current_mode() {
+  local mode
+  mode="$(mode_read)"
+  case "$mode" in
+    gnomad) apply_gnomad "${1:-}" ;;
+    *) apply_chromaleon ;;
+  esac
+}
+
+status() {
+  local mode
+  mode="$(mode_read)"
+  msg "mode:          $mode"
+  msg "extensions:    chromaleon=$(ext_state "$THEMING_CHROMALEON_UUID") user-themes=$(ext_state "$THEMING_GNOMAD_UUID")"
+  msg "tinty scheme:  $(tinty current 2>/dev/null || printf 'unknown')"
+  msg "gnomad:        gowall_only=$(sed -n 's/^gowall_only[[:space:]]*=[[:space:]]*\(.*\)$/\1/p' "$GNOMAD_CONFIG" 2>/dev/null | head -n1)"
+}
+
+usage() {
+  cat <<'EOF'
+theming — switch the silver-hour desktop between its two theming stacks.
+
+  chromaleon   ChromaLeon owns the shell, the GTK apps and the accent; the
+               bridge turns its colours into a tinted8 scheme for tinty.
+               gnomad is only a wallpaper engine here (gowall).
+  gnomad       gnomad owns everything: gowall for the wallpaper, tinty for
+               the scheme, its own GTK/Shell CSS through the User Themes
+               extension. ChromaLeon is off.
+
+Usage:
+  theming status           show the current mode and what it implies
+  theming gnomad [slug]    switch to gnomad mode (slug = scheme to apply)
+  theming chromaleon       switch to chromaleon mode
+  theming toggle           flip to the other mode
+  theming --apply          (re)apply the scheme of the current mode
+  theming --sync           reconcile the current mode's files and extensions
+EOF
+}
+
+main() {
+  case "${1:-}" in
+    status)
+      status
+      ;;
+    gnomad)
+      shift
+      switch_to_gnomad "${1:-}"
+      ;;
+    chromaleon)
+      shift
+      switch_to_chromaleon "${1:-}"
+      ;;
+    toggle)
+      case "$(mode_read)" in
+        gnomad) switch_to_chromaleon ;;
+        *) switch_to_gnomad "${2:-}" ;;
+      esac
+      ;;
+    --apply)
+      shift
+      apply_current_mode "${1:-}"
+      ;;
+    --sync)
+      sync_mode
+      ;;
+    "" | -h | --help | help)
+      usage
+      ;;
+    *)
+      warn "unknown command '${1}'"
+      usage >&2
+      return 1
+      ;;
+  esac
+}
+
+main "$@"
