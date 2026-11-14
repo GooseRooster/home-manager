@@ -129,11 +129,14 @@ theming --apply       # re-apply the scheme of the current mode
 theming --sync        # reconcile the current mode (what a switch runs)
 ```
 
-> **One re-login.** GNOME loads the extensions it knows about when the
-> session starts, so the User Themes extension only becomes available after
-> the first login that follows the switch that installed it. Until then the
-> toggle says so (`installed, not loaded`) and carries on with everything
-> else; the shell theme itself needs that login to show up.
+> **One re-login for the shell theme.** The extension itself can be
+> switched on at runtime — the toggle does that. But GNOME registers an
+> extension's GSettings schema when it *loads* the extension, and a
+> disabled one is never loaded, so the shell theme name (which points at
+> gnomad's generated CSS) can only be set once the extension was enabled at
+> session start. So the first switch to gnomad mode wants a log out and back
+> in; after that the toggle manages the theme name on its own. Until then
+> it says so, and everything else (the scheme, the terminal apps) works.
 
 The mode lives in `~/.config/theming/mode` (`gnomad` | `chromaleon`); a
 missing file means `chromaleon`, so nothing changes until the toggle is

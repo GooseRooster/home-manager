@@ -138,14 +138,25 @@ ext_disable() {
 
 # The shell theme User Themes loads. Only settable while the extension is
 # loaded — a disabled extension's schema is not registered with GSettings.
+# The shell theme User Themes loads.
+#
+# Only settable while the extension is loaded: GNOME registers an
+# extension's GSettings schema when it loads the extension, and a disabled
+# extension is not loaded. The extension can be switched on at runtime, but
+# its schema only shows up once it was enabled at session start — so the
+# shell theme needs that one login, the extension itself does not.
 user_theme_set() {
+  local name="$1" required="${2:-no}"
   if ! command -v gsettings >/dev/null 2>&1; then
     return 0
   fi
   if ! gsettings writable org.gnome.shell.extensions.user-theme name >/dev/null 2>&1; then
+    if [ "$required" = "yes" ]; then
+      warn "the User Themes extension is not loaded — log out and back in for the shell theme to follow"
+    fi
     return 0
   fi
-  if ! gsettings set org.gnome.shell.extensions.user-theme name "$1"; then
+  if ! gsettings set org.gnome.shell.extensions.user-theme name "$name"; then
     warn "could not set the shell theme"
   fi
 }
@@ -222,7 +233,7 @@ switch_to_gnomad() {
   gnomad_set_gowall_only false
   ext_disable "$THEMING_CHROMALEON_UUID"
   ext_enable "$THEMING_GNOMAD_UUID"
-  user_theme_set "$(gnomad_theme_name)"
+  user_theme_set "$(gnomad_theme_name)" yes
   # The apply is what switches the terminal apps over to the base16
   # templates: the scheme becomes a base16 one, so tinty builds them.
   if ! apply_gnomad "$slug"; then

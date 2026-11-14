@@ -31,7 +31,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import html
 import json
 import re
 import subprocess
@@ -153,29 +152,35 @@ def rewrite_pins(text: str, updates: dict[str, dict]) -> str:
 # extensions.gnome.org
 
 
-def ego_versions(uuid: str) -> dict:
+def ego_versions(uuid: str, shell: str) -> dict:
     """The per-shell-version build table of an extension.
 
-    The v1 API exposes the extension record but not the internal version
-    ids the download URL needs; those live in the page's data-versions
-    attribute, which is what the site's own frontend reads.
+    {shell_version: {"pk": download id, "version": release number}} — the
+    build EGO publishes for each shell version.
+
+    The extension-info API is the source: it reports the release *number* of
+    every build, which is what the comparison below needs. The version table
+    on the page (the attribute the site's own frontend reads) cannot be used
+    for that: some extensions version themselves after the GNOME scheme
+    ("51.alpha", "51.rc", "51.0"), and those strings do not order like plain
+    release numbers — "51.0" is the *newest* of those three, yet it sorts
+    before "51.alpha" when a non-numeric suffix counts as "newer". The API
+    normalises the same builds to plain numbers (78 for the 51.0 build), so
+    the comparison stays a plain numeric one.
     """
     quoted = urllib.parse.quote(uuid, safe="")
-    record = json.loads(fetch_text(f"{EGO}/api/v1/extensions/{quoted}/"))
-    page = fetch_text(f"{EGO}{record['link']}")
-
-    match = re.search(r'data-versions="([^"]*)"', page)
-    if not match:
-        raise RuntimeError(f"could not find the version table of {uuid}")
-    return json.loads(html.unescape(match.group(1)))
+    record = json.loads(
+        fetch_text(f"{EGO}/extension-info/?uuid={quoted}&shell_version={shell}")
+    )
+    return record.get("shell_version_map", {})
 
 
 def builds_for_shell(versions: dict, shell: str) -> dict:
     """{version_tag: version} of the builds published for `shell`."""
-    return {
-        int(entry["pk"]): entry["version"]
-        for entry in versions.get(shell, {}).values()
-    }
+    build = versions.get(shell)
+    if not build:
+        return {}
+    return {int(build["pk"]): build["version"]}
 
 
 def download_build(uuid: str, version_tag: int) -> bytes:
@@ -302,7 +307,7 @@ def main() -> int:
 
     for ext in extensions:
         try:
-            versions = ego_versions(ext.uuid)
+            versions = ego_versions(ext.uuid, shell)
         except (urllib.error.URLError, RuntimeError, json.JSONDecodeError) as error:
             notes.append(f"{ext}: could not query extensions.gnome.org ({error})")
             continue
@@ -321,8 +326,7 @@ def main() -> int:
             continue
 
         # Newer upstream release than the one published for our shell?
-        every_build = {int(e["pk"]): e["version"]
-                       for shell_v in versions.values() for e in shell_v.values()}
+        every_build = {int(b["pk"]): b["version"] for b in versions.values()}
         newest = max(every_build, key=lambda tag: version_key(every_build[tag]))
         if newest != best_tag:
             notes.append(
