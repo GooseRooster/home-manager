@@ -129,6 +129,10 @@ theming --apply       # re-apply the scheme of the current mode
 theming --sync        # reconcile the current mode (what a switch runs)
 ```
 
+A scheme can be named either way: gnomad knows it by the name of its file
+(`kiln`, from `files/gnomad/schemes/`), tinty by the system-prefixed one
+(`base16-kiln`). The toggle accepts both.
+
 > **One re-login for the shell theme.** The extension itself can be
 > switched on at runtime — the toggle does that. But GNOME registers an
 > extension's GSettings schema when it *loads* the extension, and a

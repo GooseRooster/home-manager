@@ -201,19 +201,34 @@ gnomad_scheme_slug() {
     "$GNOMAD_CONFIG" | head -n1
 }
 
+# A scheme has two names: gnomad knows it by the name of its file ("kiln"),
+# tinty by the system-prefixed one ("base16-kiln"). `gnomad --apply` wants
+# the first, so accept both here.
+normalize_slug() {
+  case "$1" in
+    base16-* | base24-* | tinted8-*) printf '%s\n' "${1#*-}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
 # ── Applying a scheme ───────────────────────────────────────────────────────
 
 apply_gnomad() {
   local slug="${1:-}"
   if [ -z "$slug" ]; then
     slug="$(gnomad_scheme_slug)"
+  else
+    slug="$(normalize_slug "$slug")"
   fi
   if [ -z "$slug" ]; then
     warn "no scheme to apply — pick one in gnomad, or run: theming gnomad <slug>"
     return 1
   fi
   msg "applying $slug (gnomad)"
-  "$THEMING_GNOMAD" --apply "$slug"
+  if ! "$THEMING_GNOMAD" --apply "$slug"; then
+    warn "gnomad could not apply '$slug' — it names schemes after their file ('kiln', not 'base16-kiln'); 'tinty list' shows the full names"
+    return 1
+  fi
 }
 
 apply_chromaleon() {
@@ -315,6 +330,9 @@ Usage:
   theming toggle           flip to the other mode
   theming --apply          (re)apply the scheme of the current mode
   theming --sync           reconcile the current mode's files and extensions
+
+A scheme can be named either way: gnomad knows it by the name of its file
+("kiln"), tinty by the system-prefixed one ("base16-kiln").
 EOF
 }
 
