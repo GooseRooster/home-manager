@@ -80,6 +80,11 @@ files/scripts/     — shell scripts installed into the profile
   `files/` or `modules/` and re-switch.
 - `~/.config/gnomad/config.toml` is the one exception: gnomad owns it, and it
   is *not* managed by home-manager. Hand edits survive a switch.
+- `~/.config/mimeapps.list` is runtime state as well (see
+  `modules/mime-apps.nix`): it is seeded once with the declared default
+  applications and is GNOME's to change afterwards. It must not be handed
+  to `xdg.mimeApps` — a store link makes the Default Applications panel
+  fail with EACCES.
 - `~/.config/theming/mode` is *runtime* state owned by the `theming` toggle
   (`files/scripts/theming`), not by home-manager. `~/.config/yazi/theme.toml`
   is runtime state too, written by tinty's global hook (it follows the

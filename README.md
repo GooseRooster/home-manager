@@ -383,7 +383,8 @@ silver-hour targets (`hosts/silver-hour.nix`):
 | Module | Flag | Owns |
 |--------|------|------|
 | `modules/gnome-extensions.nix` | `home.bundles.gnomeExtensions.enable` | the user-level GNOME Shell extensions + their settings |
-| `modules/gnome-settings.nix` | `home.modules.gnomeSettings.enable` | multitasking, alert sound, default apps, keyboard shortcuts |
+| `modules/gnome-settings.nix` | `home.modules.gnomeSettings.enable` | multitasking, alert sound, keyboard shortcuts |
+| `modules/mime-apps.nix` | `home.modules.mimeApps.enable` | the default applications (`~/.config/mimeapps.list`) |
 
 ### Extensions
 
@@ -439,14 +440,46 @@ defaults
   sound theme. The theme files are written as plain files, not store
   symlinks, so gnome-control-center can still rewrite them when the alert
   sound changes.
-- **Default applications** — the web browser is Zen (`xdg.mimeApps`); every
-  other category keeps the image's default.
+- **Default applications** — the web browser is Zen; every other
+  category keeps the image's default. The entries live in
+  `~/.config/mimeapps.list`, which is **not** `xdg.mimeApps`:
+  Home Manager would link that file into the read-only store, and
+  GNOME's Default Applications panel then cannot write to it. GIO
+  writes the file by creating a temporary file next to it, which
+  resolves into the store:
+
+  ```
+  GLib.FileError: Failed to create file
+  "/nix/store/…-home-manager-files/.config/mimeapps.list.XXXXXX":
+  Permission denied
+  ```
+
+  So `modules/mime-apps.nix` seeds the file **once** with the declared
+  entries and then leaves it alone — it is runtime state, like
+  `~/.config/gnomad/config.toml`. From then on the panel can change
+  the defaults, and the changes survive a switch. To go back to the
+  declared defaults, delete `~/.config/mimeapps.list` and switch
+  again.
+
+  Jackify's `nxm://` and `jackify://` URL schemes are declared the same
+  way (see `modules/jackify.nix`), so they are in the seeded file too.
 - **Keyboard shortcuts** — window management, workspace switching, the
   overview shortcuts, plus custom bindings for the terminal (`<Super>Return`
-  → `ghostty`) and the image's GSR screenshot/recording helpers:
+  → `ghostty`), the home folder (`<Super>e` → `nautilus --new-window
+  /var/home/gooze`), and the image's GSR screenshot/recording helpers:
   `<Super>Print` → `gsr-shot full`, `<Alt><Super>1` → `gsr-rec screen`,
   `<Alt><Super>2` → `gsr-rec --mic screen`, and `<Alt><Super>q` →
   `gsr-rec stop`.
+
+  The home folder is a *custom* binding rather than the built-in
+  "Home Folder" media key (`org.gnome.settings-daemon.plugins.media-keys
+  home`, which is left unbound). The built-in action goes through GIO
+  (`g_app_info_launch_default_for_uri`), which hands the URI to the
+  *running* file manager over D-Bus — the `--new-window` in the desktop
+  entry's `Exec` line never reaches it, and the window that already
+  shows the folder is raised instead of a new one being opened. Calling
+  Nautilus directly passes the flag through, so every press opens
+  another window.
 
 ### Updating the extension pins
 

@@ -154,26 +154,37 @@ in
     # Declaring these here rather than letting Jackify self-register matters.
     # The app registers itself by writing ~/.local/share/applications/
     # com.jackify.app.desktop and ~/.config/mimeapps.list at startup — but
-    # both paths are Home Manager's, so its own attempts fail with
+    # the desktop file is Home Manager's, so that attempt fails with
     # "Permission denied" (visible in Jackify's log as a warning from
     # nexus_oauth_protocol). Worse, the desktop file it writes points Exec
     # straight at $APPIMAGE, bypassing the sanitizing wrapper, so it would
     # break the launcher: see modules/appimages.nix for the details.
     #
-    # The entry itself is owned by the appimages module, which installs it
-    # into ~/.local/share/applications — the same path the app tries to
-    # write. Home Manager links it into the read-only store, so the app's
-    # write attempt fails harmlessly and our Exec line survives.
-    xdg.mimeApps = {
-      enable = true;
-      defaultApplications = {
-        "x-scheme-handler/nxm" = "com.jackify.app.desktop";
-        "x-scheme-handler/jackify" = "com.jackify.app.desktop";
-      };
-      associations.added = {
-        "x-scheme-handler/nxm" = [ "com.jackify.app.desktop" ];
-        "x-scheme-handler/jackify" = [ "com.jackify.app.desktop" ];
-      };
-    };
+    # The desktop entry itself is owned by the appimages module, which
+    # installs it into ~/.local/share/applications — the same path the app
+    # tries to write. Home Manager links it into the read-only store, so
+    # the app's write attempt fails harmlessly and our Exec line survives.
+    #
+    # The scheme handlers go into ~/.config/mimeapps.list, which is
+    # *runtime* state: it is seeded once with the entries declared here
+    # (see modules/mime-apps.nix) and is GNOME's to change afterwards.
+    # That file is writable, so Jackify's own registration of its two
+    # schemes succeeds as well — it only ever adds them to what is
+    # already there.
+    home.modules.mimeApps = lib.mkMerge [
+      {
+        enable = true;
+
+        defaultApplications = {
+          "x-scheme-handler/nxm" = "com.jackify.app.desktop";
+          "x-scheme-handler/jackify" = "com.jackify.app.desktop";
+        };
+
+        addedAssociations = {
+          "x-scheme-handler/nxm" = [ "com.jackify.app.desktop" ];
+          "x-scheme-handler/jackify" = [ "com.jackify.app.desktop" ];
+        };
+      }
+    ];
   };
 }

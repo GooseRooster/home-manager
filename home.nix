@@ -30,6 +30,7 @@
     ./modules/fonts.nix
     ./modules/gnome-extensions.nix
     ./modules/gnome-settings.nix
+    ./modules/mime-apps.nix
     ./modules/ssh-agent.nix
     ./modules/scripts.nix
     ./modules/appimages.nix

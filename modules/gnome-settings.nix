@@ -62,10 +62,16 @@
       };
       "org/gnome/settings-daemon/plugins/media-keys" = {
         control-center = [ "<Super>i" ];
-        home = [ "<Super>e" ];
+        # The built-in "Home Folder" action goes through GIO, which hands
+        # the home folder to the *running* file manager — it reuses the
+        # window that already shows it instead of opening a new one. It
+        # is replaced by the custom binding below, which asks Nautilus
+        # for a new window explicitly.
+        home = [ ];
         www = [ "<Super>b" ];
         custom-keybindings = [
           "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+          "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/"
           "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/"
           "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/"
           "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/"
@@ -76,6 +82,24 @@
         name = "Terminal";
         command = "ghostty";
         binding = "<Super>Return";
+      };
+      # Home folder, always in a new window.
+      #
+      # Nautilus is a single-instance GApplication: activating it with a
+      # URI that is already open raises that window instead of opening
+      # another one. The "home" media key cannot ask for a new window,
+      # because it launches the folder through GIO
+      # (g_app_info_launch_default_for_uri), and GIO hands the URI to the
+      # running instance over D-Bus — the --new-window in the desktop
+      # entry's Exec line never reaches it. Calling Nautilus directly
+      # does pass the flag through, so every press opens another window.
+      #
+      # The path is absolute because gsd runs the command without a
+      # shell: no ~, no $HOME.
+      "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1" = {
+        name = "Home Folder (new window)";
+        command = "nautilus --new-window ${config.home.homeDirectory}";
+        binding = "<Super>e";
       };
       # GSR screenshot/recording helpers, shipped at /usr/bin by the image.
       "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2" = {
@@ -131,34 +155,41 @@
 
     # Default applications: the web browser is Zen, everything else keeps
     # the image's defaults (Papers for PDFs, Loupe for images, ...).
-    xdg.mimeApps = {
-      enable = true;
+    #
+    # Not xdg.mimeApps: that links ~/.config/mimeapps.list into the
+    # read-only store, and GNOME's Default Applications panel then cannot
+    # write to it (see modules/mime-apps.nix). The file is seeded once
+    # instead, and is GNOME's to change afterwards.
+    home.modules.mimeApps = lib.mkMerge [
+      {
+        enable = true;
 
-      defaultApplications = {
-        "x-scheme-handler/http" = "zen-browser.desktop";
-        "x-scheme-handler/https" = "zen-browser.desktop";
-        "x-scheme-handler/chrome" = "zen-browser.desktop";
-        "text/html" = "zen-browser.desktop";
-        "application/x-extension-htm" = "zen-browser.desktop";
-        "application/x-extension-html" = "zen-browser.desktop";
-        "application/x-extension-shtml" = "zen-browser.desktop";
-        "application/xhtml+xml" = "zen-browser.desktop";
-        "application/x-extension-xhtml" = "zen-browser.desktop";
-        "application/x-extension-xht" = "zen-browser.desktop";
-      };
+        defaultApplications = {
+          "x-scheme-handler/http" = "zen-browser.desktop";
+          "x-scheme-handler/https" = "zen-browser.desktop";
+          "x-scheme-handler/chrome" = "zen-browser.desktop";
+          "text/html" = "zen-browser.desktop";
+          "application/x-extension-htm" = "zen-browser.desktop";
+          "application/x-extension-html" = "zen-browser.desktop";
+          "application/x-extension-shtml" = "zen-browser.desktop";
+          "application/xhtml+xml" = "zen-browser.desktop";
+          "application/x-extension-xhtml" = "zen-browser.desktop";
+          "application/x-extension-xht" = "zen-browser.desktop";
+        };
 
-      associations.added = lib.genAttrs [
-        "x-scheme-handler/http"
-        "x-scheme-handler/https"
-        "x-scheme-handler/chrome"
-        "text/html"
-        "application/x-extension-htm"
-        "application/x-extension-html"
-        "application/x-extension-shtml"
-        "application/xhtml+xml"
-        "application/x-extension-xhtml"
-        "application/x-extension-xht"
-      ] (_: [ "zen-browser.desktop" ]);
-    };
+        addedAssociations = {
+          "x-scheme-handler/http" = [ "zen-browser.desktop" ];
+          "x-scheme-handler/https" = [ "zen-browser.desktop" ];
+          "x-scheme-handler/chrome" = [ "zen-browser.desktop" ];
+          "text/html" = [ "zen-browser.desktop" ];
+          "application/x-extension-htm" = [ "zen-browser.desktop" ];
+          "application/x-extension-html" = [ "zen-browser.desktop" ];
+          "application/x-extension-shtml" = [ "zen-browser.desktop" ];
+          "application/xhtml+xml" = [ "zen-browser.desktop" ];
+          "application/x-extension-xhtml" = [ "zen-browser.desktop" ];
+          "application/x-extension-xht" = [ "zen-browser.desktop" ];
+        };
+      }
+    ];
   };
 }
