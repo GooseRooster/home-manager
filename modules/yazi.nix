@@ -21,8 +21,8 @@ let
   pluginsRepo = fetchPlugin {
     owner = "yazi-rs";
     repo = "plugins";
-    rev = "9166202cc1694c98bac3a639874d6f4c0eaa2dab";
-    hash = "sha256-3ddGRQSzxyurNcyYJA+9LTLXTCjBFGATTqdkuGKixzA=";
+    rev = "1ef5fe02a6122f8f3bb47a41056aab3f4b8598bf";
+    hash = "sha256-Nz6AvWAiwdmH2HJ2vA3rMfbDDHSkXG20Ml6vc5yrjRM=";
   };
 
   plugins = {
