@@ -37,7 +37,12 @@ in
       Type = "exec";
       KillMode = "process";
       Environment = "LOGGING=--log-level=info";
-      ExecStart = "${pkgs.podman}/bin/podman $LOGGING system service --time=0";
+      # Deliberately the host's podman, not ${pkgs.podman}: the Nix build can't
+      # find the distro's crun and falls back to rootful storage paths
+      # (`default OCI runtime "crun" not found`, `mkdir /run/containers`), so
+      # the unit crash-loops. Every target that enables this (WSL, atomic
+      # silver-hour hosts) ships /usr/bin/podman.
+      ExecStart = "/usr/bin/podman $LOGGING system service --time=0";
       TimeoutStopSec = 30;
     };
   };
