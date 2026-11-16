@@ -121,6 +121,17 @@ builtins.map (ext: ext // { package = fetchExtension ext; }) [
     sha256 = "sha256-i46nPmzGmVKGKIXZ5Y+GRzkyoxCK6fAi5UoCZakLwcc=";
   }
   {
+    # Hot Edge — a hot edge at the bottom of the screen that opens the
+    # overview. It is the bottom-edge counterpart of the shell's own
+    # top-left hot corner.
+    id = "hotedge@jonathan.jdoda.ca";
+    name = "Hot Edge";
+    schema = "org/gnome/shell/extensions/hotedge";
+    version = "32";
+    versionTag = 74490;
+    sha256 = "sha256-S4Ft4sM1slGNNotVf2BAmdgmmBEqy7K56oOPdHPGc1I=";
+  }
+  {
     # User Themes — the shell-theme loader gnomad's own Shell CSS needs.
     # It is the counterpart of ChromaLeon: only one of the two is enabled at
     # a time (see files/scripts/theming). The image does not ship it (Fedora
