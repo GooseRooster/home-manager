@@ -209,7 +209,12 @@ in
       local target="$HOME/.config/zsh/extra.zsh"
       if [ ! -e "$target" ]; then
         mkdir -p "$(dirname "$target")"
-        cp ${pkgs.writeText "extra.zsh" extraScaffold} "$target"
+        # The store source is 0444 and cp keeps the mode; make it editable.
+        install -m 0644 ${pkgs.writeText "extra.zsh" extraScaffold} "$target"
+      fi
+      # Repair copies materialized read-only by earlier generations.
+      if [ -f "$target" ] && [ ! -w "$target" ]; then
+        chmod u+w "$target"
       fi
     }
     materializeZshExtraStep
